@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="TapeOut 3D Lab">
+  <defs>
+    <linearGradient id="die" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1a2a"/>
+      <stop offset="1" stop-color="#061019"/>
+    </linearGradient>
+    <linearGradient id="tr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#56e1ff"/>
+      <stop offset="1" stop-color="#2be6c2"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#die)"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="13.25" fill="none" stroke="#1c3550" stroke-width="1.5"/>
+  <path d="M32 10.5 50.5 21v22L32 53.5 13.5 43V21z" fill="none" stroke="url(#tr)" stroke-width="2"/>
+  <g stroke="#2be6c2" stroke-width="1.4" stroke-linecap="round" opacity=".85">
+    <path d="M32 18v6M32 40v6M22 24h-6M48 40h-6"/>
+  </g>
+  <circle cx="32" cy="18" r="1.9" fill="#ffc35c"/>
+  <circle cx="32" cy="46" r="1.9" fill="#ffc35c"/>
+  <circle cx="16" cy="24" r="1.9" fill="#ffc35c"/>
+  <circle cx="48" cy="40" r="1.9" fill="#ffc35c"/>
+  <path d="M25 26h6.5a6.5 6.5 0 0 1 0 13H25z" fill="#0d2739" stroke="#56e1ff" stroke-width="1.8"/>
+  <path d="M19 30h6M19 35h6M38 32.5h3" stroke="#56e1ff" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="43.2" cy="32.5" r="2.1" fill="#08131d" stroke="#ffc35c" stroke-width="1.8"/>
+</svg>

@@ -1,0 +1,57 @@
+{
+  "name": "dsh-tapeout-3d-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TapeOut 协议 3D 交互演示实验室：七章任务，从一颗与非门到链上巨兽。",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1 <0.3.0"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "tapeout"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Qzy05231/dsh-tapelab.git"
+  },
+  "homepage": "https://github.com/Qzy05231/dsh-tapelab#readme",
+  "bugs": {
+    "url": "https://github.com/Qzy05231/dsh-tapelab/issues"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}

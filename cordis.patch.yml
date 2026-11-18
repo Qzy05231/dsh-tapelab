@@ -1,0 +1,4 @@
+# dsh-tapeout-3d-lab：同一个包提供 Host 半片与浏览器半片。
+- insert:
+    - id: tapeout-lab
+      name: dsh-tapeout-3d-lab

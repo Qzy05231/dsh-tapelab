@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# dependencies (the plugin has none at runtime; React comes from the Harness)
+node_modules/
+
+# logs and local env
+*.log
+.env
+
+# editor noise
+.vscode/
+.idea/
