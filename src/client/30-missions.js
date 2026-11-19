@@ -562,9 +562,31 @@ TT.Missions = (function () {
       lottery: freshLottery(),
       art: freshArt(),
       sensors: freshSensors(),
+      defi: freshDefi(),
     }
     state.play = playFor(state, 0)
     return state
+  }
+
+  function freshDefi() {
+    const pools = {}
+    for (const pool of TT.Defi ? TT.Defi.POOLS : []) pools[pool.id] = { x: pool.x, y: pool.y }
+    return {
+      poolId: 'eth-usdc',
+      pools,
+      amountIn: 2,
+      maxImpact: 10,
+      cap: 20,
+      allowlisted: 1,
+      paused: 0,
+      oracle: 1,
+      audit: null,
+      receipt: null,
+      verifyCode: '',
+      verifyHash: '',
+      verifyResult: null,
+      trades: [],
+    }
   }
 
   function freshSensors() {
@@ -1147,6 +1169,97 @@ TT.Missions = (function () {
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
         }
+      case 'defi/pool':
+        return { ...state, defi: { ...state.defi, poolId: action.id || 'eth-usdc', audit: null, receipt: null, verifyResult: null } }
+      case 'defi/amount':
+        return { ...state, defi: { ...state.defi, amountIn: Math.max(0, Number(action.value) || 0), audit: null, receipt: null, verifyResult: null } }
+      case 'defi/impact':
+        return { ...state, defi: { ...state.defi, maxImpact: Math.max(0.1, Number(action.value) || 0), audit: null, receipt: null, verifyResult: null } }
+      case 'defi/cap':
+        return { ...state, defi: { ...state.defi, cap: Math.max(1, Number(action.value) || 1), audit: null, receipt: null, verifyResult: null } }
+      case 'defi/flag': {
+        const key = ['allowlisted', 'paused', 'oracle'].indexOf(action.key) >= 0 ? action.key : 'oracle'
+        return { ...state, defi: { ...state.defi, [key]: state.defi[key] ? 0 : 1, audit: null, receipt: null, verifyResult: null } }
+      }
+      case 'defi/resetPool': {
+        if (!TT.Defi) return state
+        const meta = TT.Defi.pool(state.defi.poolId)
+        return {
+          ...state,
+          defi: { ...state.defi, pools: { ...state.defi.pools, [meta.id]: { x: meta.x, y: meta.y } }, trades: [] },
+        }
+      }
+      case 'defi/execute': {
+        if (!TT.Defi) return state
+        const defi = state.defi
+        const meta = TT.Defi.pool(defi.poolId)
+        const poolState = defi.pools[defi.poolId] || { x: meta.x, y: meta.y }
+        const quote = TT.Defi.quote(poolState, defi.amountIn)
+        const evaluation = TT.Defi.evaluate({
+          poolId: defi.poolId,
+          x: poolState.x,
+          y: poolState.y,
+          amountIn: defi.amountIn,
+          maxImpact: defi.maxImpact,
+          cap: defi.cap,
+          impact: quote.impact,
+          allowlisted: defi.allowlisted,
+          paused: defi.paused,
+          oracle: defi.oracle,
+        })
+        if (!evaluation.allow) {
+          return pushToast(state, 'defi.blocked', { reasons: evaluation.reasons.join('；') }, 'warn')
+        }
+        const trade = {
+          poolId: defi.poolId,
+          amountIn: quote.amountIn,
+          amountOut: quote.amountOut,
+          impact: quote.impact,
+          at: Date.now(),
+        }
+        return {
+          ...state,
+          defi: {
+            ...defi,
+            pools: { ...defi.pools, [defi.poolId]: { x: quote.newX, y: quote.newY } },
+            trades: [trade, ...(defi.trades || [])].slice(0, 8),
+            receipt: null,
+          },
+        }
+      }
+      case 'defi/audit': {
+        if (!TT.Defi) return state
+        return { ...state, defi: { ...state.defi, audit: TT.Defi.audit() } }
+      }
+      case 'defi/issue': {
+        if (!TT.Defi) return state
+        const defi = state.defi
+        const meta = TT.Defi.pool(defi.poolId)
+        const poolState = defi.pools[defi.poolId] || { x: meta.x, y: meta.y }
+        const quote = TT.Defi.quote(poolState, defi.amountIn)
+        const issued = TT.Defi.receipt({
+          poolId: defi.poolId, x: poolState.x, y: poolState.y, amountIn: defi.amountIn,
+          maxImpact: defi.maxImpact, cap: defi.cap, impact: quote.impact,
+          allowlisted: defi.allowlisted, paused: defi.paused, oracle: defi.oracle,
+        })
+        return {
+          ...state,
+          defi: {
+            ...defi,
+            receipt: { code: issued.code, fingerprint: issued.fingerprint, at: issued.payload.at },
+            verifyCode: issued.code,
+            verifyResult: null,
+          },
+        }
+      }
+      case 'defi/verifyCode':
+        return { ...state, defi: { ...state.defi, verifyCode: String(action.code || ''), verifyResult: null } }
+      case 'defi/verifyHash':
+        return { ...state, defi: { ...state.defi, verifyHash: String(action.hash || ''), verifyResult: null } }
+      case 'defi/verify': {
+        if (!TT.Defi) return state
+        return { ...state, defi: { ...state.defi, verifyResult: TT.Defi.verify(state.defi.verifyCode, state.defi.verifyHash) } }
+      }
       case 'sensors/scenario':
         return {
           ...state,

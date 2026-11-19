@@ -32,6 +32,7 @@ const SOURCES = [
   '42-lottery.js',
   '43-art.js',
   '44-sensors.js',
+  '45-defi.js',
   '40-ui.js',
   '50-app.js',
 ]
