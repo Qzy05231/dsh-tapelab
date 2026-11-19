@@ -1329,26 +1329,40 @@ TT.Missions = (function () {
         const playerHp = Math.max(0, match.playerHp - resolved.cpuScore)
         const cpuHp = Math.max(0, match.cpuHp - resolved.playerScore)
         const exchange = match.exchange + 1
-        const finished = playerHp <= 0 || cpuHp <= 0 || exchange >= TT.Boxing.MAX_EXCHANGES
+        const roundExchange = (match.roundExchange || 0) + 1
+        const roundOver = playerHp <= 0 || cpuHp <= 0 || roundExchange >= TT.Boxing.MAX_EXCHANGES
+        let wins = { ...(match.wins || { player: 0, cpu: 0 }) }
+        let round = match.round || 1
+        let nextPlayerHp = playerHp
+        let nextCpuHp = cpuHp
+        let nextRoundExchange = roundExchange
+        if (roundOver) {
+          if (playerHp > cpuHp) wins.player += 1
+          else if (cpuHp > playerHp) wins.cpu += 1
+        }
+        const finished = roundOver && (wins.player >= 2 || wins.cpu >= 2)
+        if (roundOver && !finished) {
+          round += 1
+          nextPlayerHp = TT.Boxing.START_HP
+          nextCpuHp = TT.Boxing.START_HP
+          nextRoundExchange = 0
+        }
         const result = finished
-          ? playerHp <= 0 && cpuHp <= 0
-            ? 'draw'
-            : cpuHp <= 0
-              ? 'win'
-              : playerHp <= 0
-                ? 'lose'
-                : playerHp > cpuHp
-                  ? 'win'
-                  : playerHp < cpuHp
-                    ? 'lose'
-                    : 'draw'
+          ? wins.player > wins.cpu
+            ? 'win'
+            : wins.player < wins.cpu
+              ? 'lose'
+              : 'draw'
           : null
-        const entry = { n: exchange, player, cpu, playerScore: resolved.playerScore, cpuScore: resolved.cpuScore, bits: resolved.bits }
+        const entry = { n: exchange, round: match.round || 1, player, cpu, playerScore: resolved.playerScore, cpuScore: resolved.cpuScore, bits: resolved.bits }
         const next = {
           ...match,
-          playerHp,
-          cpuHp,
+          playerHp: nextPlayerHp,
+          cpuHp: nextCpuHp,
           exchange,
+          roundExchange: nextRoundExchange,
+          round,
+          wins,
           last: entry,
           log: [...match.log, entry],
           finished,

@@ -6321,26 +6321,40 @@ TT.Missions = (function () {
         const playerHp = Math.max(0, match.playerHp - resolved.cpuScore)
         const cpuHp = Math.max(0, match.cpuHp - resolved.playerScore)
         const exchange = match.exchange + 1
-        const finished = playerHp <= 0 || cpuHp <= 0 || exchange >= TT.Boxing.MAX_EXCHANGES
+        const roundExchange = (match.roundExchange || 0) + 1
+        const roundOver = playerHp <= 0 || cpuHp <= 0 || roundExchange >= TT.Boxing.MAX_EXCHANGES
+        let wins = { ...(match.wins || { player: 0, cpu: 0 }) }
+        let round = match.round || 1
+        let nextPlayerHp = playerHp
+        let nextCpuHp = cpuHp
+        let nextRoundExchange = roundExchange
+        if (roundOver) {
+          if (playerHp > cpuHp) wins.player += 1
+          else if (cpuHp > playerHp) wins.cpu += 1
+        }
+        const finished = roundOver && (wins.player >= 2 || wins.cpu >= 2)
+        if (roundOver && !finished) {
+          round += 1
+          nextPlayerHp = TT.Boxing.START_HP
+          nextCpuHp = TT.Boxing.START_HP
+          nextRoundExchange = 0
+        }
         const result = finished
-          ? playerHp <= 0 && cpuHp <= 0
-            ? 'draw'
-            : cpuHp <= 0
-              ? 'win'
-              : playerHp <= 0
-                ? 'lose'
-                : playerHp > cpuHp
-                  ? 'win'
-                  : playerHp < cpuHp
-                    ? 'lose'
-                    : 'draw'
+          ? wins.player > wins.cpu
+            ? 'win'
+            : wins.player < wins.cpu
+              ? 'lose'
+              : 'draw'
           : null
-        const entry = { n: exchange, player, cpu, playerScore: resolved.playerScore, cpuScore: resolved.cpuScore, bits: resolved.bits }
+        const entry = { n: exchange, round: match.round || 1, player, cpu, playerScore: resolved.playerScore, cpuScore: resolved.cpuScore, bits: resolved.bits }
         const next = {
           ...match,
-          playerHp,
-          cpuHp,
+          playerHp: nextPlayerHp,
+          cpuHp: nextCpuHp,
           exchange,
+          roundExchange: nextRoundExchange,
+          round,
+          wins,
           last: entry,
           log: [...match.log, entry],
           finished,
@@ -11146,9 +11160,13 @@ TT.Boxing = (function () {
   function start(seed) {
     return {
       seed: seed || 'ring-genesis',
+      round: 1,
+      wins: { player: 0, cpu: 0 },
+      roundWins: 0,
       playerHp: START_HP,
       cpuHp: START_HP,
       exchange: 0,
+      roundExchange: 0,
       log: [],
       last: null,
       finished: false,
@@ -11188,7 +11206,9 @@ TT.Boxing = (function () {
     const payload = {
       schema: 'dsh-tapelab.boxing.v1',
       seed: match.seed,
-      log: match.log.map((entry) => ({ player: entry.player, cpu: entry.cpu, playerScore: entry.playerScore, cpuScore: entry.cpuScore, bits: entry.bits })),
+      log: match.log.map((entry) => ({ n: entry.n, round: entry.round, player: entry.player, cpu: entry.cpu, playerScore: entry.playerScore, cpuScore: entry.cpuScore, bits: entry.bits })),
+      round: match.round,
+      wins: match.wins,
       playerHp: match.playerHp,
       cpuHp: match.cpuHp,
       result: match.result,
@@ -11228,18 +11248,35 @@ TT.Boxing = (function () {
     }
     let playerHp = START_HP
     let cpuHp = START_HP
+    let round = 1
+    let roundExchange = 0
+    const wins = { player: 0, cpu: 0 }
     for (const entry of payload.log || []) {
+      if (entry.round && entry.round !== round) reasons.push('日志的回合编号不连续')
       const bits = exchangeBits(entry.player, entry.cpu)
       if (bits !== entry.bits) reasons.push('日志输入位与动作不一致')
       const outputs = TT.Circuit.evaluate(netlist, bits).outputs
       if (outputs[0] !== entry.playerScore || outputs[1] !== entry.cpuScore) reasons.push('日志得分与裁判网表不一致')
-      playerHp -= outputs[1]
-      cpuHp -= outputs[0]
+      playerHp = Math.max(0, playerHp - outputs[1])
+      cpuHp = Math.max(0, cpuHp - outputs[0])
+      roundExchange += 1
+      const roundOver = playerHp <= 0 || cpuHp <= 0 || roundExchange >= MAX_EXCHANGES
+      if (roundOver) {
+        if (playerHp > cpuHp) wins.player += 1
+        else if (cpuHp > playerHp) wins.cpu += 1
+        const matchOver = wins.player >= 2 || wins.cpu >= 2
+        if (!matchOver) {
+          round += 1
+          roundExchange = 0
+          playerHp = START_HP
+          cpuHp = START_HP
+        }
+      }
     }
-    if (playerHp !== payload.playerHp || cpuHp !== payload.cpuHp) reasons.push('还原后的血量与凭证不一致')
-    const expectedResult = playerHp <= 0 && cpuHp <= 0 ? 'draw' : cpuHp <= 0 ? 'win' : playerHp <= 0 ? 'lose' : 'draw'
+    if (wins.player !== payload.wins.player || wins.cpu !== payload.wins.cpu) reasons.push('还原后的局分与凭证不一致')
+    const expectedResult = wins.player > wins.cpu ? 'win' : wins.player < wins.cpu ? 'lose' : 'draw'
     if (payload.result && payload.result !== expectedResult) reasons.push('比赛结果与日志不一致')
-    return { ok: reasons.length === 0, reasons, payload, playerHp, cpuHp, result: expectedResult, fingerprint: actualFingerprint }
+    return { ok: reasons.length === 0, reasons, payload, playerHp, cpuHp, wins, result: expectedResult, fingerprint: actualFingerprint }
   }
 
   return { ACTIONS, START_HP, MAX_EXCHANGES, circuit, resolve, cpuAction, start, audit, receipt, verify, fingerprint, exchangeBits, b64url, unb64url }
@@ -11263,13 +11300,18 @@ TT.BoxingUI = (function () {
         ),
         h('div', { className: 'tt-boxers' },
           h('div', { className: 'tt-boxer' },
-            h('span', { className: 'tt-boxername' }, '🥊', ' ', t('boxing.you')),
+            h('span', { className: 'tt-boxername' }, '🥊', ' ', t('boxing.you'),
+              h('i', { className: 'tt-roundwins' }, '★'.repeat(match.wins.player))),
             h('div', { className: 'tt-hpbar' }, h('i', { style: { width: `${(match.playerHp / TT.Boxing.START_HP) * 100}%` } })),
             h('span', { className: 'tt-hpnum' }, `${match.playerHp} / ${TT.Boxing.START_HP}`),
           ),
-          h('div', { className: 'tt-vs' }, `#${match.exchange}`),
+          h('div', { className: 'tt-vs' },
+            h('span', null, `R${match.round}`),
+            h('small', null, `${match.wins.player} : ${match.wins.cpu}`),
+          ),
           h('div', { className: 'tt-boxer tt-cpu' },
-            h('span', { className: 'tt-boxername' }, '🤖', ' ', t('boxing.cpu')),
+            h('span', { className: 'tt-boxername' }, '🤖', ' ', t('boxing.cpu'),
+              h('i', { className: 'tt-roundwins' }, '★'.repeat(match.wins.cpu))),
             h('div', { className: 'tt-hpbar' }, h('i', { style: { width: `${(match.cpuHp / TT.Boxing.START_HP) * 100}%` } })),
             h('span', { className: 'tt-hpnum' }, `${match.cpuHp} / ${TT.Boxing.START_HP}`),
           ),
@@ -11292,19 +11334,21 @@ TT.BoxingUI = (function () {
           }, h('span', null, action.icon), h('b', null, t(action.labelKey))))),
         match.finished
           ? h('div', { className: 'tt-boxingresult', 'data-result': match.result || 'draw' },
-              h('strong', null, match.result === 'win' ? t('boxing.win') : match.result === 'lose' ? t('boxing.lose') : t('boxing.draw')),
+              h('strong', null, `${match.result === 'win' ? t('boxing.win') : match.result === 'lose' ? t('boxing.lose') : t('boxing.draw')} · ${match.wins.player}:${match.wins.cpu}`),
               h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
                 onClick: () => api.dispatch({ type: 'boxing/start' }) }, t('boxing.again')),
             )
           : h('div', { className: 'tt-labrow' },
               h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
                 onClick: () => api.dispatch({ type: 'boxing/start' }) }, t('boxing.restart')),
-              h('span', { className: 'tt-lablabel' }, `${t('boxing.round')} ${match.exchange + 1} / ${TT.Boxing.MAX_EXCHANGES}`),
+              h('span', { className: 'tt-lablabel' },
+                `${t('boxing.round')} ${match.round} / 3 · ${t('boxing.roundScore')} ${match.wins.player}:${match.wins.cpu} · ${t('boxing.exchange')} ${(match.roundExchange || 0) + 1}/${TT.Boxing.MAX_EXCHANGES}`),
             ),
         match.log.length
           ? h('table', { className: 'tt-table' },
               h('thead', null, h('tr', null,
                 h('th', null, '#'),
+                h('th', null, t('boxing.round')),
                 h('th', null, t('boxing.you')),
                 h('th', null, t('boxing.cpu')),
                 h('th', null, t('boxing.score')),
@@ -11312,6 +11356,7 @@ TT.BoxingUI = (function () {
               h('tbody', null, match.log.slice(-8).reverse().map((entry) =>
                 h('tr', { key: entry.n },
                   h('td', null, entry.n),
+                  h('td', null, `R${entry.round || 1}`),
                   h('td', null, t(`boxing.action.${entry.player}`)),
                   h('td', null, t(`boxing.action.${entry.cpu}`)),
                   h('td', { className: 'tt-bit' }, `${entry.playerScore} : ${entry.cpuScore}`),
@@ -11476,6 +11521,10 @@ TT.dict = {
     'boxing.receipt.title': '比赛凭证',
     'boxing.receipt.empty': '打完后自动生成比赛凭证，可粘贴验证。',
     'boxing.rules.title': '判定规则',
+    'boxing.keyboard': '键盘快捷键：1 出拳 · 2 格挡 · 3 虚招（点按钮也可以）',
+    'boxing.roundScore': '局分',
+    'boxing.exchange': '本回合第',
+    'boxing.bestOf': '三局两胜',
     'boxing.why': '为什么它“基于 TapeOut”：裁判不是脚本，而是真实 NAND 网表——出拳/格挡/虚招的编码与得分规则都能在实验室里画出、审计、复算；比赛凭证还带裁判指纹，换掉一个门就会被发现。',
 
     'arcade.snake.title': '链上贪吃蛇',
@@ -12243,6 +12292,10 @@ TT.dict = {
     'boxing.receipt.title': 'Match receipt',
     'boxing.receipt.empty': 'A receipt is generated automatically when the fight ends.',
     'boxing.rules.title': 'Judging rules',
+    'boxing.keyboard': 'Keyboard: 1 punch · 2 guard · 3 feint (buttons work too)',
+    'boxing.roundScore': 'Rounds',
+    'boxing.exchange': 'exchange',
+    'boxing.bestOf': 'Best of three',
     'boxing.why': 'Why it is “TapOut-based”: the referee is a real NAND netlist — action encodings and scoring rules can be drawn, audited and recomputed in the lab; the match receipt carries the referee fingerprint, so swapping one gate is detected.',
 
     'arcade.snake.title': 'Chain snake',
@@ -13450,6 +13503,9 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-boxingresult[data-result="win"] { background:rgba(43,230,194,.1); border-color:rgba(43,230,194,.4); }
 .tt-boxingresult[data-result="win"] strong { color:var(--tt-mint); }
 
+.tt-roundwins { margin-left:6px; color:var(--tt-amber); font-style:normal; letter-spacing:1px; font-size:10px; }
+.tt-vs small { display:block; font-size:10px; color:var(--tt-dim); text-align:center; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -13584,6 +13640,15 @@ TT.UI.Panel = function Panel(props) {
           event.preventDefault()
           event.stopPropagation()
           api.dispatch({ type: 'snake/dir', dir })
+          return
+        }
+      }
+      if (current.mode === 'arcade' && current.arcade.game === 'boxing' && ['1', '2', '3'].indexOf(event.key) >= 0) {
+        const action = TT.Boxing && TT.Boxing.ACTIONS[Number(event.key) - 1]
+        if (action) {
+          event.preventDefault()
+          event.stopPropagation()
+          api.dispatch({ type: 'boxing/action', action: action.id })
           return
         }
       }

@@ -68,6 +68,10 @@ TT.dict = {
     'boxing.receipt.title': '比赛凭证',
     'boxing.receipt.empty': '打完后自动生成比赛凭证，可粘贴验证。',
     'boxing.rules.title': '判定规则',
+    'boxing.keyboard': '键盘快捷键：1 出拳 · 2 格挡 · 3 虚招（点按钮也可以）',
+    'boxing.roundScore': '局分',
+    'boxing.exchange': '本回合第',
+    'boxing.bestOf': '三局两胜',
     'boxing.why': '为什么它“基于 TapeOut”：裁判不是脚本，而是真实 NAND 网表——出拳/格挡/虚招的编码与得分规则都能在实验室里画出、审计、复算；比赛凭证还带裁判指纹，换掉一个门就会被发现。',
 
     'arcade.snake.title': '链上贪吃蛇',
@@ -835,6 +839,10 @@ TT.dict = {
     'boxing.receipt.title': 'Match receipt',
     'boxing.receipt.empty': 'A receipt is generated automatically when the fight ends.',
     'boxing.rules.title': 'Judging rules',
+    'boxing.keyboard': 'Keyboard: 1 punch · 2 guard · 3 feint (buttons work too)',
+    'boxing.roundScore': 'Rounds',
+    'boxing.exchange': 'exchange',
+    'boxing.bestOf': 'Best of three',
     'boxing.why': 'Why it is “TapOut-based”: the referee is a real NAND netlist — action encodings and scoring rules can be drawn, audited and recomputed in the lab; the match receipt carries the referee fingerprint, so swapping one gate is detected.',
 
     'arcade.snake.title': 'Chain snake',
@@ -2042,6 +2050,9 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-boxingresult[data-result="win"] { background:rgba(43,230,194,.1); border-color:rgba(43,230,194,.4); }
 .tt-boxingresult[data-result="win"] strong { color:var(--tt-mint); }
 
+.tt-roundwins { margin-left:6px; color:var(--tt-amber); font-style:normal; letter-spacing:1px; font-size:10px; }
+.tt-vs small { display:block; font-size:10px; color:var(--tt-dim); text-align:center; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -2176,6 +2187,15 @@ TT.UI.Panel = function Panel(props) {
           event.preventDefault()
           event.stopPropagation()
           api.dispatch({ type: 'snake/dir', dir })
+          return
+        }
+      }
+      if (current.mode === 'arcade' && current.arcade.game === 'boxing' && ['1', '2', '3'].indexOf(event.key) >= 0) {
+        const action = TT.Boxing && TT.Boxing.ACTIONS[Number(event.key) - 1]
+        if (action) {
+          event.preventDefault()
+          event.stopPropagation()
+          api.dispatch({ type: 'boxing/action', action: action.id })
           return
         }
       }
