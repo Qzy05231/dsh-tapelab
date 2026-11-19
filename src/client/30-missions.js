@@ -563,7 +563,6 @@ TT.Missions = (function () {
       art: freshArt(),
       sensors: freshSensors(),
       defi: freshDefi(),
-      boxing: TT.Boxing ? TT.Boxing.start('ring-genesis') : null,
     }
     state.play = playFor(state, 0)
     return state
@@ -656,11 +655,6 @@ TT.Missions = (function () {
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
       snake: null,
     }
-  }
-
-  function ensureBoxing(next) {
-    if (!TT.Boxing || next.boxing) return next
-    return { ...next, boxing: TT.Boxing.start('ring-' + next.blocks) }
   }
 
   function ensureSnake(arcade) {
@@ -1162,19 +1156,19 @@ TT.Missions = (function () {
       case 'intro/close':
         return { ...state, intro: false }
       case 'arcade/open':
-        return ensureBoxing({
+        return {
           ...state,
           mode: 'arcade',
           arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
-        })
+        }
       case 'arcade/close':
         return { ...state, mode: 'missions' }
       case 'arcade/game':
-        return ensureBoxing({
+        return {
           ...state,
           mode: 'arcade',
           arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
-        })
+        }
       case 'defi/pool':
         return { ...state, defi: { ...state.defi, poolId: action.id || 'eth-usdc', audit: null, receipt: null, verifyResult: null } }
       case 'defi/amount':
@@ -1316,83 +1310,6 @@ TT.Missions = (function () {
         const result = TT.Sensors.verify(state.sensors.verifyCode, state.sensors.verifyHash)
         return { ...state, sensors: { ...state.sensors, verifyResult: result } }
       }
-      case 'boxing/start': {
-        if (!TT.Boxing) return state
-        return { ...state, boxing: TT.Boxing.start('ring-' + (state.blocks || 0) + '-' + Date.now()) }
-      }
-      case 'boxing/action': {
-        if (!TT.Boxing || !state.boxing || state.boxing.finished) return state
-        const match = state.boxing
-        const player = TT.Boxing.ACTIONS.some((item) => item.id === action.action) ? action.action : 'punch'
-        const cpu = TT.Boxing.cpuAction(match.seed, match.exchange)
-        const resolved = TT.Boxing.resolve(player, cpu)
-        const playerHp = Math.max(0, match.playerHp - resolved.cpuScore)
-        const cpuHp = Math.max(0, match.cpuHp - resolved.playerScore)
-        const exchange = match.exchange + 1
-        const roundExchange = (match.roundExchange || 0) + 1
-        const roundOver = playerHp <= 0 || cpuHp <= 0 || roundExchange >= TT.Boxing.MAX_EXCHANGES
-        let wins = { ...(match.wins || { player: 0, cpu: 0 }) }
-        let round = match.round || 1
-        let nextPlayerHp = playerHp
-        let nextCpuHp = cpuHp
-        let nextRoundExchange = roundExchange
-        if (roundOver) {
-          if (playerHp > cpuHp) wins.player += 1
-          else if (cpuHp > playerHp) wins.cpu += 1
-        }
-        const finished = roundOver && (wins.player >= 2 || wins.cpu >= 2)
-        if (roundOver && !finished) {
-          round += 1
-          nextPlayerHp = TT.Boxing.START_HP
-          nextCpuHp = TT.Boxing.START_HP
-          nextRoundExchange = 0
-        }
-        const result = finished
-          ? wins.player > wins.cpu
-            ? 'win'
-            : wins.player < wins.cpu
-              ? 'lose'
-              : 'draw'
-          : null
-        let combo = match.combo || 0
-        let bestCombo = match.bestCombo || 0
-        if (resolved.playerScore > 0 && resolved.cpuScore === 0) {
-          combo += 1
-          bestCombo = Math.max(bestCombo, combo)
-        } else if (resolved.cpuScore > 0) {
-          combo = 0
-        }
-        const entry = { n: exchange, round: match.round || 1, player, cpu, playerScore: resolved.playerScore, cpuScore: resolved.cpuScore, bits: resolved.bits, combo }
-        const next = {
-          ...match,
-          playerHp: nextPlayerHp,
-          cpuHp: nextCpuHp,
-          exchange,
-          roundExchange: nextRoundExchange,
-          round,
-          wins,
-          combo,
-          bestCombo,
-          last: entry,
-          log: [...match.log, entry],
-          finished,
-          result,
-        }
-        if (finished) {
-          const issued = TT.Boxing.receipt(next)
-          next.receipt = { code: issued.code, fingerprint: issued.fingerprint, at: issued.payload.at }
-          next.verifyCode = issued.code
-        }
-        return { ...state, boxing: next }
-      }
-      case 'boxing/audit':
-        return TT.Boxing ? { ...state, boxing: { ...state.boxing, audit: TT.Boxing.audit() } } : state
-      case 'boxing/verifyCode':
-        return { ...state, boxing: { ...state.boxing, verifyCode: String(action.code || ''), verifyResult: null } }
-      case 'boxing/verify':
-        return TT.Boxing
-          ? { ...state, boxing: { ...state.boxing, verifyResult: TT.Boxing.verify(state.boxing.verifyCode) } }
-          : state
       case 'art/seed':
         return { ...state, art: { ...state.art, seed: String(action.seed || ''), index: 0, verifyResult: null } }
       case 'art/circuit':

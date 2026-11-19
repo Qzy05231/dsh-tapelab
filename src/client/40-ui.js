@@ -41,42 +41,6 @@ TT.dict = {
     'arcade.game.vote': '表决器',
     'arcade.game.debug': '故障排查',
     'arcade.game.snake': '链上贪吃蛇',
-    'arcade.game.boxing': '拳击裁判',
-    'boxing.title': 'TapOut 拳击',
-    'boxing.sub': '出拳 / 格挡 / 虚招，由 4 输入 2 输出的 NAND 裁判网表判定；比赛日志可离线复算。',
-    'boxing.you': '你',
-    'boxing.cpu': '对手',
-    'boxing.ready': '选一个动作，开始第一回合。',
-    'boxing.action.punch': '出拳',
-    'boxing.action.guard': '格挡',
-    'boxing.action.feint': '虚招',
-    'boxing.trade': '互换得分',
-    'boxing.hit': '命中',
-    'boxing.hurt': '被击中',
-    'boxing.blocked': '格挡 / 落空',
-    'boxing.win': '你赢了',
-    'boxing.lose': '你输了',
-    'boxing.draw': '平局',
-    'boxing.again': '再来一场',
-    'boxing.restart': '重新开始',
-    'boxing.round': '回合',
-    'boxing.score': '得分',
-    'boxing.result': '结果',
-    'boxing.referee.title': '裁判电路',
-    'boxing.referee.hint': '两人动作各 2 位 → 4 输入；两个输出分别决定谁得分',
-    'boxing.referee.auditHint': '穷举 9 种动作组合，验证裁判网表',
-    'boxing.receipt.title': '比赛凭证',
-    'boxing.receipt.empty': '打完后自动生成比赛凭证，可粘贴验证。',
-    'boxing.rules.title': '判定规则',
-    'boxing.keyboard': '键盘：1/J 出拳 · 2/K 格挡 · 3/L 虚招',
-    'boxing.roundScore': '局分',
-    'boxing.exchange': '本回合第',
-    'boxing.bestOf': '三局两胜',
-    'fight.hint': '选择动作出招；裁判电路实时判定，打空对手血条赢下本回合。',
-    'fight.details': '裁判电路、比赛凭证与判定规则',
-    'fight.combo': '连击',
-    'fight.bestCombo': '最高连击',
-    'boxing.why': '为什么它“基于 TapeOut”：裁判不是脚本，而是真实 NAND 网表——出拳/格挡/虚招的编码与得分规则都能在实验室里画出、审计、复算；比赛凭证还带裁判指纹，换掉一个门就会被发现。',
 
     'arcade.snake.title': '链上贪吃蛇',
     'arcade.snake.hint': '蛇每 0.45 秒走一格——它的状态就是几个寄存器，时钟就是出块。',
@@ -816,42 +780,6 @@ TT.dict = {
     'arcade.game.vote': 'Voter',
     'arcade.game.debug': 'Debug lab',
     'arcade.game.snake': 'Chain snake',
-    'arcade.game.boxing': 'Boxing',
-    'boxing.title': 'TapOut boxing',
-    'boxing.sub': 'Punch / guard / feint judged by a real 4-input, 2-output NAND referee; match logs replay offline.',
-    'boxing.you': 'You',
-    'boxing.cpu': 'Rival',
-    'boxing.ready': 'Pick an action to start the first exchange.',
-    'boxing.action.punch': 'Punch',
-    'boxing.action.guard': 'Guard',
-    'boxing.action.feint': 'Feint',
-    'boxing.trade': 'trade',
-    'boxing.hit': 'hit',
-    'boxing.hurt': 'hurt',
-    'boxing.blocked': 'blocked / whiff',
-    'boxing.win': 'You win',
-    'boxing.lose': 'You lose',
-    'boxing.draw': 'Draw',
-    'boxing.again': 'Fight again',
-    'boxing.restart': 'Restart',
-    'boxing.round': 'Exchange',
-    'boxing.score': 'Score',
-    'boxing.result': 'Result',
-    'boxing.referee.title': 'Referee circuit',
-    'boxing.referee.hint': 'Two actions × 2 bits → 4 inputs; two outputs decide who scores',
-    'boxing.referee.auditHint': 'Exhaustively check all 9 action pairs',
-    'boxing.receipt.title': 'Match receipt',
-    'boxing.receipt.empty': 'A receipt is generated automatically when the fight ends.',
-    'boxing.rules.title': 'Judging rules',
-    'boxing.keyboard': 'Keyboard: 1/J punch · 2/K guard · 3/L feint',
-    'boxing.roundScore': 'Rounds',
-    'boxing.exchange': 'exchange',
-    'boxing.bestOf': 'Best of three',
-    'fight.hint': 'Pick an action; the referee circuit resolves it live. Empty the rival HP bar to win the round.',
-    'fight.details': 'Referee circuit, match receipt and rules',
-    'fight.combo': 'Combo',
-    'fight.bestCombo': 'Best combo',
-    'boxing.why': 'Why it is “TapOut-based”: the referee is a real NAND netlist — action encodings and scoring rules can be drawn, audited and recomputed in the lab; the match receipt carries the referee fingerprint, so swapping one gate is detected.',
 
     'arcade.snake.title': 'Chain snake',
     'arcade.snake.hint': 'The snake moves one cell every 0.45 s — its state is a few registers, the clock is block production.',
@@ -2028,143 +1956,7 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-actuator[data-on="true"][data-tone="good"] { color:#bfffe9; border-color:rgba(43,230,194,.6); background:rgba(43,230,194,.1); }
 .tt-actuator[data-on="true"][data-tone="good"] i { background:var(--tt-mint); border-color:var(--tt-mint); box-shadow:0 0 10px rgba(43,230,194,.8); }
 
-.tt-boxers { display:flex; align-items:stretch; gap:10px; margin:6px 0; }
-.tt-boxer { flex:1; display:flex; flex-direction:column; gap:6px; padding:10px; border-radius:12px;
-  background:rgba(4,12,20,.55); border:1px solid rgba(86,225,255,.18); }
-.tt-boxername { font-size:12px; color:var(--tt-ink); }
-.tt-hpbar { height:10px; border-radius:6px; background:rgba(255,93,108,.12); overflow:hidden; }
-.tt-hpbar i { display:block; height:100%; border-radius:6px; background:linear-gradient(90deg,#ff5d6c,#ffc35c); transition:width .28s ease; }
-.tt-cpu .tt-hpbar i { background:linear-gradient(90deg,#56e1ff,#2be6c2); }
-.tt-hpnum { font-size:10px; color:var(--tt-dim); font-variant-numeric:tabular-nums; }
-.tt-vs { align-self:center; color:var(--tt-amber); font-size:12px; font-weight:700; letter-spacing:.06em; }
-.tt-boxinglast { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 10px; border-radius:10px;
-  background:rgba(86,225,255,.05); border:1px solid rgba(86,225,255,.12); font-size:12px; color:var(--tt-dim); }
-.tt-boxinglast em { font-style:normal; color:var(--tt-mint); font-weight:700; }
-.tt-boxinglast[data-out="hurt"] em { color:var(--tt-red); }
-.tt-boxinglast[data-out="trade"] em { color:var(--tt-amber); }
-.tt-boxingactions { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:8px 0; }
-.tt-actionbtn { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 6px; border-radius:12px;
-  border:1px solid rgba(86,225,255,.25); background:rgba(86,225,255,.06); color:var(--tt-ink); cursor:pointer;
-  transition:transform .12s ease, border-color .12s ease, background .12s ease; }
-.tt-actionbtn span { font-size:20px; }
-.tt-actionbtn b { font-size:11px; font-weight:600; }
-.tt-actionbtn:hover:not(:disabled) { transform:translateY(-2px); border-color:var(--tt-mint); background:rgba(43,230,194,.12); }
-.tt-actionbtn:disabled { opacity:.4; cursor:default; }
-.tt-boxingresult { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0;
-  padding:10px 12px; border-radius:12px; background:rgba(255,195,92,.1); border:1px solid rgba(255,195,92,.35); }
-.tt-boxingresult strong { font-size:15px; color:var(--tt-amber); }
-.tt-boxingresult[data-result="lose"] { background:rgba(255,93,108,.1); border-color:rgba(255,93,108,.4); }
-.tt-boxingresult[data-result="lose"] strong { color:var(--tt-red); }
-.tt-boxingresult[data-result="win"] { background:rgba(43,230,194,.1); border-color:rgba(43,230,194,.4); }
-.tt-boxingresult[data-result="win"] strong { color:var(--tt-mint); }
 
-.tt-roundwins { margin-left:6px; color:var(--tt-amber); font-style:normal; letter-spacing:1px; font-size:10px; }
-.tt-vs small { display:block; font-size:10px; color:var(--tt-dim); text-align:center; }
-
-.tt-fight { display:flex; flex-direction:column; gap:8px; }
-.tt-fight-hud { display:flex; align-items:stretch; gap:8px; }
-.tt-fighter { flex:1; display:flex; flex-direction:column; gap:5px; padding:8px 10px; border-radius:12px;
-  background:rgba(4,12,20,.6); border:1px solid rgba(86,225,255,.18); }
-.tt-fighter.cpu { align-items:flex-end; text-align:right; }
-.tt-fighter-name { font-size:12px; color:var(--tt-ink); }
-.tt-hpseg { display:flex; gap:3px; width:100%; }
-.tt-hpseg i { flex:1; height:9px; border-radius:2px; background:rgba(255,93,108,.14); transition:background .2s ease, box-shadow .2s ease; }
-.tt-hpseg i[data-on="true"] { background:linear-gradient(90deg,#ff5d6c,#ffc35c); box-shadow:0 0 7px rgba(255,93,108,.5); }
-.tt-fighter.cpu .tt-hpseg i[data-on="true"] { background:linear-gradient(90deg,#2be6c2,#56e1ff); box-shadow:0 0 7px rgba(43,230,194,.5); }
-.tt-fighter-meta { display:flex; justify-content:space-between; width:100%; font-size:10px; color:var(--tt-amber); }
-.tt-fighter-meta b { color:var(--tt-mint); font-size:10px; }
-.tt-fight-round { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
-  min-width:86px; color:var(--tt-dim); font-size:10px; }
-.tt-fight-round span { color:var(--tt-amber); font-weight:700; letter-spacing:.08em; }
-.tt-fight-round b { font-size:16px; color:var(--tt-ink); font-variant-numeric:tabular-nums; }
-.tt-ring { position:relative; height:min(350px, 48vh); min-height:250px; border-radius:16px; overflow:hidden;
-  background:radial-gradient(120% 90% at 50% 20%, rgba(86,225,255,.10), rgba(4,12,20,.98) 70%);
-  border:1px solid rgba(86,225,255,.2); box-shadow:inset 0 0 60px rgba(0,0,0,.55); }
-.tt-ringfloor { position:absolute; left:-10%; right:-10%; bottom:-6%; height:58%; background:
-  linear-gradient(180deg, rgba(255,195,92,.10), rgba(4,12,20,0) 45%),
-  repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 42px);
-  transform:perspective(280px) rotateX(24deg); transform-origin:bottom center;
-  border-top:1px solid rgba(255,195,92,.18); }
-.tt-ringropes { position:absolute; inset:12% 4% auto 4%; height:34%;
-  border-top:2px solid rgba(86,225,255,.18); border-bottom:2px solid rgba(86,225,255,.14);
-  border-radius:8px; }
-.tt-ringropes::before, .tt-ringropes::after { content:''; position:absolute; left:0; right:0; height:1px;
-  background:rgba(86,225,255,.12); }
-.tt-ringropes::before { top:30%; }
-.tt-ringropes::after { top:64%; }
-.tt-sprite { position:absolute; bottom:9%; width:130px; height:180px; }
-.tt-sprite[data-side="player"] { left:9%; }
-.tt-sprite[data-side="cpu"] { right:9%; }
-.tt-sprite-shadow { position:absolute; left:12%; right:12%; bottom:-6px; height:14px; border-radius:50%;
-  background:rgba(0,0,0,.45); filter:blur(4px); }
-.tt-sprite-body { position:absolute; left:50%; bottom:8%; width:64px; height:88px; margin-left:-32px;
-  border-radius:18px 18px 14px 14px;
-  background:linear-gradient(160deg,#2c7f96,#0d2b3a);
-  border:1px solid rgba(86,225,255,.35); }
-.tt-sprite[data-side="cpu"] .tt-sprite-body { background:linear-gradient(160deg,#8a3040,#2a0d14); border-color:rgba(255,93,108,.4); }
-.tt-sprite-head { position:absolute; left:50%; bottom:112px; width:42px; height:42px; margin-left:-21px;
-  border-radius:50%; background:linear-gradient(160deg,#ffe0b0,#c98d5a);
-  border:2px solid rgba(255,195,92,.4); }
-.tt-sprite[data-side="cpu"] .tt-sprite-head { background:linear-gradient(160deg,#c9d6e6,#7a8ba3); border-color:rgba(86,225,255,.4); }
-.tt-sprite-glove { position:absolute; width:30px; height:30px; border-radius:50% 50% 44% 44%;
-  background:radial-gradient(circle at 35% 30%,#ff8f9a,#b52436); border:1px solid rgba(255,255,255,.25);
-  box-shadow:0 4px 10px rgba(0,0,0,.4); }
-.tt-sprite[data-side="cpu"] .tt-sprite-glove { background:radial-gradient(circle at 35% 30%,#8fe9ff,#1f7f9a); }
-.tt-sprite .g1 { left:6px; bottom:64px; }
-.tt-sprite .g2 { right:6px; bottom:64px; }
-.tt-sprite[data-anim="idle"] { animation:ttBob 2.4s ease-in-out infinite; }
-.tt-sprite[data-anim="punch"] { animation:ttPunch .3s ease-out; }
-.tt-sprite[data-anim="punch"] .g2 { animation:ttGlove .3s ease-out; }
-.tt-sprite[data-anim="guard"] { animation:ttGuard .32s ease-out; }
-.tt-sprite[data-anim="guard"] .g1, .tt-sprite[data-anim="guard"] .g2 { transform:translateY(-24px) scale(1.08); }
-.tt-sprite[data-anim="feint"] { animation:ttFeint .3s ease-out; }
-.tt-sprite[data-low="true"] .tt-sprite-body { filter:saturate(.7) brightness(.85); }
-@keyframes ttBob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
-@keyframes ttPunch { 0% { transform:translateX(0) rotate(0); } 40% { transform:translateX(40px) rotate(-4deg); } 100% { transform:translateX(0) rotate(0); } }
-@keyframes ttGlove { 0% { transform:translate(0,0); } 40% { transform:translate(30px,-4px) scale(1.15); } 100% { transform:translate(0,0); } }
-@keyframes ttGuard { 0% { transform:translateY(0); } 35% { transform:translateY(5px) scaleY(.94); } 100% { transform:translateY(0); } }
-@keyframes ttFeint { 0% { transform:translateX(0) skewX(0); } 35% { transform:translateX(-16px) skewX(-7deg); } 100% { transform:translateX(0) skewX(0); } }
-.tt-sprite[data-side="cpu"][data-anim="punch"] { animation:ttPunchCpu .3s ease-out; }
-.tt-sprite[data-side="cpu"][data-anim="feint"] { animation:ttFeintCpu .3s ease-out; }
-@keyframes ttPunchCpu { 0% { transform:translateX(0) rotate(0); } 40% { transform:translateX(-40px) rotate(4deg); } 100% { transform:translateX(0) rotate(0); } }
-@keyframes ttFeintCpu { 0% { transform:translateX(0) skewX(0); } 35% { transform:translateX(16px) skewX(7deg); } 100% { transform:translateX(0) skewX(0); } }
-.tt-fx { position:absolute; left:50%; top:34%; transform:translateX(-50%); font-size:30px; font-weight:800;
-  letter-spacing:.06em; animation:ttFxPop .55s ease-out forwards; pointer-events:none; text-shadow:0 4px 18px rgba(0,0,0,.6); }
-.tt-fx[data-type="hit"] { color:var(--tt-mint); }
-.tt-fx[data-type="hurt"] { color:var(--tt-red); }
-.tt-fx[data-type="trade"] { color:var(--tt-amber); }
-.tt-fx[data-type="block"] { color:var(--tt-cyan); }
-@keyframes ttFxPop { 0% { opacity:0; transform:translate(-50%,12px) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-26px) scale(1.1); } }
-.tt-ring[data-fx="hit"], .tt-ring[data-fx="hurt"], .tt-ring[data-fx="trade"] { animation:ttShake .28s ease-in-out; }
-@keyframes ttShake { 0%,100% { transform:translate(0,0); } 25% { transform:translate(-3px,1px); } 50% { transform:translate(3px,-1px); } 75% { transform:translate(-2px,0); } }
-.tt-roundbanner { position:absolute; left:50%; top:16%; transform:translateX(-50%); font-size:20px; font-weight:800;
-  color:var(--tt-amber); letter-spacing:.14em; animation:ttBanner 1.5s ease-out forwards; pointer-events:none; }
-@keyframes ttBanner { 0% { opacity:0; transform:translate(-50%,-8px) scale(.9); } 20% { opacity:1; } 75% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-2px); } }
-.tt-combobadge { position:absolute; left:50%; bottom:7%; transform:translateX(-50%); padding:3px 10px;
-  border-radius:999px; font-size:11px; font-weight:700; color:#08221c; background:var(--tt-mint);
-  box-shadow:0 0 16px rgba(43,230,194,.65); }
-.tt-ko { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:6px; background:rgba(3,8,14,.72); backdrop-filter:blur(2px); }
-.tt-ko h3 { margin:0; font-size:26px; letter-spacing:.06em; color:var(--tt-amber); }
-.tt-ko p { margin:0; font-size:11px; color:var(--tt-dim); }
-.tt-fight-controls { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-.tt-fightbtn { display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 6px 8px; border-radius:12px;
-  border:1px solid rgba(86,225,255,.25); background:rgba(86,225,255,.06); color:var(--tt-ink); cursor:pointer;
-  transition:transform .12s ease, border-color .12s ease, background .12s ease; position:relative; }
-.tt-fightbtn span { font-size:22px; line-height:1; }
-.tt-fightbtn b { font-size:11px; font-weight:600; }
-.tt-fightbtn kbd { position:absolute; top:5px; right:7px; font-size:9px; color:var(--tt-faint);
-  border:1px solid rgba(120,190,220,.3); border-radius:4px; padding:0 4px; }
-.tt-fightbtn[data-kind="punch"] { border-color:rgba(255,93,108,.45); background:rgba(255,93,108,.09); }
-.tt-fightbtn[data-kind="guard"] { border-color:rgba(43,230,194,.4); background:rgba(43,230,194,.08); }
-.tt-fightbtn[data-kind="feint"] { border-color:rgba(255,195,92,.45); background:rgba(255,195,92,.08); }
-.tt-fightbtn:hover:not(:disabled) { transform:translateY(-2px); border-color:var(--tt-mint); }
-.tt-fightbtn:active:not(:disabled) { transform:translateY(0) scale(.98); }
-.tt-fightbtn:disabled { opacity:.4; cursor:default; }
-.tt-fight-hint { margin:0; text-align:center; font-size:10.5px; color:var(--tt-faint); }
-.tt-fight-details { margin-top:4px; border-radius:10px; background:rgba(4,12,20,.35); border:1px solid rgba(86,225,255,.1); padding:6px 10px; }
-.tt-fight-details summary { cursor:pointer; font-size:11px; color:var(--tt-dim); }
-.tt-fight-details summary:hover { color:var(--tt-mint); }
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
@@ -2300,17 +2092,6 @@ TT.UI.Panel = function Panel(props) {
           event.preventDefault()
           event.stopPropagation()
           api.dispatch({ type: 'snake/dir', dir })
-          return
-        }
-      }
-      if (current.mode === 'arcade' && current.arcade.game === 'boxing') {
-        const keyMap = { 1: 'punch', 2: 'guard', 3: 'feint', j: 'punch', k: 'guard', l: 'feint' }
-        const actionId = keyMap[event.key] || keyMap[(event.key || '').toLowerCase()]
-        const action = actionId && TT.Boxing ? TT.Boxing.ACTIONS.find((item) => item.id === actionId) : null
-        if (action) {
-          event.preventDefault()
-          event.stopPropagation()
-          api.dispatch({ type: 'boxing/action', action: action.id })
           return
         }
       }
