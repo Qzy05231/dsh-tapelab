@@ -372,6 +372,30 @@ TT.dict = {
     'lab.tab.museum': '元件展厅',
     'lab.tab.sandbox': '电路沙盒',
     'lab.tab.library': '电路库',
+    'lab.tab.hardware': '硬件搭建',
+    'lab.hardware.title': '真实硬件搭建（74HC00）',
+    'lab.hardware.hint': '把组合网表翻译成芯片数量、门级引脚分配、面包板连线与采购清单。',
+    'lab.hardware.fromResult': '用综合结果',
+    'lab.hardware.fromSandbox': '用沙盒电路',
+    'lab.hardware.chips': '74HC00 片数',
+    'lab.hardware.wires': '连线数',
+    'lab.hardware.boards': '面包板',
+    'lab.hardware.bom': '采购清单（BOM）',
+    'lab.hardware.item': '元件',
+    'lab.hardware.qty': '数量',
+    'lab.hardware.note': '说明',
+    'lab.hardware.pins': '门 / 引脚分配',
+    'lab.hardware.chip': '芯片',
+    'lab.hardware.unit': '单元',
+    'lab.hardware.wiresTitle': '面包板连线表',
+    'lab.hardware.copyBom': '复制 BOM CSV',
+    'lab.hardware.copyWires': '复制连线 CSV',
+    'lab.hardware.copyGuide': '复制搭建指南',
+    'lab.hardware.empty': '还没有可转换的电路：先综合一个逻辑函数，或打开沙盒电路，再回到这里。',
+    'lab.hardware.goSynth': '去综合器',
+    'lab.hardware.goSandbox': '去沙盒',
+    'lab.hardware.steps': '搭建顺序：芯片跨中缝、VCC/GND 与去耦电容 → 按引脚表接输入 → 输出经 330Ω 接 LED → 上电前测短路 → 按真值表拨开关验证。时序电路需要额外时钟芯片。',
+
     'lab.synth.title': '真值表 → NAND 网表',
     'lab.synth.hint': '点格子循环 0 / 1 / 无关项，综合器会做 Quine–McCluskey 化简并映射到与非门。',
     'lab.synth.inputs': '输入位数',
@@ -884,6 +908,30 @@ TT.dict = {
     'lab.tab.museum': 'Museum',
     'lab.tab.sandbox': 'Sandbox',
     'lab.tab.library': 'Library',
+    'lab.tab.hardware': 'Hardware',
+    'lab.hardware.title': 'Real hardware build (74HC00)',
+    'lab.hardware.hint': 'Translate a combinational netlist into chip count, gate pin assignment, breadboard wiring and a shopping list.',
+    'lab.hardware.fromResult': 'Use synthesis result',
+    'lab.hardware.fromSandbox': 'Use sandbox circuit',
+    'lab.hardware.chips': '74HC00 chips',
+    'lab.hardware.wires': 'Wires',
+    'lab.hardware.boards': 'Breadboards',
+    'lab.hardware.bom': 'Bill of materials',
+    'lab.hardware.item': 'Part',
+    'lab.hardware.qty': 'Qty',
+    'lab.hardware.note': 'Note',
+    'lab.hardware.pins': 'Gate / pin assignment',
+    'lab.hardware.chip': 'Chip',
+    'lab.hardware.unit': 'Unit',
+    'lab.hardware.wiresTitle': 'Breadboard wiring list',
+    'lab.hardware.copyBom': 'Copy BOM CSV',
+    'lab.hardware.copyWires': 'Copy wiring CSV',
+    'lab.hardware.copyGuide': 'Copy build guide',
+    'lab.hardware.empty': 'No circuit yet: synthesize a logic function or open a sandbox circuit, then come back.',
+    'lab.hardware.goSynth': 'Go to synthesizer',
+    'lab.hardware.goSandbox': 'Go to sandbox',
+    'lab.hardware.steps': 'Build order: straddle the chips, wire VCC/GND + decoupling → inputs per pin table → outputs via 330Ω LEDs → check for shorts before power → verify row by row. Sequential circuits need extra clock chips.',
+
     'lab.synth.title': 'Truth table → NAND netlist',
     'lab.synth.hint': 'Click cells to cycle 0 / 1 / don’t-care; Quine–McCluskey minimization is mapped to NAND gates.',
     'lab.synth.inputs': 'Inputs',
@@ -1452,6 +1500,12 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   font-family:var(--dsh-font-family-mono, monospace); color:var(--tt-ink); background:rgba(4,12,20,.6);
   border:1px solid rgba(86,225,255,.22); }
 .tt-archivebox:focus { outline:none; border-color:rgba(86,225,255,.6); }
+
+.tt-hardwarewires { display:flex; flex-direction:column; gap:4px; max-height:260px; overflow:auto; padding:6px 8px;
+  border-radius:9px; background:rgba(4,12,20,.5); border:1px solid rgba(86,225,255,.12); }
+.tt-hardwarewire { display:flex; gap:6px; align-items:baseline; font-size:10.5px; color:var(--tt-dim); flex-wrap:wrap; }
+.tt-hardwarewire b { color:var(--tt-mint); }
+.tt-hardwarewire em { color:var(--tt-faint); font-style:normal; font-size:9.5px; }
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }

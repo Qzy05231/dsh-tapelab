@@ -603,6 +603,7 @@ TT.Missions = (function () {
       sandbox: null,
       sandboxInputs: 0,
       museumId: null,
+      hardwareFrom: 'result',
       library: [],
       savedAt: null,
     }
@@ -1088,6 +1089,8 @@ TT.Missions = (function () {
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
         }
+      case 'lab/hardware':
+        return { ...state, lab: { ...state.lab, tab: 'hardware', hardwareFrom: action.from === 'sandbox' ? 'sandbox' : 'result' } }
       case 'lab/import': {
         if (!TT.Export) return state
         try {

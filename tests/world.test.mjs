@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const read = (name) => readFileSync(join(HERE, '..', 'src', 'client', name), 'utf8')
-const SOURCES = ['00-core.js', '10-engine.js', '15-parts.js', '20-circuit.js', '25-cpu.js', '28-safety.js', '30-missions.js', '35-lab.js', '36-audio.js', '37-arcade.js', '38-export.js', '40-ui.js', '50-app.js']
+const SOURCES = ['00-core.js', '10-engine.js', '15-parts.js', '20-circuit.js', '25-cpu.js', '28-safety.js', '30-missions.js', '35-lab.js', '36-audio.js', '37-arcade.js', '38-export.js', '39-hardware.js', '40-ui.js', '50-app.js']
 
 function fakeContext() {
   const gradient = { addColorStop() {} }

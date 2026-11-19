@@ -42,6 +42,7 @@ TT.LabUI = (function () {
       ['museum', 'lab.tab.museum'],
       ['sandbox', 'lab.tab.sandbox'],
       ['library', 'lab.tab.library'],
+      ['hardware', 'lab.tab.hardware'],
     ]
     return h('div', { className: 'tt-labview' },
       h('div', { className: 'tt-labhero' },
@@ -64,6 +65,7 @@ TT.LabUI = (function () {
       lab.tab === 'museum' ? h(Museum, { lab, t, api }) : null,
       lab.tab === 'sandbox' ? h(SandboxPage, { lab, t, api }) : null,
       lab.tab === 'library' ? h(Library, { lab, t, api }) : null,
+      lab.tab === 'hardware' ? h(Hardware, { lab, t, api }) : null,
     )
   }
 
@@ -240,6 +242,99 @@ TT.LabUI = (function () {
                 onClick: () => api.dispatch({ type: 'lab/remove', id: entry.id }) }, '✕'),
             ),
           )),
+    )
+  }
+
+  // ---------------------------------------------------------------- hardware
+  function Hardware(props) {
+    const { lab, t, api } = props
+    const from = lab.hardwareFrom === 'sandbox' ? 'sandbox' : 'result'
+    const netlist = from === 'sandbox' ? (lab.sandbox && lab.sandbox.netlist) : (lab.result && lab.result.netlist)
+    const plan = React.useMemo(() => {
+      if (!netlist || !TT.Hardware) return null
+      try {
+        return TT.Hardware.plan(netlist)
+      } catch (error) {
+        return null
+      }
+    }, [netlist])
+    return h('div', { className: 'tt-labcard' },
+      h('div', { className: 'tt-labcardhead' },
+        h('strong', null, t('lab.hardware.title')),
+        h('span', null, t('lab.hardware.hint')),
+        h('button', { type: 'button', className: 'tt-chip', 'data-active': from === 'result' ? 'true' : 'false',
+          onClick: () => api.dispatch({ type: 'lab/hardware', from: 'result' }) }, t('lab.hardware.fromResult')),
+        h('button', { type: 'button', className: 'tt-chip', 'data-active': from === 'sandbox' ? 'true' : 'false',
+          onClick: () => api.dispatch({ type: 'lab/hardware', from: 'sandbox' }) }, t('lab.hardware.fromSandbox')),
+      ),
+      plan ? h('div', null,
+        h('div', { className: 'tt-labstats' },
+          h('div', { className: 'tt-labstat' }, h('b', null, plan.gates), h('span', null, t('lab.synth.gates'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, plan.chips), h('span', null, t('lab.hardware.chips'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, plan.wires), h('span', null, t('lab.hardware.wires'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, plan.boards), h('span', null, t('lab.hardware.boards'))),
+        ),
+        plan.warnings.length ? h('div', { className: 'tt-finalenote', style: { margin: '4px 0' } },
+          plan.warnings.map((warning, index) => h('div', { key: index }, '⚠ ', warning))) : null,
+        h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('lab.export.title')),
+          h('button', { type: 'button', className: 'tt-chip',
+            onClick: () => copyText(api, TT.Hardware.bomCsv(plan)) }, t('lab.hardware.copyBom')),
+          h('button', { type: 'button', className: 'tt-chip',
+            onClick: () => copyText(api, TT.Hardware.wiresCsv(plan)) }, t('lab.hardware.copyWires')),
+          h('button', { type: 'button', className: 'tt-chip',
+            onClick: () => copyText(api, TT.Hardware.markdown(plan, from === 'sandbox' && lab.sandbox ? lab.sandbox.name : 'synthesized', netlist)) },
+            t('lab.hardware.copyGuide')),
+        ),
+        h('h4', { style: { margin: '8px 0 4px', fontSize: 12, color: 'var(--tt-mint)' } }, t('lab.hardware.bom')),
+        h('table', { className: 'tt-table' },
+          h('thead', null, h('tr', null,
+            h('th', null, t('lab.hardware.item')),
+            h('th', null, t('lab.hardware.qty')),
+            h('th', null, t('lab.hardware.note')),
+          )),
+          h('tbody', null, plan.bom.map((entry, index) =>
+            h('tr', { key: index },
+              h('td', null, entry.item),
+              h('td', { className: 'tt-bit' }, entry.qty),
+              h('td', { style: { fontSize: 10, color: 'var(--tt-dim)' } }, entry.note),
+            ),
+          )),
+        ),
+        h('h4', { style: { margin: '10px 0 4px', fontSize: 12, color: 'var(--tt-mint)' } }, t('lab.hardware.pins')),
+        h('table', { className: 'tt-table' },
+          h('thead', null, h('tr', null,
+            h('th', null, '#'),
+            h('th', null, t('lab.hardware.chip')),
+            h('th', null, t('lab.hardware.unit')),
+            h('th', null, 'A / B / Y'),
+          )),
+          h('tbody', null, plan.pinTable.map((entry) =>
+            h('tr', { key: entry.gate },
+              h('td', { className: 'tt-bit' }, entry.gate),
+              h('td', null, `U${entry.chip}`),
+              h('td', null, entry.unit),
+              h('td', { className: 'tt-bit' }, entry.pins),
+            ),
+          )),
+        ),
+        h('h4', { style: { margin: '10px 0 4px', fontSize: 12, color: 'var(--tt-mint)' } }, `${t('lab.hardware.wiresTitle')} · ${plan.wires}`),
+        h('div', { className: 'tt-hardwarewires' }, plan.wireList.map((entry, index) =>
+          h('div', { key: index, className: 'tt-hardwarewire' },
+            h('span', null, entry.from), h('b', null, '→'), h('span', null, entry.to),
+            entry.note ? h('em', null, entry.note) : null,
+          ),
+        )),
+        h('p', { className: 'tt-finalenote', style: { marginTop: 10 } }, t('lab.hardware.steps')),
+      ) : h('div', null,
+        h('p', { className: 'tt-labempty' }, t('lab.hardware.empty')),
+        h('div', { className: 'tt-labrow' },
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
+            onClick: () => api.dispatch({ type: 'lab/tab', tab: 'synth' }) }, t('lab.hardware.goSynth')),
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
+            onClick: () => api.dispatch({ type: 'lab/tab', tab: 'sandbox' }) }, t('lab.hardware.goSandbox')),
+        ),
+      ),
     )
   }
 

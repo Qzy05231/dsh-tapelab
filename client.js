@@ -5595,6 +5595,7 @@ TT.Missions = (function () {
       sandbox: null,
       sandboxInputs: 0,
       museumId: null,
+      hardwareFrom: 'result',
       library: [],
       savedAt: null,
     }
@@ -6080,6 +6081,8 @@ TT.Missions = (function () {
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
         }
+      case 'lab/hardware':
+        return { ...state, lab: { ...state.lab, tab: 'hardware', hardwareFrom: action.from === 'sandbox' ? 'sandbox' : 'result' } }
       case 'lab/import': {
         if (!TT.Export) return state
         try {
@@ -7121,6 +7124,7 @@ TT.LabUI = (function () {
       ['museum', 'lab.tab.museum'],
       ['sandbox', 'lab.tab.sandbox'],
       ['library', 'lab.tab.library'],
+      ['hardware', 'lab.tab.hardware'],
     ]
     return h('div', { className: 'tt-labview' },
       h('div', { className: 'tt-labhero' },
@@ -7143,6 +7147,7 @@ TT.LabUI = (function () {
       lab.tab === 'museum' ? h(Museum, { lab, t, api }) : null,
       lab.tab === 'sandbox' ? h(SandboxPage, { lab, t, api }) : null,
       lab.tab === 'library' ? h(Library, { lab, t, api }) : null,
+      lab.tab === 'hardware' ? h(Hardware, { lab, t, api }) : null,
     )
   }
 
@@ -7319,6 +7324,99 @@ TT.LabUI = (function () {
                 onClick: () => api.dispatch({ type: 'lab/remove', id: entry.id }) }, '✕'),
             ),
           )),
+    )
+  }
+
+  // ---------------------------------------------------------------- hardware
+  function Hardware(props) {
+    const { lab, t, api } = props
+    const from = lab.hardwareFrom === 'sandbox' ? 'sandbox' : 'result'
+    const netlist = from === 'sandbox' ? (lab.sandbox && lab.sandbox.netlist) : (lab.result && lab.result.netlist)
+    const plan = React.useMemo(() => {
+      if (!netlist || !TT.Hardware) return null
+      try {
+        return TT.Hardware.plan(netlist)
+      } catch (error) {
+        return null
+      }
+    }, [netlist])
+    return h('div', { className: 'tt-labcard' },
+      h('div', { className: 'tt-labcardhead' },
+        h('strong', null, t('lab.hardware.title')),
+        h('span', null, t('lab.hardware.hint')),
+        h('button', { type: 'button', className: 'tt-chip', 'data-active': from === 'result' ? 'true' : 'false',
+          onClick: () => api.dispatch({ type: 'lab/hardware', from: 'result' }) }, t('lab.hardware.fromResult')),
+        h('button', { type: 'button', className: 'tt-chip', 'data-active': from === 'sandbox' ? 'true' : 'false',
+          onClick: () => api.dispatch({ type: 'lab/hardware', from: 'sandbox' }) }, t('lab.hardware.fromSandbox')),
+      ),
+      plan ? h('div', null,
+        h('div', { className: 'tt-labstats' },
+          h('div', { className: 'tt-labstat' }, h('b', null, plan.gates), h('span', null, t('lab.synth.gates'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, plan.chips), h('span', null, t('lab.hardware.chips'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, plan.wires), h('span', null, t('lab.hardware.wires'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, plan.boards), h('span', null, t('lab.hardware.boards'))),
+        ),
+        plan.warnings.length ? h('div', { className: 'tt-finalenote', style: { margin: '4px 0' } },
+          plan.warnings.map((warning, index) => h('div', { key: index }, '⚠ ', warning))) : null,
+        h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('lab.export.title')),
+          h('button', { type: 'button', className: 'tt-chip',
+            onClick: () => copyText(api, TT.Hardware.bomCsv(plan)) }, t('lab.hardware.copyBom')),
+          h('button', { type: 'button', className: 'tt-chip',
+            onClick: () => copyText(api, TT.Hardware.wiresCsv(plan)) }, t('lab.hardware.copyWires')),
+          h('button', { type: 'button', className: 'tt-chip',
+            onClick: () => copyText(api, TT.Hardware.markdown(plan, from === 'sandbox' && lab.sandbox ? lab.sandbox.name : 'synthesized', netlist)) },
+            t('lab.hardware.copyGuide')),
+        ),
+        h('h4', { style: { margin: '8px 0 4px', fontSize: 12, color: 'var(--tt-mint)' } }, t('lab.hardware.bom')),
+        h('table', { className: 'tt-table' },
+          h('thead', null, h('tr', null,
+            h('th', null, t('lab.hardware.item')),
+            h('th', null, t('lab.hardware.qty')),
+            h('th', null, t('lab.hardware.note')),
+          )),
+          h('tbody', null, plan.bom.map((entry, index) =>
+            h('tr', { key: index },
+              h('td', null, entry.item),
+              h('td', { className: 'tt-bit' }, entry.qty),
+              h('td', { style: { fontSize: 10, color: 'var(--tt-dim)' } }, entry.note),
+            ),
+          )),
+        ),
+        h('h4', { style: { margin: '10px 0 4px', fontSize: 12, color: 'var(--tt-mint)' } }, t('lab.hardware.pins')),
+        h('table', { className: 'tt-table' },
+          h('thead', null, h('tr', null,
+            h('th', null, '#'),
+            h('th', null, t('lab.hardware.chip')),
+            h('th', null, t('lab.hardware.unit')),
+            h('th', null, 'A / B / Y'),
+          )),
+          h('tbody', null, plan.pinTable.map((entry) =>
+            h('tr', { key: entry.gate },
+              h('td', { className: 'tt-bit' }, entry.gate),
+              h('td', null, `U${entry.chip}`),
+              h('td', null, entry.unit),
+              h('td', { className: 'tt-bit' }, entry.pins),
+            ),
+          )),
+        ),
+        h('h4', { style: { margin: '10px 0 4px', fontSize: 12, color: 'var(--tt-mint)' } }, `${t('lab.hardware.wiresTitle')} · ${plan.wires}`),
+        h('div', { className: 'tt-hardwarewires' }, plan.wireList.map((entry, index) =>
+          h('div', { key: index, className: 'tt-hardwarewire' },
+            h('span', null, entry.from), h('b', null, '→'), h('span', null, entry.to),
+            entry.note ? h('em', null, entry.note) : null,
+          ),
+        )),
+        h('p', { className: 'tt-finalenote', style: { marginTop: 10 } }, t('lab.hardware.steps')),
+      ) : h('div', null,
+        h('p', { className: 'tt-labempty' }, t('lab.hardware.empty')),
+        h('div', { className: 'tt-labrow' },
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
+            onClick: () => api.dispatch({ type: 'lab/tab', tab: 'synth' }) }, t('lab.hardware.goSynth')),
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
+            onClick: () => api.dispatch({ type: 'lab/tab', tab: 'sandbox' }) }, t('lab.hardware.goSandbox')),
+        ),
+      ),
     )
   }
 
@@ -8453,6 +8551,203 @@ TT.Export = (function () {
   }
 })()
 
+// ---- 39-hardware.js ----
+/**
+ * 39-hardware — turn a combinational NAND netlist into a real breadboard build:
+ * 74HC00 chip count, per-gate pin assignment, BOM and a wire-by-wire list.
+ *
+ * Only combinational netlists are supported: a physical SR latch / counter needs
+ * extra parts (74HC74, 74HC573) and manual clock wiring, so those plans warn instead
+ * of pretending a 74HC00-only build is enough.
+ *
+ * 74HC00 pinout (DIP-14): 1=1A 2=1B 3=1Y, 4=2A 5=2B 6=2Y, 7=GND,
+ *                         8=3Y 9=3A 10=3B, 11=4Y 12=4A 13=4B, 14=VCC
+ */
+
+TT.Hardware = (function () {
+  const UNITS = [
+    { a: 1, b: 2, y: 3 },
+    { a: 4, b: 5, y: 6 },
+    { a: 9, b: 10, y: 8 },
+    { a: 12, b: 13, y: 11 },
+  ]
+
+  function gatePins(gateIndex) {
+    const chip = Math.floor(gateIndex / 4) + 1
+    const unit = gateIndex % 4
+    return { chip, unit: unit + 1, ...UNITS[unit] }
+  }
+
+  function plan(netlist) {
+    if (!netlist || !Array.isArray(netlist.gates)) throw new Error('plan: netlist required')
+    const warnings = []
+    const gates = netlist.gates
+    const chips = Math.ceil(gates.length / 4) || 1
+    const gateCount = gates.length
+    const inputs = netlist.nIn
+    const outputs = netlist.outputs
+    const nodeDriver = []
+    nodeDriver[0] = { kind: 'rail', label: 'GND（0V）' }
+    nodeDriver[1] = { kind: 'rail', label: 'VCC（5V）' }
+    for (let i = 0; i < inputs; i += 1) {
+      nodeDriver[2 + i] = { kind: 'switch', index: i, label: `拨码开关 S${i + 1}` }
+    }
+    for (let g = 0; g < gateCount; g += 1) {
+      const pins = gatePins(g)
+      nodeDriver[2 + inputs + g] = {
+        kind: 'gate',
+        gate: g,
+        label: `U${pins.chip} 第 ${pins.unit} 个门 · 输出脚 ${pins.y}`,
+        pin: pins.y,
+        chip: pins.chip,
+      }
+    }
+
+    const pinTable = []
+    const wires = []
+    const wire = (from, to, note) => wires.push({ from, to, note: note || '' })
+
+    for (let g = 0; g < gateCount; g += 1) {
+      const gate = gates[g]
+      const pins = gatePins(g)
+      pinTable.push({
+        gate: g + 1,
+        chip: pins.chip,
+        unit: pins.unit,
+        pins: `A${pins.a} B${pins.b} Y${pins.y}`,
+        aNode: gate.a,
+        bNode: gate.b,
+      })
+      ;[['A', gate.a, pins.a], ['B', gate.b, pins.b]].forEach(([pinName, node, pin]) => {
+        const driver = nodeDriver[node]
+        if (!driver) {
+          warnings.push(`门 ${g + 1} 的 ${pinName} 输入引用了不存在的节点 ${node}`)
+          return
+        }
+        if (driver.kind === 'rail') {
+          wire(driver.label, `U${pins.chip} 脚${pin}（${pinName}）`, `固定接 ${node === 0 ? 'GND' : 'VCC'}（恒 ${node}）`)
+        } else if (driver.kind === 'switch') {
+          wire(driver.label, `U${pins.chip} 脚${pin}（${pinName}）`, '开关串联 10kΩ 下拉到 GND')
+        } else {
+          wire(`U${driver.chip} 脚${driver.pin}（Y）`, `U${pins.chip} 脚${pin}（${pinName}）`, '74HC00 输出 → 输入')
+        }
+      })
+    }
+
+    outputs.forEach((node, index) => {
+      const driver = nodeDriver[node]
+      if (!driver) {
+        warnings.push(`输出 ${index + 1} 引用了不存在的节点 ${node}`)
+        return
+      }
+      if (driver.kind === 'rail') {
+        wire(driver.label, `LED${index + 1}`, `恒 ${node}：LED 直接接电源/地（经 330Ω）`)
+      } else if (driver.kind === 'switch') {
+        wire(driver.label, `LED${index + 1}`, driver.label + ' → 330Ω → LED → GND')
+      } else {
+        wire(`U${driver.chip} 脚${driver.pin}（Y）`, `LED${index + 1}`, '经 330Ω 限流电阻到 GND')
+      }
+    })
+
+    const fanOut = {}
+    for (const gate of gates) {
+      fanOut[gate.a] = (fanOut[gate.a] || 0) + 1
+      fanOut[gate.b] = (fanOut[gate.b] || 0) + 1
+    }
+    const maxFanOut = Math.max(0, ...Object.values(fanOut))
+    if (maxFanOut > 6) warnings.push(`最大扇出 ${maxFanOut}：74HC00 单输出可驱动约 10 个输入，实际布线请分叉并保持短线`)
+    if ((netlist.nState || 0) > 0) {
+      warnings.push('这是时序电路（含锁存器/状态位）：74HC00 只能搭组合逻辑，时钟与状态请用 74HC74/74HC573 并手工布线。')
+    }
+    if (gateCount > 40) warnings.push(`共 ${gateCount} 个门（${chips} 片 74HC00）：面包板会非常拥挤，建议改用洞洞板/PCB。`)
+    if (outputs.length > 7) warnings.push('输出超过 7 个：请为每路 LED 单独准备 330Ω 电阻。')
+
+    const switches = inputs
+    const leds = outputs.length
+    const decoupling = chips
+    const boards = Math.max(1, Math.ceil(chips / 2))
+    const jumpers = Math.max(10, Math.ceil((wires.length + chips * 2) / 5) * 5)
+    const bom = [
+      { item: '74HC00 四路 2 输入与非门（DIP-14）', qty: chips, note: `${gateCount} 个门 ÷ 4` },
+      { item: '0.1µF 陶瓷电容（去耦）', qty: decoupling, note: '每片芯片 VCC–GND 之间各一颗' },
+      { item: '10kΩ 电阻（下拉）', qty: switches, note: '每个拨码开关一颗' },
+      { item: '拨码开关 / 轻触开关', qty: switches, note: '每个输入一位' },
+      { item: '330Ω 电阻（LED 限流）', qty: leds, note: '每个输出 LED 一颗' },
+      { item: 'LED（5mm）', qty: leds, note: '每个输出一位' },
+      { item: '面包板 830 点', qty: boards, note: '每 2 片芯片约一块板' },
+      { item: '杜邦线 / 单股跳线', qty: jumpers, note: '按连线表裁剪' },
+      { item: '5V 电源（USB 或稳压模块）', qty: 1, note: 'HC 系列 2–6V' },
+    ]
+
+    return {
+      ok: gateCount > 0,
+      gates: gateCount,
+      chips,
+      inputs,
+      outputs: leds,
+      wires: wires.length,
+      boards,
+      maxFanOut,
+      warnings,
+      bom,
+      pinTable,
+      wireList: wires,
+      stateful: (netlist.nState || 0) > 0,
+    }
+  }
+
+  function bomCsv(plan) {
+    const rows = ['item,qty,note']
+    for (const entry of plan.bom) rows.push(`"${entry.item}",${entry.qty},"${entry.note}"`)
+    return rows.join('\n') + '\n'
+  }
+
+  function wiresCsv(plan) {
+    const rows = ['from,to,note']
+    for (const entry of plan.wireList) rows.push(`"${entry.from}","${entry.to}","${entry.note}"`)
+    return rows.join('\n') + '\n'
+  }
+
+  function markdown(plan, name, netlist) {
+    const lines = []
+    lines.push(`# 面包板搭建指南 · ${name || 'NAND 电路'}`)
+    lines.push('')
+    lines.push(`- 门数：${plan.gates}，74HC00：${plan.chips} 片，输入：${plan.inputs}，输出：${plan.outputs}`)
+    lines.push(`- 连线：${plan.wires} 根，面包板：${plan.boards} 块，最大扇出：${plan.maxFanOut}`)
+    lines.push('')
+    lines.push('## 采购清单')
+    lines.push('| 元件 | 数量 | 说明 |')
+    lines.push('| --- | --- | --- |')
+    for (const entry of plan.bom) lines.push(`| ${entry.item} | ${entry.qty} | ${entry.note} |`)
+    lines.push('')
+    lines.push('## 门与引脚分配')
+    lines.push('| 门 | 芯片 | 单元 | A/B/Y 引脚 |')
+    lines.push('| --- | --- | --- | --- |')
+    for (const entry of plan.pinTable) lines.push(`| ${entry.gate} | U${entry.chip} | ${entry.unit} | ${entry.pins} |`)
+    lines.push('')
+    lines.push('## 连线表')
+    lines.push('| 从 | 到 | 说明 |')
+    lines.push('| --- | --- | --- |')
+    for (const entry of plan.wireList) lines.push(`| ${entry.from} | ${entry.to} | ${entry.note} |`)
+    lines.push('')
+    if (plan.warnings.length) {
+      lines.push('## 注意')
+      for (const warning of plan.warnings) lines.push(`- ${warning}`)
+      lines.push('')
+    }
+    lines.push('## 搭建顺序')
+    lines.push('1. 先把每片 74HC00 跨在面包板中缝上，VCC（14）接 +5V 轨、GND（7）接地轨，每片并一颗 0.1µF。')
+    lines.push('2. 按引脚表把每个门的 A/B 输入接到来源：拨码开关（经 10kΩ 下拉）或前级输出。')
+    lines.push('3. 输出经 330Ω 接 LED 到 GND；上电前先用万用表确认电源没有短路。')
+    lines.push('4. 按真值表逐行拨开关验证：LED 亮 = 1，灭 = 0。')
+    lines.push('')
+    if (netlist) lines.push(`网表 hex：${TT.Circuit.gateHex(netlist)}`)
+    return lines.join('\n') + '\n'
+  }
+
+  return { plan, bomCsv, wiresCsv, markdown, UNITS, gatePins }
+})()
+
 // ---- 40-ui.js ----
 /**
  * 40-ui — locale dictionaries, panel chrome, HUD, codex.
@@ -8828,6 +9123,30 @@ TT.dict = {
     'lab.tab.museum': '元件展厅',
     'lab.tab.sandbox': '电路沙盒',
     'lab.tab.library': '电路库',
+    'lab.tab.hardware': '硬件搭建',
+    'lab.hardware.title': '真实硬件搭建（74HC00）',
+    'lab.hardware.hint': '把组合网表翻译成芯片数量、门级引脚分配、面包板连线与采购清单。',
+    'lab.hardware.fromResult': '用综合结果',
+    'lab.hardware.fromSandbox': '用沙盒电路',
+    'lab.hardware.chips': '74HC00 片数',
+    'lab.hardware.wires': '连线数',
+    'lab.hardware.boards': '面包板',
+    'lab.hardware.bom': '采购清单（BOM）',
+    'lab.hardware.item': '元件',
+    'lab.hardware.qty': '数量',
+    'lab.hardware.note': '说明',
+    'lab.hardware.pins': '门 / 引脚分配',
+    'lab.hardware.chip': '芯片',
+    'lab.hardware.unit': '单元',
+    'lab.hardware.wiresTitle': '面包板连线表',
+    'lab.hardware.copyBom': '复制 BOM CSV',
+    'lab.hardware.copyWires': '复制连线 CSV',
+    'lab.hardware.copyGuide': '复制搭建指南',
+    'lab.hardware.empty': '还没有可转换的电路：先综合一个逻辑函数，或打开沙盒电路，再回到这里。',
+    'lab.hardware.goSynth': '去综合器',
+    'lab.hardware.goSandbox': '去沙盒',
+    'lab.hardware.steps': '搭建顺序：芯片跨中缝、VCC/GND 与去耦电容 → 按引脚表接输入 → 输出经 330Ω 接 LED → 上电前测短路 → 按真值表拨开关验证。时序电路需要额外时钟芯片。',
+
     'lab.synth.title': '真值表 → NAND 网表',
     'lab.synth.hint': '点格子循环 0 / 1 / 无关项，综合器会做 Quine–McCluskey 化简并映射到与非门。',
     'lab.synth.inputs': '输入位数',
@@ -9340,6 +9659,30 @@ TT.dict = {
     'lab.tab.museum': 'Museum',
     'lab.tab.sandbox': 'Sandbox',
     'lab.tab.library': 'Library',
+    'lab.tab.hardware': 'Hardware',
+    'lab.hardware.title': 'Real hardware build (74HC00)',
+    'lab.hardware.hint': 'Translate a combinational netlist into chip count, gate pin assignment, breadboard wiring and a shopping list.',
+    'lab.hardware.fromResult': 'Use synthesis result',
+    'lab.hardware.fromSandbox': 'Use sandbox circuit',
+    'lab.hardware.chips': '74HC00 chips',
+    'lab.hardware.wires': 'Wires',
+    'lab.hardware.boards': 'Breadboards',
+    'lab.hardware.bom': 'Bill of materials',
+    'lab.hardware.item': 'Part',
+    'lab.hardware.qty': 'Qty',
+    'lab.hardware.note': 'Note',
+    'lab.hardware.pins': 'Gate / pin assignment',
+    'lab.hardware.chip': 'Chip',
+    'lab.hardware.unit': 'Unit',
+    'lab.hardware.wiresTitle': 'Breadboard wiring list',
+    'lab.hardware.copyBom': 'Copy BOM CSV',
+    'lab.hardware.copyWires': 'Copy wiring CSV',
+    'lab.hardware.copyGuide': 'Copy build guide',
+    'lab.hardware.empty': 'No circuit yet: synthesize a logic function or open a sandbox circuit, then come back.',
+    'lab.hardware.goSynth': 'Go to synthesizer',
+    'lab.hardware.goSandbox': 'Go to sandbox',
+    'lab.hardware.steps': 'Build order: straddle the chips, wire VCC/GND + decoupling → inputs per pin table → outputs via 330Ω LEDs → check for shorts before power → verify row by row. Sequential circuits need extra clock chips.',
+
     'lab.synth.title': 'Truth table → NAND netlist',
     'lab.synth.hint': 'Click cells to cycle 0 / 1 / don’t-care; Quine–McCluskey minimization is mapped to NAND gates.',
     'lab.synth.inputs': 'Inputs',
@@ -9908,6 +10251,12 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   font-family:var(--dsh-font-family-mono, monospace); color:var(--tt-ink); background:rgba(4,12,20,.6);
   border:1px solid rgba(86,225,255,.22); }
 .tt-archivebox:focus { outline:none; border-color:rgba(86,225,255,.6); }
+
+.tt-hardwarewires { display:flex; flex-direction:column; gap:4px; max-height:260px; overflow:auto; padding:6px 8px;
+  border-radius:9px; background:rgba(4,12,20,.5); border:1px solid rgba(86,225,255,.12); }
+.tt-hardwarewire { display:flex; gap:6px; align-items:baseline; font-size:10.5px; color:var(--tt-dim); flex-wrap:wrap; }
+.tt-hardwarewire b { color:var(--tt-mint); }
+.tt-hardwarewire em { color:var(--tt-faint); font-style:normal; font-size:9.5px; }
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
