@@ -26,6 +26,7 @@ const SOURCES = [
   '35-lab.js',
   '36-audio.js',
   '37-arcade.js',
+  '38-export.js',
   '40-ui.js',
   '50-app.js',
 ]

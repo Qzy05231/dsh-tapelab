@@ -11,6 +11,29 @@ TT.LabUI = (function () {
     return gates == null ? '—' : String(gates)
   }
 
+  function copyText(api, text) {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          () => api.dispatch({ type: 'toast/show', key: 'lab.copied', tone: 'good' }),
+          () => api.dispatch({ type: 'toast/show', key: 'lab.copyFail', tone: 'warn' }),
+        )
+        return
+      }
+      const area = document.createElement('textarea')
+      area.value = text
+      area.style.position = 'fixed'
+      area.style.opacity = '0'
+      document.body.appendChild(area)
+      area.select()
+      const ok = document.execCommand && document.execCommand('copy')
+      document.body.removeChild(area)
+      api.dispatch({ type: 'toast/show', key: ok ? 'lab.copied' : 'lab.copyFail', tone: ok ? 'good' : 'warn' })
+    } catch (error) {
+      api.dispatch({ type: 'toast/show', key: 'lab.copyFail', tone: 'warn' })
+    }
+  }
+
   function Lab(props) {
     const { state, t, resolve, api } = props
     const lab = state.lab
@@ -95,6 +118,13 @@ TT.LabUI = (function () {
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
             disabled: !result, onClick: () => api.dispatch({ type: 'lab/save' }) }, t('lab.synth.save')),
         ),
+        result && TT.Export ? h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('lab.export.title')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => copyText(api, result.hex) }, t('lab.export.hex')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => copyText(api, TT.Export.verilog(result.netlist, 'synthesized')) }, t('lab.export.verilog')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => copyText(api, TT.Export.netlistJson(result.netlist)) }, t('lab.export.json')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => copyText(api, TT.Export.truthTableCsv(result.netlist)) }, t('lab.export.csv')),
+        ) : null,
       ),
       h('section', { className: 'tt-labcard' },
         h('div', { className: 'tt-labcardhead' },
@@ -168,11 +198,36 @@ TT.LabUI = (function () {
   function Library(props) {
     const { lab, t, api } = props
     const library = lab.library || []
+    const [archive, setArchive] = React.useState('')
+    const [importing, setImporting] = React.useState(false)
     return h('div', { className: 'tt-labcard' },
       h('div', { className: 'tt-labcardhead' },
         h('strong', null, t('lab.library.title')),
         h('span', null, `${library.length}/24`),
       ),
+      TT.Export ? h('div', { className: 'tt-labrow' },
+        h('span', { className: 'tt-lablabel' }, t('lab.archive.title')),
+        h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
+          onClick: () => copyText(api, TT.Export.libraryCode(library)) }, t('lab.archive.export')),
+        h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
+          onClick: () => setImporting((open) => !open) }, t('lab.archive.import')),
+        h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('lab.archive.hint')),
+      ) : null,
+      importing ? h('div', { className: 'tt-labrow', style: { alignItems: 'stretch' } },
+        h('textarea', {
+          className: 'tt-archivebox',
+          placeholder: t('lab.archive.placeholder'),
+          value: archive,
+          onChange: (event) => setArchive(event.target.value),
+        }),
+        h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
+          onClick: () => {
+            if (!archive.trim()) return
+            api.dispatch({ type: 'lab/import', code: archive.trim() })
+            setArchive('')
+            setImporting(false)
+          } }, t('lab.archive.import')),
+      ) : null,
       library.length === 0
         ? h('p', { className: 'tt-labempty' }, t('lab.library.empty'))
         : h('div', { className: 'tt-librarylist' }, library.map((entry) =>
@@ -212,6 +267,10 @@ TT.LabUI = (function () {
         h('span', null, `${sandbox.name} · ${TT.Circuit.gateCount(netlist)} ${t('lab.synth.gates')} · ${netlist.nIn} in / ${netlist.outputs.length} out`),
         h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
           onClick: () => api.dispatch({ type: 'lab/tab', tab: 'synth' }) }, '←'),
+        TT.Export ? h('button', { type: 'button', className: 'tt-chip',
+          onClick: () => copyText(api, TT.Export.verilog(netlist, sandbox.name)) }, t('lab.export.verilog')) : null,
+        TT.Export ? h('button', { type: 'button', className: 'tt-chip',
+          onClick: () => copyText(api, TT.Export.netlistJson(netlist)) }, t('lab.export.json')) : null,
       ),
       h(SandboxCanvas, { netlist, inputs, api, t }),
       h('div', { className: 'tt-labrow tt-sandboxinputs' },

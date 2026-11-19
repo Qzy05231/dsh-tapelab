@@ -195,7 +195,58 @@ TT.Arcade = (function () {
     return TT.Circuit.makeNetlist({ nIn: puzzle.nIn, gates, outputs: puzzle.correct.outputs.slice() })
   }
 
+  // ------------------------------------------------------------ snake on the matrix
+  const SNAKE_DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
+
+  function snakeInitial(seed) {
+    const start = { cells: [27, 26, 25], dir: 'right', food: 12, score: 0, alive: true, running: false, ticks: 0 }
+    return placeFood(start, seed || 7)
+  }
+
+  function placeFood(snake, seed) {
+    const occupied = new Set(snake.cells)
+    const free = []
+    for (let index = 0; index < 64; index += 1) if (!occupied.has(index)) free.push(index)
+    if (free.length === 0) return { ...snake, alive: false }
+    const rand = TT.util.random((seed || 1) + snake.cells.length * 31 + snake.ticks * 7)
+    const food = free[Math.floor(rand() * free.length)]
+    return { ...snake, food }
+  }
+
+  function snakeStep(snake) {
+    if (!snake.alive) return snake
+    const head = snake.cells[0]
+    const row = Math.floor(head / 8)
+    const col = head % 8
+    const delta = SNAKE_DIRS[snake.dir] || SNAKE_DIRS.right
+    const nextRow = row + delta[1]
+    const nextCol = col + delta[0]
+    if (nextRow < 0 || nextRow > 7 || nextCol < 0 || nextCol > 7) {
+      return { ...snake, alive: false, running: false }
+    }
+    const next = nextRow * 8 + nextCol
+    const body = snake.cells.slice(0, snake.cells.length - 1)
+    if (body.indexOf(next) >= 0) return { ...snake, alive: false, running: false }
+    const ate = next === snake.food
+    const cells = [next, ...(ate ? snake.cells : body)]
+    const grown = { ...snake, cells, ticks: snake.ticks + 1, score: snake.score + (ate ? 1 : 0) }
+    return ate ? placeFood(grown, snake.ticks + snake.score + 3) : grown
+  }
+
+  function snakeTurn(snake, dir) {
+    if (!snake.alive || !SNAKE_DIRS[dir]) return snake
+    const delta = SNAKE_DIRS[dir]
+    const deltaNow = SNAKE_DIRS[snake.dir] || SNAKE_DIRS.right
+    // no instant 180-degree reversal
+    if (delta[0] === -deltaNow[0] && delta[1] === -deltaNow[1]) return snake
+    return { ...snake, dir }
+  }
+
   return {
+    SNAKE_DIRS,
+    snakeInitial,
+    snakeStep,
+    snakeTurn,
     SCALES,
     TUNES,
     PATTERNS: PATTERN_KEYS,
@@ -223,6 +274,7 @@ TT.ArcadeUI = (function () {
     ['guess', 'arcade.game.guess', '🔢'],
     ['vote', 'arcade.game.vote', '🗳️'],
     ['debug', 'arcade.game.debug', '🐞'],
+    ['snake', 'arcade.game.snake', '🐍'],
   ]
 
   function Page(props) {
@@ -251,6 +303,7 @@ TT.ArcadeUI = (function () {
       arcade.game === 'guess' ? h(Guess, { arcade, t, api }) : null,
       arcade.game === 'vote' ? h(Vote, { arcade, t, api }) : null,
       arcade.game === 'debug' ? h(Debug, { arcade, t, api }) : null,
+      arcade.game === 'snake' ? h(Snake, { arcade, t, api }) : null,
     )
   }
 
@@ -549,6 +602,60 @@ TT.ArcadeUI = (function () {
       h(Card, { title: t('arcade.debug.why'), hint: '' },
         h('p', { className: 'tt-labempty' }, t('arcade.debug.body')),
         h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.debug.scope')),
+      ),
+    )
+  }
+
+  function Snake(props) {
+    const { arcade, t, api } = props
+    const game = arcade.snake || TT.Arcade.snakeInitial()
+    const cellAt = (index) => {
+      if (index === game.food) return 'food'
+      const at = game.cells.indexOf(index)
+      if (at === 0) return 'head'
+      if (at > 0) return 'body'
+      return ''
+    }
+    return h('div', { className: 'tt-labgrid' },
+      h(Card, { title: t('arcade.snake.title'), hint: t('arcade.snake.hint') },
+        h('div', { className: 'tt-snakewrap' },
+          h('div', { className: 'tt-snakegrid' }, Array.from({ length: 64 }, (_, index) => {
+            const kind = cellAt(index)
+            return h('div', {
+              key: index,
+              className: 'tt-snakecell',
+              'data-kind': kind,
+            })
+          })),
+          game.alive ? null : h('div', { className: 'tt-snakeover' },
+            h('strong', null, t('arcade.snake.over')),
+            h('span', null, `${t('arcade.snake.score')} ${game.score}`),
+          ),
+        ),
+        h('div', { className: 'tt-labrow' },
+          h('button', {
+            type: 'button',
+            className: 'tt-btn',
+            'data-kind': game.running ? 'active' : 'primary',
+            disabled: !game.alive,
+            onClick: () => api.dispatch({ type: 'snake/toggle' }),
+          }, game.running ? t('arcade.snake.pause') : t('arcade.snake.play')),
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
+            onClick: () => api.dispatch({ type: 'snake/reset' }) }, t('arcade.snake.reset')),
+          h('span', { className: 'tt-lablabel' }, `${t('arcade.snake.score')} ${game.score}`),
+          h('span', { className: 'tt-lablabel' }, `${t('arcade.snake.dir')} ${game.dir}`),
+        ),
+        h('div', { className: 'tt-labrow' },
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'up' }) }, '↑'),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'down' }) }, '↓'),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'left' }) }, '←'),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'right' }) }, '→'),
+          h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('arcade.snake.keys')),
+        ),
+      ),
+      h(Card, { title: t('arcade.snake.how'), hint: '' },
+        h('p', { className: 'tt-labempty' }, t('arcade.snake.body')),
+        h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.snake.clock')),
       ),
     )
   }

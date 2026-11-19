@@ -40,6 +40,33 @@ TT.dict = {
     'arcade.game.guess': '猜数字',
     'arcade.game.vote': '表决器',
     'arcade.game.debug': '故障排查',
+    'arcade.game.snake': '链上贪吃蛇',
+    'arcade.snake.title': '链上贪吃蛇',
+    'arcade.snake.hint': '蛇每 0.45 秒走一格——它的状态就是几个寄存器，时钟就是出块。',
+    'arcade.snake.play': '▶ 开始',
+    'arcade.snake.pause': '⏸ 暂停',
+    'arcade.snake.reset': '重开',
+    'arcade.snake.score': '得分',
+    'arcade.snake.dir': '方向',
+    'arcade.snake.keys': '方向键 / WASD',
+    'arcade.snake.over': '撞到了！',
+    'arcade.snake.how': '它在门级上是什么',
+    'arcade.snake.body': '真实实现：8×8 点阵 + 行/列计数器 + 比较器判定蛇头坐标与食物/自身坐标是否相等，状态寄存器每个时钟更新一次。',
+    'arcade.snake.clock': '蛇速 = 链上时钟 2.22 Hz（0.45 秒/块）；想更快只能靠更多并行电路，而不是提高出块频率。',
+    'lab.export.hex': '复制 hex',
+    'lab.export.verilog': '复制 Verilog',
+    'lab.export.json': '复制 JSON',
+    'lab.export.csv': '复制真值表 CSV',
+    'lab.copied': '已复制到剪贴板',
+    'lab.export.title': '导出',
+    'lab.copyFail': '复制失败，请手动选择文本',
+    'lab.archive.title': '存档码',
+    'lab.archive.export': '复制存档码',
+    'lab.archive.import': '导入存档码',
+    'lab.archive.hint': '存档码把整个电路库压成一段文本，换电脑粘贴即可恢复。',
+    'lab.archive.placeholder': '粘贴存档码…',
+    'lab.importDone': '已导入 {n} 个电路',
+    'lab.importFail': '存档码无效：{error}',
     'arcade.scale.major': '大调',
     'arcade.scale.penta': '五声',
     'arcade.scale.minor': '小调',
@@ -525,6 +552,33 @@ TT.dict = {
     'arcade.game.guess': 'Guess number',
     'arcade.game.vote': 'Voter',
     'arcade.game.debug': 'Debug lab',
+    'arcade.game.snake': 'Chain snake',
+    'arcade.snake.title': 'Chain snake',
+    'arcade.snake.hint': 'The snake moves one cell every 0.45 s — its state is a few registers, the clock is block production.',
+    'arcade.snake.play': '▶ Start',
+    'arcade.snake.pause': '⏸ Pause',
+    'arcade.snake.reset': 'Restart',
+    'arcade.snake.score': 'Score',
+    'arcade.snake.dir': 'Dir',
+    'arcade.snake.keys': 'arrows / WASD',
+    'arcade.snake.over': 'Crashed!',
+    'arcade.snake.how': 'What it is at gate level',
+    'arcade.snake.body': 'A real build: 8×8 matrix + row/column counters + comparators checking the head against food and body, with state registers updated every clock.',
+    'arcade.snake.clock': 'Snake speed is the chain clock (2.22 Hz); you cannot make blocks faster, only add more parallel circuits.',
+    'lab.export.hex': 'Copy hex',
+    'lab.export.verilog': 'Copy Verilog',
+    'lab.export.json': 'Copy JSON',
+    'lab.export.csv': 'Copy truth-table CSV',
+    'lab.copied': 'Copied to clipboard',
+    'lab.export.title': 'Export',
+    'lab.copyFail': 'Copy failed — select the text manually',
+    'lab.archive.title': 'Archive code',
+    'lab.archive.export': 'Copy archive code',
+    'lab.archive.import': 'Import archive code',
+    'lab.archive.hint': 'The archive code packs the whole circuit library into one text; paste it on another machine to restore.',
+    'lab.archive.placeholder': 'Paste an archive code…',
+    'lab.importDone': 'Imported {n} circuits',
+    'lab.importFail': 'Invalid archive code: {error}',
     'arcade.scale.major': 'Major',
     'arcade.scale.penta': 'Pentatonic',
     'arcade.scale.minor': 'Minor',
@@ -1385,6 +1439,20 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-debugoption[data-kind="good"] { color:#04121c; background:linear-gradient(160deg,#8df0ff,#2be6c2); border-color:transparent; }
 .tt-debugoption[data-kind="bad"] { color:#ff9aa4; border-color:rgba(255,93,108,.55); background:rgba(255,93,108,.08); }
 
+.tt-snakewrap { position:relative; width:min(400px, 100%); }
+.tt-snakegrid { display:grid; grid-template-columns:repeat(8, 1fr); gap:3px; width:min(400px, 100%); aspect-ratio:1;
+  padding:6px; border-radius:12px; background:rgba(4,12,20,.7); border:1px solid rgba(86,225,255,.18); }
+.tt-snakecell { border-radius:4px; background:rgba(86,225,255,.04); }
+.tt-snakecell[data-kind="head"] { background:linear-gradient(150deg,#ffe9ae,#ffc35c); box-shadow:0 0 12px rgba(255,195,92,.7); }
+.tt-snakecell[data-kind="body"] { background:rgba(255,195,92,.55); }
+.tt-snakecell[data-kind="food"] { background:var(--tt-mint); box-shadow:0 0 12px rgba(43,230,194,.8); }
+.tt-snakeover { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:4px; border-radius:12px; background:rgba(4,12,20,.72); color:#ff9aa4; font-size:13px; }
+.tt-archivebox { width:100%; min-height:72px; resize:vertical; border-radius:9px; padding:8px 10px; font-size:11px;
+  font-family:var(--dsh-font-family-mono, monospace); color:var(--tt-ink); background:rgba(4,12,20,.6);
+  border:1px solid rgba(86,225,255,.22); }
+.tt-archivebox:focus { outline:none; border-color:rgba(86,225,255,.6); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -1506,6 +1574,15 @@ TT.UI.Panel = function Panel(props) {
         if (state.codex) api.dispatch({ type: 'codex/close' })
         else if (!state.finaleDismissed && TT.Missions.allDone(state)) api.dispatch({ type: 'finale/close' })
         return
+      }
+      if (state.mode === 'arcade' && state.arcade.game === 'snake') {
+        const dirs = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', a: 'left', s: 'down', d: 'right' }
+        const dir = dirs[event.key] || dirs[event.key.toLowerCase()]
+        if (dir) {
+          event.preventDefault()
+          api.dispatch({ type: 'snake/dir', dir })
+          return
+        }
       }
       if (/^[1-9]$/.test(event.key)) {
         api.dispatch({ type: 'chapter/select', index: Number(event.key) - 1 })

@@ -28,6 +28,7 @@ TT.App = (function () {
     let cinemaInternal = false
     let musicTimer = null
     let pixelTimer = null
+    let snakeTimer = null
     let clockTimer = null
     let clockRunning = false
     let world = null
@@ -187,6 +188,23 @@ TT.App = (function () {
       } else if (!musicOn && musicTimer) {
         clearTimeout(musicTimer)
         musicTimer = null
+      }
+      const snakeOn = inArcade && state.arcade.game === 'snake' && state.arcade.snake && state.arcade.snake.running
+      if (snakeOn && !snakeTimer) {
+        snakeTimer = setInterval(() => {
+          const current = get()
+          const game = current.arcade.snake
+          if (current.mode !== 'arcade' || current.arcade.game !== 'snake' || !game || !game.running) return
+          const scoreBefore = game.score
+          dispatch({ type: 'snake/tick' })
+          const after = get().arcade.snake
+          if (!after) return
+          if (after.score > scoreBefore && TT.Audio) TT.Audio.play('mint')
+          if (!after.alive && TT.Audio) TT.Audio.play('error')
+        }, 420)
+      } else if (!snakeOn && snakeTimer) {
+        clearInterval(snakeTimer)
+        snakeTimer = null
       }
       const pixelOn = inArcade && state.arcade.game === 'pixel' && state.arcade.pixel.anim
       if (pixelOn && !pixelTimer) {

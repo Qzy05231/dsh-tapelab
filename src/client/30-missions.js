@@ -573,7 +573,13 @@ TT.Missions = (function () {
       guess: { secret: 11, guess: 0, tries: 0, history: [], solved: false },
       vote: { a: 0, b: 0, c: 0 },
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
+      snake: null,
     }
+  }
+
+  function ensureSnake(arcade) {
+    if (arcade.snake || !TT.Arcade) return arcade
+    return { ...arcade, snake: TT.Arcade.snakeInitial() }
   }
 
   function ensureArcadePuzzles(arcade) {
@@ -1072,7 +1078,7 @@ TT.Missions = (function () {
         return {
           ...state,
           mode: 'arcade',
-          arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
+          arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
         }
       case 'arcade/close':
         return { ...state, mode: 'missions' }
@@ -1082,6 +1088,46 @@ TT.Missions = (function () {
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
         }
+      case 'lab/import': {
+        if (!TT.Export) return state
+        try {
+          const entries = TT.Export.decodeLibrary(action.code)
+          const existing = state.lab.library || []
+          const ids = new Set(existing.map((item) => item.id))
+          const merged = [...existing]
+          for (const entry of entries) {
+            if (ids.has(entry.id)) continue
+            merged.push(entry)
+            ids.add(entry.id)
+          }
+          let next = { ...state, lab: { ...state.lab, library: merged.slice(0, 24) } }
+          return pushToast(next, 'lab.importDone', { n: merged.length - existing.length }, 'good')
+        } catch (error) {
+          return pushToast(state, 'lab.importFail', { error: String(error && error.message ? error.message : error) }, 'warn')
+        }
+      }
+      case 'snake/toggle': {
+        const snake = state.arcade.snake || (TT.Arcade ? TT.Arcade.snakeInitial() : null)
+        if (!snake) return state
+        if (!snake.alive) {
+          const reset = TT.Arcade.snakeInitial()
+          return { ...state, arcade: { ...state.arcade, snake: { ...reset, running: true } } }
+        }
+        return { ...state, arcade: { ...state.arcade, snake: { ...snake, running: !snake.running } } }
+      }
+      case 'snake/dir': {
+        const snake = state.arcade.snake || (TT.Arcade ? TT.Arcade.snakeInitial() : null)
+        if (!snake || !TT.Arcade) return state
+        return { ...state, arcade: { ...state.arcade, snake: TT.Arcade.snakeTurn(snake, action.dir) } }
+      }
+      case 'snake/tick': {
+        const snake = state.arcade.snake
+        if (!snake || !snake.running || !TT.Arcade) return state
+        const next = TT.Arcade.snakeStep(snake)
+        return { ...state, arcade: { ...state.arcade, snake: next } }
+      }
+      case 'snake/reset':
+        return { ...state, arcade: { ...state.arcade, snake: TT.Arcade ? TT.Arcade.snakeInitial() : null } }
       case 'music/toggle':
         return {
           ...state,

@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const read = (name) => readFileSync(join(HERE, '..', 'src', 'client', name), 'utf8')
 const TT = new Function(read('00-core.js') + '\nreturn TT')()
-for (const name of ['20-circuit.js', '25-cpu.js', '28-safety.js', '30-missions.js', '37-arcade.js']) {
+for (const name of ['20-circuit.js', '25-cpu.js', '28-safety.js', '30-missions.js', '37-arcade.js', '38-export.js']) {
   new Function('TT', read(name))(TT)
 }
 const A = TT.Arcade
@@ -57,6 +57,53 @@ test('debug lab has five solvable puzzles with one correct repair each', () => {
   }
 })
 
+test('chain snake moves, turns, eats and dies on walls', () => {
+  let snake = A.snakeInitial()
+  assert.equal(snake.alive, true)
+  assert.equal(snake.cells.length, 3)
+  const head = snake.cells[0]
+  snake = A.snakeStep(snake)
+  assert.equal(snake.cells[0], head + 1)
+  snake = A.snakeTurn(snake, 'left')
+  assert.equal(snake.dir, 'right', '180-degree turn is rejected')
+  snake = A.snakeTurn(snake, 'up')
+  const before = snake.cells[0]
+  snake = A.snakeStep(snake)
+  assert.equal(snake.cells[0], before - 8)
+  // eating
+  let eat = A.snakeInitial()
+  eat = { ...eat, food: eat.cells[0] + 1 }
+  const length = eat.cells.length
+  eat = A.snakeStep(eat)
+  assert.equal(eat.score, 1)
+  assert.equal(eat.cells.length, length + 1)
+  // wall collision
+  let wall = A.snakeInitial()
+  wall = { ...wall, cells: [7, 6, 5], dir: 'right' }
+  wall = A.snakeStep(wall)
+  assert.equal(wall.alive, false)
+})
+
+test('export helpers round-trip netlists, Verilog and libraries', () => {
+  const half = TT.Circuit.canonical.halfAdder()
+  const code = TT.Export.encodeNetlist(half)
+  assert.equal(typeof code, 'string')
+  const decoded = TT.Export.decodeNetlist(code)
+  assert.equal(TT.Circuit.equivalent(decoded, half), true)
+  const verilog = TT.Export.verilog(half, 'half_adder')
+  assert.ok(verilog.includes('module half_adder'))
+  assert.ok(verilog.includes('assign w['))
+  const csv = TT.Export.truthTableCsv(half)
+  const lines = csv.trim().split('\n')
+  assert.equal(lines[0], 'in_bits,out_bits')
+  assert.equal(lines.length, 5, 'header + four truth-table rows')
+  const library = [{ id: 'a', name: 'one', nIn: 2, gateCount: 5, hex: '0x00', netlist: half, at: 1 }]
+  const archive = TT.Export.libraryCode(library)
+  const restored = TT.Export.decodeLibrary(archive)
+  assert.equal(restored.length, 1)
+  assert.equal(TT.Circuit.equivalent(restored[0].netlist, half), true)
+})
+
 test('arcade reducer drives every mini game', () => {
   let state = M.initial()
   state = M.reduce(state, { type: 'arcade/open', game: 'music' })
@@ -90,6 +137,15 @@ test('arcade reducer drives every mini game', () => {
   state = M.reduce(state, { type: 'vote/toggle', index: 0 })
   state = M.reduce(state, { type: 'vote/toggle', index: 1 })
   assert.equal(A.majority(state.arcade.vote.a, state.arcade.vote.b, state.arcade.vote.c), 1)
+
+  state = M.reduce(state, { type: 'arcade/game', game: 'snake' })
+  state = M.reduce(state, { type: 'snake/toggle' })
+  assert.equal(state.arcade.snake.running, true)
+  const headBefore = state.arcade.snake.cells[0]
+  state = M.reduce(state, { type: 'snake/tick' })
+  assert.notEqual(state.arcade.snake.cells[0], headBefore)
+  state = M.reduce(state, { type: 'snake/dir', dir: 'up' })
+  assert.equal(state.arcade.snake.dir, 'up')
 
   state = M.reduce(state, { type: 'arcade/game', game: 'debug' })
   assert.equal(state.arcade.debug.puzzles.length, 5)

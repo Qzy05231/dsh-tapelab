@@ -5565,7 +5565,13 @@ TT.Missions = (function () {
       guess: { secret: 11, guess: 0, tries: 0, history: [], solved: false },
       vote: { a: 0, b: 0, c: 0 },
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
+      snake: null,
     }
+  }
+
+  function ensureSnake(arcade) {
+    if (arcade.snake || !TT.Arcade) return arcade
+    return { ...arcade, snake: TT.Arcade.snakeInitial() }
   }
 
   function ensureArcadePuzzles(arcade) {
@@ -6064,7 +6070,7 @@ TT.Missions = (function () {
         return {
           ...state,
           mode: 'arcade',
-          arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
+          arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
         }
       case 'arcade/close':
         return { ...state, mode: 'missions' }
@@ -6074,6 +6080,46 @@ TT.Missions = (function () {
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
         }
+      case 'lab/import': {
+        if (!TT.Export) return state
+        try {
+          const entries = TT.Export.decodeLibrary(action.code)
+          const existing = state.lab.library || []
+          const ids = new Set(existing.map((item) => item.id))
+          const merged = [...existing]
+          for (const entry of entries) {
+            if (ids.has(entry.id)) continue
+            merged.push(entry)
+            ids.add(entry.id)
+          }
+          let next = { ...state, lab: { ...state.lab, library: merged.slice(0, 24) } }
+          return pushToast(next, 'lab.importDone', { n: merged.length - existing.length }, 'good')
+        } catch (error) {
+          return pushToast(state, 'lab.importFail', { error: String(error && error.message ? error.message : error) }, 'warn')
+        }
+      }
+      case 'snake/toggle': {
+        const snake = state.arcade.snake || (TT.Arcade ? TT.Arcade.snakeInitial() : null)
+        if (!snake) return state
+        if (!snake.alive) {
+          const reset = TT.Arcade.snakeInitial()
+          return { ...state, arcade: { ...state.arcade, snake: { ...reset, running: true } } }
+        }
+        return { ...state, arcade: { ...state.arcade, snake: { ...snake, running: !snake.running } } }
+      }
+      case 'snake/dir': {
+        const snake = state.arcade.snake || (TT.Arcade ? TT.Arcade.snakeInitial() : null)
+        if (!snake || !TT.Arcade) return state
+        return { ...state, arcade: { ...state.arcade, snake: TT.Arcade.snakeTurn(snake, action.dir) } }
+      }
+      case 'snake/tick': {
+        const snake = state.arcade.snake
+        if (!snake || !snake.running || !TT.Arcade) return state
+        const next = TT.Arcade.snakeStep(snake)
+        return { ...state, arcade: { ...state.arcade, snake: next } }
+      }
+      case 'snake/reset':
+        return { ...state, arcade: { ...state.arcade, snake: TT.Arcade ? TT.Arcade.snakeInitial() : null } }
       case 'music/toggle':
         return {
           ...state,
@@ -7044,6 +7090,29 @@ TT.LabUI = (function () {
     return gates == null ? '—' : String(gates)
   }
 
+  function copyText(api, text) {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          () => api.dispatch({ type: 'toast/show', key: 'lab.copied', tone: 'good' }),
+          () => api.dispatch({ type: 'toast/show', key: 'lab.copyFail', tone: 'warn' }),
+        )
+        return
+      }
+      const area = document.createElement('textarea')
+      area.value = text
+      area.style.position = 'fixed'
+      area.style.opacity = '0'
+      document.body.appendChild(area)
+      area.select()
+      const ok = document.execCommand && document.execCommand('copy')
+      document.body.removeChild(area)
+      api.dispatch({ type: 'toast/show', key: ok ? 'lab.copied' : 'lab.copyFail', tone: ok ? 'good' : 'warn' })
+    } catch (error) {
+      api.dispatch({ type: 'toast/show', key: 'lab.copyFail', tone: 'warn' })
+    }
+  }
+
   function Lab(props) {
     const { state, t, resolve, api } = props
     const lab = state.lab
@@ -7128,6 +7197,13 @@ TT.LabUI = (function () {
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
             disabled: !result, onClick: () => api.dispatch({ type: 'lab/save' }) }, t('lab.synth.save')),
         ),
+        result && TT.Export ? h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('lab.export.title')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => copyText(api, result.hex) }, t('lab.export.hex')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => copyText(api, TT.Export.verilog(result.netlist, 'synthesized')) }, t('lab.export.verilog')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => copyText(api, TT.Export.netlistJson(result.netlist)) }, t('lab.export.json')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => copyText(api, TT.Export.truthTableCsv(result.netlist)) }, t('lab.export.csv')),
+        ) : null,
       ),
       h('section', { className: 'tt-labcard' },
         h('div', { className: 'tt-labcardhead' },
@@ -7201,11 +7277,36 @@ TT.LabUI = (function () {
   function Library(props) {
     const { lab, t, api } = props
     const library = lab.library || []
+    const [archive, setArchive] = React.useState('')
+    const [importing, setImporting] = React.useState(false)
     return h('div', { className: 'tt-labcard' },
       h('div', { className: 'tt-labcardhead' },
         h('strong', null, t('lab.library.title')),
         h('span', null, `${library.length}/24`),
       ),
+      TT.Export ? h('div', { className: 'tt-labrow' },
+        h('span', { className: 'tt-lablabel' }, t('lab.archive.title')),
+        h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
+          onClick: () => copyText(api, TT.Export.libraryCode(library)) }, t('lab.archive.export')),
+        h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
+          onClick: () => setImporting((open) => !open) }, t('lab.archive.import')),
+        h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('lab.archive.hint')),
+      ) : null,
+      importing ? h('div', { className: 'tt-labrow', style: { alignItems: 'stretch' } },
+        h('textarea', {
+          className: 'tt-archivebox',
+          placeholder: t('lab.archive.placeholder'),
+          value: archive,
+          onChange: (event) => setArchive(event.target.value),
+        }),
+        h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
+          onClick: () => {
+            if (!archive.trim()) return
+            api.dispatch({ type: 'lab/import', code: archive.trim() })
+            setArchive('')
+            setImporting(false)
+          } }, t('lab.archive.import')),
+      ) : null,
       library.length === 0
         ? h('p', { className: 'tt-labempty' }, t('lab.library.empty'))
         : h('div', { className: 'tt-librarylist' }, library.map((entry) =>
@@ -7245,6 +7346,10 @@ TT.LabUI = (function () {
         h('span', null, `${sandbox.name} · ${TT.Circuit.gateCount(netlist)} ${t('lab.synth.gates')} · ${netlist.nIn} in / ${netlist.outputs.length} out`),
         h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
           onClick: () => api.dispatch({ type: 'lab/tab', tab: 'synth' }) }, '←'),
+        TT.Export ? h('button', { type: 'button', className: 'tt-chip',
+          onClick: () => copyText(api, TT.Export.verilog(netlist, sandbox.name)) }, t('lab.export.verilog')) : null,
+        TT.Export ? h('button', { type: 'button', className: 'tt-chip',
+          onClick: () => copyText(api, TT.Export.netlistJson(netlist)) }, t('lab.export.json')) : null,
       ),
       h(SandboxCanvas, { netlist, inputs, api, t }),
       h('div', { className: 'tt-labrow tt-sandboxinputs' },
@@ -7751,7 +7856,58 @@ TT.Arcade = (function () {
     return TT.Circuit.makeNetlist({ nIn: puzzle.nIn, gates, outputs: puzzle.correct.outputs.slice() })
   }
 
+  // ------------------------------------------------------------ snake on the matrix
+  const SNAKE_DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
+
+  function snakeInitial(seed) {
+    const start = { cells: [27, 26, 25], dir: 'right', food: 12, score: 0, alive: true, running: false, ticks: 0 }
+    return placeFood(start, seed || 7)
+  }
+
+  function placeFood(snake, seed) {
+    const occupied = new Set(snake.cells)
+    const free = []
+    for (let index = 0; index < 64; index += 1) if (!occupied.has(index)) free.push(index)
+    if (free.length === 0) return { ...snake, alive: false }
+    const rand = TT.util.random((seed || 1) + snake.cells.length * 31 + snake.ticks * 7)
+    const food = free[Math.floor(rand() * free.length)]
+    return { ...snake, food }
+  }
+
+  function snakeStep(snake) {
+    if (!snake.alive) return snake
+    const head = snake.cells[0]
+    const row = Math.floor(head / 8)
+    const col = head % 8
+    const delta = SNAKE_DIRS[snake.dir] || SNAKE_DIRS.right
+    const nextRow = row + delta[1]
+    const nextCol = col + delta[0]
+    if (nextRow < 0 || nextRow > 7 || nextCol < 0 || nextCol > 7) {
+      return { ...snake, alive: false, running: false }
+    }
+    const next = nextRow * 8 + nextCol
+    const body = snake.cells.slice(0, snake.cells.length - 1)
+    if (body.indexOf(next) >= 0) return { ...snake, alive: false, running: false }
+    const ate = next === snake.food
+    const cells = [next, ...(ate ? snake.cells : body)]
+    const grown = { ...snake, cells, ticks: snake.ticks + 1, score: snake.score + (ate ? 1 : 0) }
+    return ate ? placeFood(grown, snake.ticks + snake.score + 3) : grown
+  }
+
+  function snakeTurn(snake, dir) {
+    if (!snake.alive || !SNAKE_DIRS[dir]) return snake
+    const delta = SNAKE_DIRS[dir]
+    const deltaNow = SNAKE_DIRS[snake.dir] || SNAKE_DIRS.right
+    // no instant 180-degree reversal
+    if (delta[0] === -deltaNow[0] && delta[1] === -deltaNow[1]) return snake
+    return { ...snake, dir }
+  }
+
   return {
+    SNAKE_DIRS,
+    snakeInitial,
+    snakeStep,
+    snakeTurn,
     SCALES,
     TUNES,
     PATTERNS: PATTERN_KEYS,
@@ -7779,6 +7935,7 @@ TT.ArcadeUI = (function () {
     ['guess', 'arcade.game.guess', '🔢'],
     ['vote', 'arcade.game.vote', '🗳️'],
     ['debug', 'arcade.game.debug', '🐞'],
+    ['snake', 'arcade.game.snake', '🐍'],
   ]
 
   function Page(props) {
@@ -7807,6 +7964,7 @@ TT.ArcadeUI = (function () {
       arcade.game === 'guess' ? h(Guess, { arcade, t, api }) : null,
       arcade.game === 'vote' ? h(Vote, { arcade, t, api }) : null,
       arcade.game === 'debug' ? h(Debug, { arcade, t, api }) : null,
+      arcade.game === 'snake' ? h(Snake, { arcade, t, api }) : null,
     )
   }
 
@@ -8109,7 +8267,190 @@ TT.ArcadeUI = (function () {
     )
   }
 
+  function Snake(props) {
+    const { arcade, t, api } = props
+    const game = arcade.snake || TT.Arcade.snakeInitial()
+    const cellAt = (index) => {
+      if (index === game.food) return 'food'
+      const at = game.cells.indexOf(index)
+      if (at === 0) return 'head'
+      if (at > 0) return 'body'
+      return ''
+    }
+    return h('div', { className: 'tt-labgrid' },
+      h(Card, { title: t('arcade.snake.title'), hint: t('arcade.snake.hint') },
+        h('div', { className: 'tt-snakewrap' },
+          h('div', { className: 'tt-snakegrid' }, Array.from({ length: 64 }, (_, index) => {
+            const kind = cellAt(index)
+            return h('div', {
+              key: index,
+              className: 'tt-snakecell',
+              'data-kind': kind,
+            })
+          })),
+          game.alive ? null : h('div', { className: 'tt-snakeover' },
+            h('strong', null, t('arcade.snake.over')),
+            h('span', null, `${t('arcade.snake.score')} ${game.score}`),
+          ),
+        ),
+        h('div', { className: 'tt-labrow' },
+          h('button', {
+            type: 'button',
+            className: 'tt-btn',
+            'data-kind': game.running ? 'active' : 'primary',
+            disabled: !game.alive,
+            onClick: () => api.dispatch({ type: 'snake/toggle' }),
+          }, game.running ? t('arcade.snake.pause') : t('arcade.snake.play')),
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
+            onClick: () => api.dispatch({ type: 'snake/reset' }) }, t('arcade.snake.reset')),
+          h('span', { className: 'tt-lablabel' }, `${t('arcade.snake.score')} ${game.score}`),
+          h('span', { className: 'tt-lablabel' }, `${t('arcade.snake.dir')} ${game.dir}`),
+        ),
+        h('div', { className: 'tt-labrow' },
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'up' }) }, '↑'),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'down' }) }, '↓'),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'left' }) }, '←'),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'right' }) }, '→'),
+          h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('arcade.snake.keys')),
+        ),
+      ),
+      h(Card, { title: t('arcade.snake.how'), hint: '' },
+        h('p', { className: 'tt-labempty' }, t('arcade.snake.body')),
+        h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.snake.clock')),
+      ),
+    )
+  }
+
   return { Page }
+})()
+
+// ---- 38-export.js ----
+/**
+ * 38-export — practical export/share helpers for circuits and the local library.
+ * Everything is text: JSON, Verilog, truth-table CSV, and base64url share codes.
+ */
+
+TT.Export = (function () {
+  function b64encode(text) {
+    const json = String(text)
+    if (typeof Buffer !== 'undefined') return Buffer.from(json, 'utf8').toString('base64')
+    return btoa(unescape(encodeURIComponent(json)))
+  }
+  function b64decode(code) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(code, 'base64').toString('utf8')
+    return decodeURIComponent(escape(atob(code)))
+  }
+  function toUrlSafe(base64) {
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
+  function fromUrlSafe(code) {
+    const base64 = code.replace(/-/g, '+').replace(/_/g, '/')
+    return base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+  }
+
+  function netlistJson(netlist) {
+    return JSON.stringify(
+      {
+        schema: 'dsh-tapelab.netlist.v1',
+        nIn: netlist.nIn,
+        nOut: netlist.outputs.length,
+        nState: netlist.nState || 0,
+        gates: netlist.gates.map((gate) => [gate.a, gate.b]),
+        outputs: netlist.outputs.slice(),
+      },
+      null,
+      2,
+    )
+  }
+
+  function verilog(netlist, name) {
+    const moduleName = (name || 'circuit').replace(/[^A-Za-z0-9_]/g, '_')
+    const nodeCount = 2 + netlist.nIn + (netlist.nState || 0) + netlist.gates.length
+    const lines = []
+    lines.push(`// generated by TapeOut 3D Lab — ${new Date().toISOString().slice(0, 10)}`)
+    lines.push(`module ${moduleName}(input [${Math.max(0, netlist.nIn - 1)}:0] in, output [${Math.max(0, netlist.outputs.length - 1)}:0] out);`)
+    lines.push(`  wire [${nodeCount - 1}:0] w;`)
+    lines.push("  assign w[0] = 1'b0;")
+    lines.push("  assign w[1] = 1'b1;")
+    for (let i = 0; i < netlist.nIn; i += 1) lines.push(`  assign w[${2 + i}] = in[${i}];`)
+    netlist.gates.forEach((gate, index) => {
+      lines.push(`  assign w[${2 + netlist.nIn + (netlist.nState || 0) + index}] = ~(w[${gate.a}] & w[${gate.b}]);`)
+    })
+    netlist.outputs.forEach((node, index) => {
+      lines.push(`  assign out[${index}] = w[${node}];`)
+    })
+    lines.push('endmodule')
+    return lines.join('\n') + '\n'
+  }
+
+  function truthTableCsv(netlist, maxRows) {
+    const limit = Math.min(maxRows || 4096, 1 << netlist.nIn)
+    const rows = ['in_bits,out_bits']
+    for (let bits = 0; bits < limit; bits += 1) {
+      let result
+      try {
+        result = TT.Circuit.evaluate(netlist, bits)
+      } catch (error) {
+        break
+      }
+      rows.push(`${TT.util.formatBits(bits, netlist.nIn)},${TT.util.formatBits(result.outputBits, netlist.outputs.length)}`)
+    }
+    if (limit < 1 << netlist.nIn) rows.push(`# truncated: ${limit} of ${1 << netlist.nIn} rows`)
+    return rows.join('\n') + '\n'
+  }
+
+  function encodeNetlist(netlist) {
+    return toUrlSafe(b64encode(netlistJson(netlist)))
+  }
+  function decodeNetlist(code) {
+    const raw = b64decode(fromUrlSafe(String(code || '').trim()))
+    const data = JSON.parse(raw)
+    if (!data || !Array.isArray(data.gates)) throw new Error('not a netlist code')
+    const gates = data.gates.map((pair) => ({ a: Number(pair[0]), b: Number(pair[1]) }))
+    const netlist = TT.Circuit.makeNetlist({
+      nIn: Number(data.nIn) || 0,
+      nState: Number(data.nState) || 0,
+      gates,
+      outputs: Array.isArray(data.outputs) ? data.outputs.map(Number) : [],
+    })
+    const check = TT.Circuit.validateNetlist(netlist)
+    if (!check.ok) throw new Error(check.error)
+    return netlist
+  }
+
+  function libraryCode(library) {
+    const payload = {
+      schema: 'dsh-tapelab.library.v1',
+      created: Date.now(),
+      library: (library || []).map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        nIn: entry.nIn,
+        gateCount: entry.gateCount,
+        hex: entry.hex,
+        netlist: entry.netlist,
+        at: entry.at,
+      })),
+    }
+    return toUrlSafe(b64encode(JSON.stringify(payload)))
+  }
+  function decodeLibrary(code) {
+    const data = JSON.parse(b64decode(fromUrlSafe(String(code || '').trim())))
+    if (!data || !Array.isArray(data.library)) throw new Error('not a library code')
+    return data.library.filter((entry) => entry && entry.netlist && Array.isArray(entry.netlist.gates))
+  }
+
+  return {
+    b64encode,
+    b64decode,
+    netlistJson,
+    verilog,
+    truthTableCsv,
+    encodeNetlist,
+    decodeNetlist,
+    libraryCode,
+    decodeLibrary,
+  }
 })()
 
 // ---- 40-ui.js ----
@@ -8155,6 +8496,33 @@ TT.dict = {
     'arcade.game.guess': '猜数字',
     'arcade.game.vote': '表决器',
     'arcade.game.debug': '故障排查',
+    'arcade.game.snake': '链上贪吃蛇',
+    'arcade.snake.title': '链上贪吃蛇',
+    'arcade.snake.hint': '蛇每 0.45 秒走一格——它的状态就是几个寄存器，时钟就是出块。',
+    'arcade.snake.play': '▶ 开始',
+    'arcade.snake.pause': '⏸ 暂停',
+    'arcade.snake.reset': '重开',
+    'arcade.snake.score': '得分',
+    'arcade.snake.dir': '方向',
+    'arcade.snake.keys': '方向键 / WASD',
+    'arcade.snake.over': '撞到了！',
+    'arcade.snake.how': '它在门级上是什么',
+    'arcade.snake.body': '真实实现：8×8 点阵 + 行/列计数器 + 比较器判定蛇头坐标与食物/自身坐标是否相等，状态寄存器每个时钟更新一次。',
+    'arcade.snake.clock': '蛇速 = 链上时钟 2.22 Hz（0.45 秒/块）；想更快只能靠更多并行电路，而不是提高出块频率。',
+    'lab.export.hex': '复制 hex',
+    'lab.export.verilog': '复制 Verilog',
+    'lab.export.json': '复制 JSON',
+    'lab.export.csv': '复制真值表 CSV',
+    'lab.copied': '已复制到剪贴板',
+    'lab.export.title': '导出',
+    'lab.copyFail': '复制失败，请手动选择文本',
+    'lab.archive.title': '存档码',
+    'lab.archive.export': '复制存档码',
+    'lab.archive.import': '导入存档码',
+    'lab.archive.hint': '存档码把整个电路库压成一段文本，换电脑粘贴即可恢复。',
+    'lab.archive.placeholder': '粘贴存档码…',
+    'lab.importDone': '已导入 {n} 个电路',
+    'lab.importFail': '存档码无效：{error}',
     'arcade.scale.major': '大调',
     'arcade.scale.penta': '五声',
     'arcade.scale.minor': '小调',
@@ -8640,6 +9008,33 @@ TT.dict = {
     'arcade.game.guess': 'Guess number',
     'arcade.game.vote': 'Voter',
     'arcade.game.debug': 'Debug lab',
+    'arcade.game.snake': 'Chain snake',
+    'arcade.snake.title': 'Chain snake',
+    'arcade.snake.hint': 'The snake moves one cell every 0.45 s — its state is a few registers, the clock is block production.',
+    'arcade.snake.play': '▶ Start',
+    'arcade.snake.pause': '⏸ Pause',
+    'arcade.snake.reset': 'Restart',
+    'arcade.snake.score': 'Score',
+    'arcade.snake.dir': 'Dir',
+    'arcade.snake.keys': 'arrows / WASD',
+    'arcade.snake.over': 'Crashed!',
+    'arcade.snake.how': 'What it is at gate level',
+    'arcade.snake.body': 'A real build: 8×8 matrix + row/column counters + comparators checking the head against food and body, with state registers updated every clock.',
+    'arcade.snake.clock': 'Snake speed is the chain clock (2.22 Hz); you cannot make blocks faster, only add more parallel circuits.',
+    'lab.export.hex': 'Copy hex',
+    'lab.export.verilog': 'Copy Verilog',
+    'lab.export.json': 'Copy JSON',
+    'lab.export.csv': 'Copy truth-table CSV',
+    'lab.copied': 'Copied to clipboard',
+    'lab.export.title': 'Export',
+    'lab.copyFail': 'Copy failed — select the text manually',
+    'lab.archive.title': 'Archive code',
+    'lab.archive.export': 'Copy archive code',
+    'lab.archive.import': 'Import archive code',
+    'lab.archive.hint': 'The archive code packs the whole circuit library into one text; paste it on another machine to restore.',
+    'lab.archive.placeholder': 'Paste an archive code…',
+    'lab.importDone': 'Imported {n} circuits',
+    'lab.importFail': 'Invalid archive code: {error}',
     'arcade.scale.major': 'Major',
     'arcade.scale.penta': 'Pentatonic',
     'arcade.scale.minor': 'Minor',
@@ -9500,6 +9895,20 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-debugoption[data-kind="good"] { color:#04121c; background:linear-gradient(160deg,#8df0ff,#2be6c2); border-color:transparent; }
 .tt-debugoption[data-kind="bad"] { color:#ff9aa4; border-color:rgba(255,93,108,.55); background:rgba(255,93,108,.08); }
 
+.tt-snakewrap { position:relative; width:min(400px, 100%); }
+.tt-snakegrid { display:grid; grid-template-columns:repeat(8, 1fr); gap:3px; width:min(400px, 100%); aspect-ratio:1;
+  padding:6px; border-radius:12px; background:rgba(4,12,20,.7); border:1px solid rgba(86,225,255,.18); }
+.tt-snakecell { border-radius:4px; background:rgba(86,225,255,.04); }
+.tt-snakecell[data-kind="head"] { background:linear-gradient(150deg,#ffe9ae,#ffc35c); box-shadow:0 0 12px rgba(255,195,92,.7); }
+.tt-snakecell[data-kind="body"] { background:rgba(255,195,92,.55); }
+.tt-snakecell[data-kind="food"] { background:var(--tt-mint); box-shadow:0 0 12px rgba(43,230,194,.8); }
+.tt-snakeover { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:4px; border-radius:12px; background:rgba(4,12,20,.72); color:#ff9aa4; font-size:13px; }
+.tt-archivebox { width:100%; min-height:72px; resize:vertical; border-radius:9px; padding:8px 10px; font-size:11px;
+  font-family:var(--dsh-font-family-mono, monospace); color:var(--tt-ink); background:rgba(4,12,20,.6);
+  border:1px solid rgba(86,225,255,.22); }
+.tt-archivebox:focus { outline:none; border-color:rgba(86,225,255,.6); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -9621,6 +10030,15 @@ TT.UI.Panel = function Panel(props) {
         if (state.codex) api.dispatch({ type: 'codex/close' })
         else if (!state.finaleDismissed && TT.Missions.allDone(state)) api.dispatch({ type: 'finale/close' })
         return
+      }
+      if (state.mode === 'arcade' && state.arcade.game === 'snake') {
+        const dirs = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', a: 'left', s: 'down', d: 'right' }
+        const dir = dirs[event.key] || dirs[event.key.toLowerCase()]
+        if (dir) {
+          event.preventDefault()
+          api.dispatch({ type: 'snake/dir', dir })
+          return
+        }
       }
       if (/^[1-9]$/.test(event.key)) {
         api.dispatch({ type: 'chapter/select', index: Number(event.key) - 1 })
@@ -10323,6 +10741,7 @@ TT.App = (function () {
     let cinemaInternal = false
     let musicTimer = null
     let pixelTimer = null
+    let snakeTimer = null
     let clockTimer = null
     let clockRunning = false
     let world = null
@@ -10482,6 +10901,23 @@ TT.App = (function () {
       } else if (!musicOn && musicTimer) {
         clearTimeout(musicTimer)
         musicTimer = null
+      }
+      const snakeOn = inArcade && state.arcade.game === 'snake' && state.arcade.snake && state.arcade.snake.running
+      if (snakeOn && !snakeTimer) {
+        snakeTimer = setInterval(() => {
+          const current = get()
+          const game = current.arcade.snake
+          if (current.mode !== 'arcade' || current.arcade.game !== 'snake' || !game || !game.running) return
+          const scoreBefore = game.score
+          dispatch({ type: 'snake/tick' })
+          const after = get().arcade.snake
+          if (!after) return
+          if (after.score > scoreBefore && TT.Audio) TT.Audio.play('mint')
+          if (!after.alive && TT.Audio) TT.Audio.play('error')
+        }, 420)
+      } else if (!snakeOn && snakeTimer) {
+        clearInterval(snakeTimer)
+        snakeTimer = null
       }
       const pixelOn = inArcade && state.arcade.game === 'pixel' && state.arcade.pixel.anim
       if (pixelOn && !pixelTimer) {
