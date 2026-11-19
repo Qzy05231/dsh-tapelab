@@ -560,9 +560,24 @@ TT.Missions = (function () {
       arcade: freshArcade(),
       access: freshAccess(),
       lottery: freshLottery(),
+      art: freshArt(),
     }
     state.play = playFor(state, 0)
     return state
+  }
+
+  function freshArt() {
+    return {
+      seed: 'genesis-block',
+      circuit: 'lfsr8',
+      palette: 0,
+      index: 0,
+      playing: false,
+      gallery: [],
+      verifyCode: '',
+      verifyHash: '',
+      verifyResult: null,
+    }
   }
 
   function freshLottery() {
@@ -1118,6 +1133,52 @@ TT.Missions = (function () {
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
         }
+      case 'art/seed':
+        return { ...state, art: { ...state.art, seed: String(action.seed || ''), index: 0, verifyResult: null } }
+      case 'art/circuit':
+        return { ...state, art: { ...state.art, circuit: action.circuit || 'lfsr8', index: 0, verifyResult: null } }
+      case 'art/palette':
+        return { ...state, art: { ...state.art, palette: Math.max(0, Number(action.palette) || 0), verifyResult: null } }
+      case 'art/step':
+        return { ...state, art: { ...state.art, index: (state.art.index || 0) + 1 } }
+      case 'art/play':
+        return { ...state, art: { ...state.art, playing: !state.art.playing } }
+      case 'art/reset':
+        return { ...state, art: { ...state.art, index: 0, playing: false } }
+      case 'art/verifyCode':
+        return { ...state, art: { ...state.art, verifyCode: String(action.code || ''), verifyResult: null } }
+      case 'art/verifyHash':
+        return { ...state, art: { ...state.art, verifyHash: String(action.hash || ''), verifyResult: null } }
+      case 'art/verify': {
+        if (!TT.Art) return state
+        const result = TT.Art.verify(state.art.verifyCode, state.art.verifyHash)
+        return { ...state, art: { ...state.art, verifyResult: result } }
+      }
+      case 'art/mint': {
+        if (!TT.Art) return state
+        const frame = TT.Art.params(state.art)
+        const entry = { code: TT.Art.artworkCode(frame), frame }
+        return { ...state, art: { ...state.art, gallery: [entry, ...(state.art.gallery || [])].slice(0, 12) } }
+      }
+      case 'art/load': {
+        if (!TT.Art) return state
+        const result = TT.Art.verify(action.code, state.art.verifyHash)
+        if (!result.ok || !result.payload) {
+          return { ...state, art: { ...state.art, verifyResult: result } }
+        }
+        return {
+          ...state,
+          art: {
+            ...state.art,
+            seed: result.payload.seed,
+            circuit: result.payload.circuit,
+            palette: result.payload.palette,
+            index: result.payload.index,
+            verifyCode: String(action.code || ''),
+            verifyResult: result,
+          },
+        }
+      }
       case 'lottery/seed':
         return { ...state, lottery: { ...state.lottery, seed: String(action.seed || ''), result: null, receipt: null, verifyResult: null } }
       case 'lottery/participants':

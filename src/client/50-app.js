@@ -29,6 +29,7 @@ TT.App = (function () {
     let musicTimer = null
     let pixelTimer = null
     let snakeTimer = null
+    let artTimer = null
     let clockTimer = null
     let clockRunning = false
     let world = null
@@ -188,6 +189,18 @@ TT.App = (function () {
       } else if (!musicOn && musicTimer) {
         clearTimeout(musicTimer)
         musicTimer = null
+      }
+      const artOn = state.mode === 'lab' && state.lab.tab === 'art' && state.art && state.art.playing
+      if (artOn && !artTimer) {
+        artTimer = setInterval(() => {
+          const current = get()
+          if (current.mode !== 'lab' || current.lab.tab !== 'art' || !current.art.playing) return
+          dispatch({ type: 'art/step' })
+          if (TT.Audio) TT.Audio.play('tick')
+        }, 1050)
+      } else if (!artOn && artTimer) {
+        clearInterval(artTimer)
+        artTimer = null
       }
       const snakeOn = inArcade && state.arcade.game === 'snake' && state.arcade.snake && state.arcade.snake.running
       if (snakeOn && !snakeTimer) {

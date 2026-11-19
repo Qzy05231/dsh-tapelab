@@ -375,6 +375,40 @@ TT.dict = {
     'lab.tab.hardware': '硬件搭建',
     'lab.tab.access': '门禁资格',
     'lab.tab.lottery': '可验证抽奖',
+    'lab.tab.art': '生成艺术',
+    'art.title': '生成艺术 / 每区块一帧',
+    'art.sub': '电路状态决定画面：同一份种子与区块序号永远得到同一帧，可导出、可验证、可收藏。',
+    'art.play': '▶ 播放动画',
+    'art.pause': '⏸ 暂停动画',
+    'art.step': '下一帧',
+    'art.reset': '回到第 0 帧',
+    'art.block': '每个区块推进一帧',
+    'art.seed': '种子',
+    'art.circuit': '状态来源',
+    'art.circuit.lfsr': '8 位 LFSR',
+    'art.circuit.counter': '4 位计数器',
+    'art.circuit.gates': '组合逻辑哈希',
+    'art.palette': '配色',
+    'art.palette.cyber': '赛博',
+    'art.palette.riso': '孔版',
+    'art.palette.mono': '黑白',
+    'art.exportPng': '导出 PNG',
+    'art.copyCode': '复制作品码',
+    'art.mint': '铸造进画廊',
+    'art.hash': '帧哈希',
+    'art.exported': '已导出 PNG',
+    'art.exportFail': '当前环境无法导出 PNG',
+    'art.verify.title': '作品验证',
+    'art.verify.hint': '粘贴作品码，任何人可复算出同一帧哈希。',
+    'art.verify.placeholder': '粘贴作品码…',
+    'art.verify.hashPlaceholder': '期望的帧哈希（可选）',
+    'art.verify.run': '验证',
+    'art.verify.pass': '验证通过',
+    'art.verify.fail': '验证失败',
+    'art.gallery.title': '我的画廊',
+    'art.gallery.empty': '还没有铸造作品：点「铸造进画廊」。',
+    'art.nft': 'NFT 叙事：作品码记录了种子、状态来源、区块序号与帧哈希；画面由电路状态确定性生成，换一个区块就是新的一帧——天然具备收藏与验证叙事。',
+
     'lottery.title': '可验证抽奖 / 随机数',
     'lottery.sub': '公开种子 + 参与者名单 → 确定性选人；任何人都能离线复算，事后改不了。',
     'lottery.seed': '公开种子 / 区块哈希',
@@ -994,6 +1028,40 @@ TT.dict = {
     'lab.tab.hardware': 'Hardware',
     'lab.tab.access': 'Access',
     'lab.tab.lottery': 'Lottery',
+    'lab.tab.art': 'Art',
+    'art.title': 'Generative art / one frame per block',
+    'art.sub': 'Circuit state determines the picture: the same seed and block index always yield the same frame — exportable, verifiable, collectible.',
+    'art.play': '▶ Animate',
+    'art.pause': '⏸ Pause',
+    'art.step': 'Next frame',
+    'art.reset': 'Back to frame 0',
+    'art.block': 'one block, one frame',
+    'art.seed': 'Seed',
+    'art.circuit': 'State source',
+    'art.circuit.lfsr': '8-bit LFSR',
+    'art.circuit.counter': '4-bit counter',
+    'art.circuit.gates': 'Combinational hash',
+    'art.palette': 'Palette',
+    'art.palette.cyber': 'Cyber',
+    'art.palette.riso': 'Riso',
+    'art.palette.mono': 'Mono',
+    'art.exportPng': 'Export PNG',
+    'art.copyCode': 'Copy artwork code',
+    'art.mint': 'Mint to gallery',
+    'art.hash': 'Frame hash',
+    'art.exported': 'PNG exported',
+    'art.exportFail': 'PNG export is unavailable here',
+    'art.verify.title': 'Verify artwork',
+    'art.verify.hint': 'Paste an artwork code; anybody can recompute the same frame hash.',
+    'art.verify.placeholder': 'Paste an artwork code…',
+    'art.verify.hashPlaceholder': 'Expected frame hash (optional)',
+    'art.verify.run': 'Verify',
+    'art.verify.pass': 'Verified',
+    'art.verify.fail': 'Verification failed',
+    'art.gallery.title': 'My gallery',
+    'art.gallery.empty': 'Nothing minted yet — press “Mint to gallery”.',
+    'art.nft': 'NFT narrative: the artwork code records the seed, state source, block index and frame hash; the picture is deterministic from circuit state, so every block is a new frame — a natural collectible/verifiable story.',
+
     'lottery.title': 'Verifiable lottery / randomness',
     'lottery.sub': 'Public seed + participant list determines the winners; anyone can recompute offline and nobody can change it afterwards.',
     'lottery.seed': 'Public seed / block hash',
@@ -1679,6 +1747,19 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-winner b { color:var(--tt-amber); }
 .tt-winner span { flex:1; color:var(--tt-ink); }
 .tt-winner em { color:var(--tt-faint); font-style:normal; font-family:var(--dsh-font-family-mono, monospace); font-size:10px; }
+
+.tt-artwrap { position:relative; display:flex; justify-content:center; }
+.tt-artcanvas { border-radius:12px; border:1px solid rgba(86,225,255,.2);
+  box-shadow:0 18px 44px rgba(0,0,0,.5); max-width:100%; height:auto; }
+.tt-artbadge { position:absolute; left:10px; bottom:10px; display:flex; gap:6px; flex-wrap:wrap; max-width:92%;
+  padding:4px 8px; border-radius:8px; background:rgba(4,12,20,.78); border:1px solid rgba(86,225,255,.18);
+  color:var(--tt-dim); font-size:9.5px; font-family:var(--dsh-font-family-mono, monospace); }
+.tt-artbadge span:first-child { color:var(--tt-amber); font-weight:700; }
+.tt-artgallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:8px; }
+.tt-artthumb { padding:0; border:1px solid rgba(86,225,255,.2); background:none; border-radius:10px;
+  overflow:hidden; cursor:pointer; display:block; }
+.tt-artthumb:hover { border-color:rgba(86,225,255,.6); }
+.tt-artthumb canvas { display:block; width:100%; height:auto; }
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
