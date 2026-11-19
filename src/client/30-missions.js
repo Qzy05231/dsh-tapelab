@@ -2245,6 +2245,7 @@ TT.Missions = (function () {
   function nextHint(state) {
     const index = state.chapter
     const play = state.play
+    if (state.completed && state.completed[index]) return { key: 'hint.chapterDone', params: {} }
     if (index === 0) return { key: 'hint.mint', params: { n: 8 - play.minted.length } }
     if (index === 1) {
       if (!play.placed) return { key: 'hint.nandPlace', params: {} }

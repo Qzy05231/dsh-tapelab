@@ -7237,6 +7237,7 @@ TT.Missions = (function () {
   function nextHint(state) {
     const index = state.chapter
     const play = state.play
+    if (state.completed && state.completed[index]) return { key: 'hint.chapterDone', params: {} }
     if (index === 0) return { key: 'hint.mint', params: { n: 8 - play.minted.length } }
     if (index === 1) {
       if (!play.placed) return { key: 'hint.nandPlace', params: {} }
@@ -11537,6 +11538,13 @@ TT.dict = {
     'access.input.staff': '员工',
     'access.input.temp': '临时权限',
     'access.input.manager': '经理批准',
+    'access.issue': '签发凭证',
+    'access.verify.fingerprint': '指纹',
+    'defi.guard.open': '白名单且未暂停',
+    'defi.guard.oracle': '预言机数据新鲜',
+    'defi.guard.impact': '价格冲击在限额内',
+    'defi.guard.cap': '金额在上限内',
+    'hint.chapterDone': '本章已完成 ✓ 点底部「完成，进入下一章」继续。',
     'access.conditions': '条件开关（点击切换）',
     'access.allow': '允许通行',
     'access.deny': '拒绝',
@@ -12277,6 +12285,13 @@ TT.dict = {
     'access.input.staff': 'Staff',
     'access.input.temp': 'Temporary',
     'access.input.manager': 'Manager approval',
+    'access.issue': 'Issue receipt',
+    'access.verify.fingerprint': 'Fingerprint',
+    'defi.guard.open': 'Allowlisted and open',
+    'defi.guard.oracle': 'Oracle data fresh',
+    'defi.guard.impact': 'Price impact within limit',
+    'defi.guard.cap': 'Amount within cap',
+    'hint.chapterDone': 'Chapter complete ✓ — use the dock button to continue.',
     'access.conditions': 'Conditions (click to toggle)',
     'access.allow': 'ALLOW',
     'access.deny': 'DENY',
