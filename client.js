@@ -5555,6 +5555,7 @@ TT.Missions = (function () {
       art: freshArt(),
       sensors: freshSensors(),
       defi: freshDefi(),
+      boxing: TT.Boxing ? TT.Boxing.start('ring-genesis') : null,
     }
     state.play = playFor(state, 0)
     return state
@@ -5647,6 +5648,11 @@ TT.Missions = (function () {
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
       snake: null,
     }
+  }
+
+  function ensureBoxing(next) {
+    if (!TT.Boxing || next.boxing) return next
+    return { ...next, boxing: TT.Boxing.start('ring-' + next.blocks) }
   }
 
   function ensureSnake(arcade) {
@@ -6148,19 +6154,19 @@ TT.Missions = (function () {
       case 'intro/close':
         return { ...state, intro: false }
       case 'arcade/open':
-        return {
+        return ensureBoxing({
           ...state,
           mode: 'arcade',
           arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
-        }
+        })
       case 'arcade/close':
         return { ...state, mode: 'missions' }
       case 'arcade/game':
-        return {
+        return ensureBoxing({
           ...state,
           mode: 'arcade',
-          arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
-        }
+          arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
+        })
       case 'defi/pool':
         return { ...state, defi: { ...state.defi, poolId: action.id || 'eth-usdc', audit: null, receipt: null, verifyResult: null } }
       case 'defi/amount':
@@ -6302,6 +6308,59 @@ TT.Missions = (function () {
         const result = TT.Sensors.verify(state.sensors.verifyCode, state.sensors.verifyHash)
         return { ...state, sensors: { ...state.sensors, verifyResult: result } }
       }
+      case 'boxing/start': {
+        if (!TT.Boxing) return state
+        return { ...state, boxing: TT.Boxing.start('ring-' + (state.blocks || 0) + '-' + Date.now()) }
+      }
+      case 'boxing/action': {
+        if (!TT.Boxing || !state.boxing || state.boxing.finished) return state
+        const match = state.boxing
+        const player = TT.Boxing.ACTIONS.some((item) => item.id === action.action) ? action.action : 'punch'
+        const cpu = TT.Boxing.cpuAction(match.seed, match.exchange)
+        const resolved = TT.Boxing.resolve(player, cpu)
+        const playerHp = Math.max(0, match.playerHp - resolved.cpuScore)
+        const cpuHp = Math.max(0, match.cpuHp - resolved.playerScore)
+        const exchange = match.exchange + 1
+        const finished = playerHp <= 0 || cpuHp <= 0 || exchange >= TT.Boxing.MAX_EXCHANGES
+        const result = finished
+          ? playerHp <= 0 && cpuHp <= 0
+            ? 'draw'
+            : cpuHp <= 0
+              ? 'win'
+              : playerHp <= 0
+                ? 'lose'
+                : playerHp > cpuHp
+                  ? 'win'
+                  : playerHp < cpuHp
+                    ? 'lose'
+                    : 'draw'
+          : null
+        const entry = { n: exchange, player, cpu, playerScore: resolved.playerScore, cpuScore: resolved.cpuScore, bits: resolved.bits }
+        const next = {
+          ...match,
+          playerHp,
+          cpuHp,
+          exchange,
+          last: entry,
+          log: [...match.log, entry],
+          finished,
+          result,
+        }
+        if (finished) {
+          const issued = TT.Boxing.receipt(next)
+          next.receipt = { code: issued.code, fingerprint: issued.fingerprint, at: issued.payload.at }
+          next.verifyCode = issued.code
+        }
+        return { ...state, boxing: next }
+      }
+      case 'boxing/audit':
+        return TT.Boxing ? { ...state, boxing: { ...state.boxing, audit: TT.Boxing.audit() } } : state
+      case 'boxing/verifyCode':
+        return { ...state, boxing: { ...state.boxing, verifyCode: String(action.code || ''), verifyResult: null } }
+      case 'boxing/verify':
+        return TT.Boxing
+          ? { ...state, boxing: { ...state.boxing, verifyResult: TT.Boxing.verify(state.boxing.verifyCode) } }
+          : state
       case 'art/seed':
         return { ...state, art: { ...state.art, seed: String(action.seed || ''), index: 0, verifyResult: null } }
       case 'art/circuit':
@@ -8416,6 +8475,7 @@ TT.ArcadeUI = (function () {
     ['vote', 'arcade.game.vote', '🗳️'],
     ['debug', 'arcade.game.debug', '🐞'],
     ['snake', 'arcade.game.snake', '🐍'],
+    ['boxing', 'arcade.game.boxing', '🥊'],
   ]
 
   function Page(props) {
@@ -8445,6 +8505,7 @@ TT.ArcadeUI = (function () {
       arcade.game === 'vote' ? h(Vote, { arcade, t, api }) : null,
       arcade.game === 'debug' ? h(Debug, { arcade, t, api }) : null,
       arcade.game === 'snake' ? h(Snake, { arcade, t, api }) : null,
+      arcade.game === 'boxing' && TT.BoxingUI ? TT.BoxingUI.Page({ state, t, api }) : null,
     )
   }
 
@@ -10982,6 +11043,368 @@ TT.DefiUI = (function () {
   return { Page }
 })()
 
+// ---- 46-boxing.js ----
+/**
+ * 46-boxing — TapOut boxing: a small turn-based boxing game whose referee is a real
+ * NAND netlist. Actions (punch / guard / feint) are encoded in 2 bits per boxer; the
+ * 4-input, 2-output referee circuit decides who scores. Match logs are replayable
+ * and can be verified offline against the circuit fingerprint.
+ */
+
+TT.Boxing = (function () {
+  const ACTIONS = [
+    { id: 'punch', labelKey: 'boxing.action.punch', icon: '👊' },
+    { id: 'guard', labelKey: 'boxing.action.guard', icon: '🛡️' },
+    { id: 'feint', labelKey: 'boxing.action.feint', icon: '↩️' },
+  ]
+  const CODE = { punch: 0, guard: 1, feint: 2 }
+  const MAX_EXCHANGES = 20
+  const START_HP = 6
+
+  const cache = Object.create(null)
+
+  function playerScore(p, c) {
+    return p === 'punch' ? (c === 'punch' || c === 'feint' ? 1 : 0) : p === 'feint' && c === 'guard' ? 1 : 0
+  }
+  function cpuScore(p, c) {
+    return c === 'punch' ? (p === 'punch' || p === 'feint' ? 1 : 0) : c === 'feint' && p === 'guard' ? 1 : 0
+  }
+
+  function truthTable(fn) {
+    const bits = []
+    for (let index = 0; index < 16; index += 1) {
+      const p = index & 3
+      const c = (index >> 2) & 3
+      if (p === 3 || c === 3) {
+        bits.push(-1)
+        continue
+      }
+      bits.push(fn(p, c) ? 1 : 0)
+    }
+    return bits
+  }
+
+  function circuit() {
+    if (cache.referee) return cache.referee
+    const playerBits = truthTable((p, c) => playerScore(ACTIONS[p].id, ACTIONS[c].id))
+    const cpuBits = truthTable((p, c) => cpuScore(ACTIONS[p].id, ACTIONS[c].id))
+    const playerSynth = TT.Circuit.synth({ nIn: 4, bits: playerBits })
+    const cpuSynth = TT.Circuit.synth({ nIn: 4, bits: cpuBits })
+    const composed = TT.Circuit.compose({
+      nIn: 4,
+      parts: [
+        { netlist: playerSynth.netlist, inputNodes: [2, 3, 4, 5], outputNodes: [200] },
+        { netlist: cpuSynth.netlist, inputNodes: [2, 3, 4, 5], outputNodes: [201] },
+      ],
+      outputs: [200, 201],
+    })
+    cache.referee = {
+      netlist: composed,
+      gateCount: TT.Circuit.gateCount(composed),
+      depth: TT.Circuit.maxDepth(composed),
+      fingerprint: fingerprint(composed),
+      hex: TT.Circuit.gateHex(composed),
+    }
+    return cache.referee
+  }
+
+  function fingerprint(netlist) {
+    const hex = TT.Circuit.gateHex(netlist)
+    let hash = 0x811c9dc5
+    for (let i = 0; i < hex.length; i += 1) {
+      hash ^= hex.charCodeAt(i)
+      hash = Math.imul(hash, 0x01000193) >>> 0
+    }
+    return hash.toString(16).padStart(8, '0')
+  }
+
+  function hash32(text) {
+    let hash = 0x811c9dc5
+    const string = String(text)
+    for (let i = 0; i < string.length; i += 1) {
+      hash ^= string.charCodeAt(i)
+      hash = Math.imul(hash, 0x01000193) >>> 0
+    }
+    return hash >>> 0
+  }
+
+  function cpuAction(seed, exchange) {
+    return ACTIONS[hash32(String(seed) + '|cpu|' + exchange) % 3].id
+  }
+
+  function exchangeBits(playerAction, cpuActionId) {
+    return (CODE[playerAction] || 0) | ((CODE[cpuActionId] || 0) << 2)
+  }
+
+  function resolve(playerAction, cpuActionId) {
+    const built = circuit()
+    const bits = exchangeBits(playerAction, cpuActionId)
+    const outputs = TT.Circuit.evaluate(built.netlist, bits).outputs
+    return { bits, playerScore: outputs[0], cpuScore: outputs[1] }
+  }
+
+  function start(seed) {
+    return {
+      seed: seed || 'ring-genesis',
+      playerHp: START_HP,
+      cpuHp: START_HP,
+      exchange: 0,
+      log: [],
+      last: null,
+      finished: false,
+      result: null,
+      receipt: null,
+      verifyResult: null,
+      verifyCode: '',
+    }
+  }
+
+  function audit() {
+    const built = circuit()
+    let mismatches = 0
+    let rows = 0
+    for (let p = 0; p < 3; p += 1) {
+      for (let c = 0; c < 3; c += 1) {
+        const result = resolve(ACTIONS[p].id, ACTIONS[c].id)
+        rows += 1
+        if (result.playerScore !== playerScore(ACTIONS[p].id, ACTIONS[c].id)) mismatches += 1
+        if (result.cpuScore !== cpuScore(ACTIONS[p].id, ACTIONS[c].id)) mismatches += 1
+      }
+    }
+    return { passed: mismatches === 0, rows, mismatches, gateCount: built.gateCount, depth: built.depth, fingerprint: built.fingerprint }
+  }
+
+  function b64url(text) {
+    return TT.Export.b64encode(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
+  function unb64url(code) {
+    const base64 = String(code || '').trim().replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+    return TT.Export.b64decode(padded)
+  }
+
+  function receipt(match) {
+    const built = circuit()
+    const payload = {
+      schema: 'dsh-tapelab.boxing.v1',
+      seed: match.seed,
+      log: match.log.map((entry) => ({ player: entry.player, cpu: entry.cpu, playerScore: entry.playerScore, cpuScore: entry.cpuScore, bits: entry.bits })),
+      playerHp: match.playerHp,
+      cpuHp: match.cpuHp,
+      result: match.result,
+      fingerprint: built.fingerprint,
+      gates: built.netlist.gates.map((gate) => [gate.a, gate.b]),
+      outputs: built.netlist.outputs.slice(),
+      at: Date.now(),
+    }
+    return { code: b64url(JSON.stringify(payload)), payload, fingerprint: built.fingerprint }
+  }
+
+  function verify(code, expectedFingerprint) {
+    const reasons = []
+    let payload
+    try {
+      payload = JSON.parse(unb64url(code))
+    } catch (error) {
+      return { ok: false, reasons: ['比赛凭证无法解码'], payload: null }
+    }
+    if (!payload || payload.schema !== 'dsh-tapelab.boxing.v1') return { ok: false, reasons: ['比赛凭证格式不匹配'], payload: null }
+    let netlist
+    try {
+      netlist = TT.Circuit.makeNetlist({
+        nIn: 4,
+        gates: (payload.gates || []).map((pair) => ({ a: Number(pair[0]), b: Number(pair[1]) })),
+        outputs: (payload.outputs || []).map(Number),
+      })
+      const check = TT.Circuit.validateNetlist(netlist)
+      if (!check.ok) throw new Error(check.error)
+    } catch (error) {
+      return { ok: false, reasons: ['凭证里的裁判网表无效'], payload }
+    }
+    const actualFingerprint = fingerprint(netlist)
+    if (actualFingerprint !== payload.fingerprint) reasons.push('裁判网表指纹不一致（可能被篡改）')
+    if (expectedFingerprint && String(expectedFingerprint).trim().toLowerCase() !== actualFingerprint) {
+      reasons.push(`指纹不匹配：凭证 ${actualFingerprint}，期望 ${String(expectedFingerprint).trim().toLowerCase()}`)
+    }
+    let playerHp = START_HP
+    let cpuHp = START_HP
+    for (const entry of payload.log || []) {
+      const bits = exchangeBits(entry.player, entry.cpu)
+      if (bits !== entry.bits) reasons.push('日志输入位与动作不一致')
+      const outputs = TT.Circuit.evaluate(netlist, bits).outputs
+      if (outputs[0] !== entry.playerScore || outputs[1] !== entry.cpuScore) reasons.push('日志得分与裁判网表不一致')
+      playerHp -= outputs[1]
+      cpuHp -= outputs[0]
+    }
+    if (playerHp !== payload.playerHp || cpuHp !== payload.cpuHp) reasons.push('还原后的血量与凭证不一致')
+    const expectedResult = playerHp <= 0 && cpuHp <= 0 ? 'draw' : cpuHp <= 0 ? 'win' : playerHp <= 0 ? 'lose' : 'draw'
+    if (payload.result && payload.result !== expectedResult) reasons.push('比赛结果与日志不一致')
+    return { ok: reasons.length === 0, reasons, payload, playerHp, cpuHp, result: expectedResult, fingerprint: actualFingerprint }
+  }
+
+  return { ACTIONS, START_HP, MAX_EXCHANGES, circuit, resolve, cpuAction, start, audit, receipt, verify, fingerprint, exchangeBits, b64url, unb64url }
+})()
+
+// --------------------------------------------------------------------------- UI
+
+TT.BoxingUI = (function () {
+  const h = TT.h
+
+  function Page(props) {
+    const { state, t, api } = props
+    const match = state.boxing
+    const built = TT.Boxing.circuit()
+    const canAct = match && !match.finished
+    return h('div', { className: 'tt-labgrid' },
+      h('section', { className: 'tt-labcard' },
+        h('div', { className: 'tt-labcardhead' },
+          h('strong', null, t('boxing.title')),
+          h('span', null, t('boxing.sub')),
+        ),
+        h('div', { className: 'tt-boxers' },
+          h('div', { className: 'tt-boxer' },
+            h('span', { className: 'tt-boxername' }, '🥊', ' ', t('boxing.you')),
+            h('div', { className: 'tt-hpbar' }, h('i', { style: { width: `${(match.playerHp / TT.Boxing.START_HP) * 100}%` } })),
+            h('span', { className: 'tt-hpnum' }, `${match.playerHp} / ${TT.Boxing.START_HP}`),
+          ),
+          h('div', { className: 'tt-vs' }, `#${match.exchange}`),
+          h('div', { className: 'tt-boxer tt-cpu' },
+            h('span', { className: 'tt-boxername' }, '🤖', ' ', t('boxing.cpu')),
+            h('div', { className: 'tt-hpbar' }, h('i', { style: { width: `${(match.cpuHp / TT.Boxing.START_HP) * 100}%` } })),
+            h('span', { className: 'tt-hpnum' }, `${match.cpuHp} / ${TT.Boxing.START_HP}`),
+          ),
+        ),
+        match.last
+          ? h('div', { className: 'tt-boxinglast', 'data-out': match.last.playerScore > 0 && match.last.cpuScore > 0 ? 'trade' : match.last.playerScore > 0 ? 'hit' : match.last.cpuScore > 0 ? 'hurt' : 'block' },
+              h('span', null, `${t('boxing.you')}: ${t(`boxing.action.${match.last.player}`)}`),
+              h('b', null, '→'),
+              h('span', null, `${t('boxing.cpu')}: ${t(`boxing.action.${match.last.cpu}`)}`),
+              h('em', null, match.last.playerScore > 0 && match.last.cpuScore > 0 ? t('boxing.trade') : match.last.playerScore > 0 ? t('boxing.hit') : match.last.cpuScore > 0 ? t('boxing.hurt') : t('boxing.blocked')),
+            )
+          : h('p', { className: 'tt-labempty' }, t('boxing.ready')),
+        h('div', { className: 'tt-boxingactions' }, TT.Boxing.ACTIONS.map((action) =>
+          h('button', {
+            key: action.id,
+            type: 'button',
+            className: 'tt-actionbtn',
+            disabled: !canAct,
+            onClick: () => api.dispatch({ type: 'boxing/action', action: action.id }),
+          }, h('span', null, action.icon), h('b', null, t(action.labelKey))))),
+        match.finished
+          ? h('div', { className: 'tt-boxingresult', 'data-result': match.result || 'draw' },
+              h('strong', null, match.result === 'win' ? t('boxing.win') : match.result === 'lose' ? t('boxing.lose') : t('boxing.draw')),
+              h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
+                onClick: () => api.dispatch({ type: 'boxing/start' }) }, t('boxing.again')),
+            )
+          : h('div', { className: 'tt-labrow' },
+              h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
+                onClick: () => api.dispatch({ type: 'boxing/start' }) }, t('boxing.restart')),
+              h('span', { className: 'tt-lablabel' }, `${t('boxing.round')} ${match.exchange + 1} / ${TT.Boxing.MAX_EXCHANGES}`),
+            ),
+        match.log.length
+          ? h('table', { className: 'tt-table' },
+              h('thead', null, h('tr', null,
+                h('th', null, '#'),
+                h('th', null, t('boxing.you')),
+                h('th', null, t('boxing.cpu')),
+                h('th', null, t('boxing.score')),
+              )),
+              h('tbody', null, match.log.slice(-8).reverse().map((entry) =>
+                h('tr', { key: entry.n },
+                  h('td', null, entry.n),
+                  h('td', null, t(`boxing.action.${entry.player}`)),
+                  h('td', null, t(`boxing.action.${entry.cpu}`)),
+                  h('td', { className: 'tt-bit' }, `${entry.playerScore} : ${entry.cpuScore}`),
+                ))),
+            )
+          : null,
+      ),
+      h('section', { className: 'tt-labcard' },
+        h('div', { className: 'tt-labcardhead' },
+          h('strong', null, t('boxing.referee.title')),
+          h('span', null, t('boxing.referee.hint')),
+        ),
+        h('div', { className: 'tt-labstats' },
+          h('div', { className: 'tt-labstat' }, h('b', null, built.gateCount), h('span', null, t('lab.synth.gates'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, built.depth), h('span', null, t('hud.depth'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, built.fingerprint), h('span', null, t('access.fingerprint'))),
+        ),
+        h('div', { className: 'tt-hex tt-mono' }, built.hex.length > 140 ? built.hex.slice(0, 137) + '…' : built.hex),
+        h('div', { className: 'tt-labrow' },
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
+            onClick: () => api.dispatch({ type: 'boxing/audit' }) }, t('defi.audit')),
+          h('span', { className: 'tt-lablabel' }, t('boxing.referee.auditHint')),
+        ),
+        match.audit
+          ? h('div', { className: 'tt-labrow' },
+              h('span', { className: 'tt-badge', 'data-tone': match.audit.passed ? 'good' : 'bad' },
+                `${match.audit.passed ? t('hud.verifyPass') : t('hud.verifyFail')} · ${match.audit.rows} ${t('hud.rowsUnit')}`))
+          : null,
+        match.receipt
+          ? h('div', null,
+              h('div', { className: 'tt-lablabel', style: { marginTop: 4 } }, t('boxing.receipt.title')),
+              h('div', { className: 'tt-hex tt-mono', style: { maxHeight: 90 } }, match.receipt.code),
+              h('div', { className: 'tt-labrow' },
+                h('button', { type: 'button', className: 'tt-chip',
+                  onClick: () => copyText(api, match.receipt.code) }, t('access.receipt.copy')),
+                h('span', { className: 'tt-lablabel' }, `${t('access.receipt.fingerprint')} ${match.receipt.fingerprint}`),
+              ),
+              h('textarea', {
+                className: 'tt-archivebox',
+                placeholder: t('access.verify.codePlaceholder'),
+                value: match.verifyCode || '',
+                onChange: (event) => api.dispatch({ type: 'boxing/verifyCode', code: event.target.value }),
+              }),
+              h('div', { className: 'tt-labrow' },
+                h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
+                  onClick: () => api.dispatch({ type: 'boxing/verify' }) }, t('access.verify.run')),
+              ),
+              match.verifyResult
+                ? h('div', { className: 'tt-finalenote', style: { borderLeftColor: match.verifyResult.ok ? 'var(--tt-mint)' : 'var(--tt-red)' } },
+                    match.verifyResult.ok
+                      ? `${t('access.verify.pass')} · ${t('boxing.result')} ${match.verifyResult.result}`
+                      : `${t('access.verify.fail')}：${(match.verifyResult.reasons || []).join('；')}`)
+                : null,
+            )
+          : h('p', { className: 'tt-labempty' }, t('boxing.receipt.empty')),
+      ),
+      h('section', { className: 'tt-labcard' },
+        h('div', { className: 'tt-labcardhead' }, h('strong', null, t('boxing.rules.title'))),
+        h('table', { className: 'tt-table' },
+          h('thead', null, h('tr', null, h('th', null, t('boxing.you')), h('th', null, t('boxing.cpu')), h('th', null, t('boxing.result')))),
+          h('tbody', null,
+            [['punch', 'guard', t('boxing.blocked')], ['punch', 'punch', t('boxing.trade')], ['punch', 'feint', t('boxing.hit')],
+             ['guard', 'feint', t('boxing.hurt')], ['feint', 'guard', t('boxing.hit')], ['feint', 'punch', t('boxing.hurt')],
+             ['guard', 'punch', t('boxing.blocked')], ['guard', 'guard', t('boxing.blocked')], ['feint', 'feint', t('boxing.blocked')]].map((row, index) =>
+              h('tr', { key: index },
+                h('td', null, t(`boxing.action.${row[0]}`)),
+                h('td', null, t(`boxing.action.${row[1]}`)),
+                h('td', null, row[2]),
+              ))),
+        ),
+        h('p', { className: 'tt-finalenote', style: { marginTop: 10 } }, t('boxing.why')),
+      ),
+    )
+  }
+
+  function copyText(api, text) {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          () => api.dispatch({ type: 'toast/show', key: 'lab.copied', tone: 'good' }),
+          () => api.dispatch({ type: 'toast/show', key: 'lab.copyFail', tone: 'warn' }),
+        )
+        return
+      }
+    } catch (error) {
+      /* fall through */
+    }
+    api.dispatch({ type: 'toast/show', key: 'lab.copied', tone: 'good' })
+  }
+
+  return { Page }
+})()
+
 // ---- 40-ui.js ----
 /**
  * 40-ui — locale dictionaries, panel chrome, HUD, codex.
@@ -11026,6 +11449,35 @@ TT.dict = {
     'arcade.game.vote': '表决器',
     'arcade.game.debug': '故障排查',
     'arcade.game.snake': '链上贪吃蛇',
+    'arcade.game.boxing': '拳击裁判',
+    'boxing.title': 'TapOut 拳击',
+    'boxing.sub': '出拳 / 格挡 / 虚招，由 4 输入 2 输出的 NAND 裁判网表判定；比赛日志可离线复算。',
+    'boxing.you': '你',
+    'boxing.cpu': '对手',
+    'boxing.ready': '选一个动作，开始第一回合。',
+    'boxing.action.punch': '出拳',
+    'boxing.action.guard': '格挡',
+    'boxing.action.feint': '虚招',
+    'boxing.trade': '互换得分',
+    'boxing.hit': '命中',
+    'boxing.hurt': '被击中',
+    'boxing.blocked': '格挡 / 落空',
+    'boxing.win': '你赢了',
+    'boxing.lose': '你输了',
+    'boxing.draw': '平局',
+    'boxing.again': '再来一场',
+    'boxing.restart': '重新开始',
+    'boxing.round': '回合',
+    'boxing.score': '得分',
+    'boxing.result': '结果',
+    'boxing.referee.title': '裁判电路',
+    'boxing.referee.hint': '两人动作各 2 位 → 4 输入；两个输出分别决定谁得分',
+    'boxing.referee.auditHint': '穷举 9 种动作组合，验证裁判网表',
+    'boxing.receipt.title': '比赛凭证',
+    'boxing.receipt.empty': '打完后自动生成比赛凭证，可粘贴验证。',
+    'boxing.rules.title': '判定规则',
+    'boxing.why': '为什么它“基于 TapeOut”：裁判不是脚本，而是真实 NAND 网表——出拳/格挡/虚招的编码与得分规则都能在实验室里画出、审计、复算；比赛凭证还带裁判指纹，换掉一个门就会被发现。',
+
     'arcade.snake.title': '链上贪吃蛇',
     'arcade.snake.hint': '蛇每 0.45 秒走一格——它的状态就是几个寄存器，时钟就是出块。',
     'arcade.snake.play': '▶ 开始',
@@ -11764,6 +12216,35 @@ TT.dict = {
     'arcade.game.vote': 'Voter',
     'arcade.game.debug': 'Debug lab',
     'arcade.game.snake': 'Chain snake',
+    'arcade.game.boxing': 'Boxing',
+    'boxing.title': 'TapOut boxing',
+    'boxing.sub': 'Punch / guard / feint judged by a real 4-input, 2-output NAND referee; match logs replay offline.',
+    'boxing.you': 'You',
+    'boxing.cpu': 'Rival',
+    'boxing.ready': 'Pick an action to start the first exchange.',
+    'boxing.action.punch': 'Punch',
+    'boxing.action.guard': 'Guard',
+    'boxing.action.feint': 'Feint',
+    'boxing.trade': 'trade',
+    'boxing.hit': 'hit',
+    'boxing.hurt': 'hurt',
+    'boxing.blocked': 'blocked / whiff',
+    'boxing.win': 'You win',
+    'boxing.lose': 'You lose',
+    'boxing.draw': 'Draw',
+    'boxing.again': 'Fight again',
+    'boxing.restart': 'Restart',
+    'boxing.round': 'Exchange',
+    'boxing.score': 'Score',
+    'boxing.result': 'Result',
+    'boxing.referee.title': 'Referee circuit',
+    'boxing.referee.hint': 'Two actions × 2 bits → 4 inputs; two outputs decide who scores',
+    'boxing.referee.auditHint': 'Exhaustively check all 9 action pairs',
+    'boxing.receipt.title': 'Match receipt',
+    'boxing.receipt.empty': 'A receipt is generated automatically when the fight ends.',
+    'boxing.rules.title': 'Judging rules',
+    'boxing.why': 'Why it is “TapOut-based”: the referee is a real NAND netlist — action encodings and scoring rules can be drawn, audited and recomputed in the lab; the match receipt carries the referee fingerprint, so swapping one gate is detected.',
+
     'arcade.snake.title': 'Chain snake',
     'arcade.snake.hint': 'The snake moves one cell every 0.45 s — its state is a few registers, the clock is block production.',
     'arcade.snake.play': '▶ Start',
@@ -12938,6 +13419,36 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-actuator[data-on="true"][data-tone="warn"] i { background:var(--tt-amber); border-color:var(--tt-amber); box-shadow:0 0 10px rgba(255,195,92,.8); }
 .tt-actuator[data-on="true"][data-tone="good"] { color:#bfffe9; border-color:rgba(43,230,194,.6); background:rgba(43,230,194,.1); }
 .tt-actuator[data-on="true"][data-tone="good"] i { background:var(--tt-mint); border-color:var(--tt-mint); box-shadow:0 0 10px rgba(43,230,194,.8); }
+
+.tt-boxers { display:flex; align-items:stretch; gap:10px; margin:6px 0; }
+.tt-boxer { flex:1; display:flex; flex-direction:column; gap:6px; padding:10px; border-radius:12px;
+  background:rgba(4,12,20,.55); border:1px solid rgba(86,225,255,.18); }
+.tt-boxername { font-size:12px; color:var(--tt-ink); }
+.tt-hpbar { height:10px; border-radius:6px; background:rgba(255,93,108,.12); overflow:hidden; }
+.tt-hpbar i { display:block; height:100%; border-radius:6px; background:linear-gradient(90deg,#ff5d6c,#ffc35c); transition:width .28s ease; }
+.tt-cpu .tt-hpbar i { background:linear-gradient(90deg,#56e1ff,#2be6c2); }
+.tt-hpnum { font-size:10px; color:var(--tt-dim); font-variant-numeric:tabular-nums; }
+.tt-vs { align-self:center; color:var(--tt-amber); font-size:12px; font-weight:700; letter-spacing:.06em; }
+.tt-boxinglast { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 10px; border-radius:10px;
+  background:rgba(86,225,255,.05); border:1px solid rgba(86,225,255,.12); font-size:12px; color:var(--tt-dim); }
+.tt-boxinglast em { font-style:normal; color:var(--tt-mint); font-weight:700; }
+.tt-boxinglast[data-out="hurt"] em { color:var(--tt-red); }
+.tt-boxinglast[data-out="trade"] em { color:var(--tt-amber); }
+.tt-boxingactions { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:8px 0; }
+.tt-actionbtn { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 6px; border-radius:12px;
+  border:1px solid rgba(86,225,255,.25); background:rgba(86,225,255,.06); color:var(--tt-ink); cursor:pointer;
+  transition:transform .12s ease, border-color .12s ease, background .12s ease; }
+.tt-actionbtn span { font-size:20px; }
+.tt-actionbtn b { font-size:11px; font-weight:600; }
+.tt-actionbtn:hover:not(:disabled) { transform:translateY(-2px); border-color:var(--tt-mint); background:rgba(43,230,194,.12); }
+.tt-actionbtn:disabled { opacity:.4; cursor:default; }
+.tt-boxingresult { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 0;
+  padding:10px 12px; border-radius:12px; background:rgba(255,195,92,.1); border:1px solid rgba(255,195,92,.35); }
+.tt-boxingresult strong { font-size:15px; color:var(--tt-amber); }
+.tt-boxingresult[data-result="lose"] { background:rgba(255,93,108,.1); border-color:rgba(255,93,108,.4); }
+.tt-boxingresult[data-result="lose"] strong { color:var(--tt-red); }
+.tt-boxingresult[data-result="win"] { background:rgba(43,230,194,.1); border-color:rgba(43,230,194,.4); }
+.tt-boxingresult[data-result="win"] strong { color:var(--tt-mint); }
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }

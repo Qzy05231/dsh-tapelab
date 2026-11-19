@@ -563,6 +563,7 @@ TT.Missions = (function () {
       art: freshArt(),
       sensors: freshSensors(),
       defi: freshDefi(),
+      boxing: TT.Boxing ? TT.Boxing.start('ring-genesis') : null,
     }
     state.play = playFor(state, 0)
     return state
@@ -655,6 +656,11 @@ TT.Missions = (function () {
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
       snake: null,
     }
+  }
+
+  function ensureBoxing(next) {
+    if (!TT.Boxing || next.boxing) return next
+    return { ...next, boxing: TT.Boxing.start('ring-' + next.blocks) }
   }
 
   function ensureSnake(arcade) {
@@ -1156,19 +1162,19 @@ TT.Missions = (function () {
       case 'intro/close':
         return { ...state, intro: false }
       case 'arcade/open':
-        return {
+        return ensureBoxing({
           ...state,
           mode: 'arcade',
           arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
-        }
+        })
       case 'arcade/close':
         return { ...state, mode: 'missions' }
       case 'arcade/game':
-        return {
+        return ensureBoxing({
           ...state,
           mode: 'arcade',
-          arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
-        }
+          arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
+        })
       case 'defi/pool':
         return { ...state, defi: { ...state.defi, poolId: action.id || 'eth-usdc', audit: null, receipt: null, verifyResult: null } }
       case 'defi/amount':
@@ -1310,6 +1316,59 @@ TT.Missions = (function () {
         const result = TT.Sensors.verify(state.sensors.verifyCode, state.sensors.verifyHash)
         return { ...state, sensors: { ...state.sensors, verifyResult: result } }
       }
+      case 'boxing/start': {
+        if (!TT.Boxing) return state
+        return { ...state, boxing: TT.Boxing.start('ring-' + (state.blocks || 0) + '-' + Date.now()) }
+      }
+      case 'boxing/action': {
+        if (!TT.Boxing || !state.boxing || state.boxing.finished) return state
+        const match = state.boxing
+        const player = TT.Boxing.ACTIONS.some((item) => item.id === action.action) ? action.action : 'punch'
+        const cpu = TT.Boxing.cpuAction(match.seed, match.exchange)
+        const resolved = TT.Boxing.resolve(player, cpu)
+        const playerHp = Math.max(0, match.playerHp - resolved.cpuScore)
+        const cpuHp = Math.max(0, match.cpuHp - resolved.playerScore)
+        const exchange = match.exchange + 1
+        const finished = playerHp <= 0 || cpuHp <= 0 || exchange >= TT.Boxing.MAX_EXCHANGES
+        const result = finished
+          ? playerHp <= 0 && cpuHp <= 0
+            ? 'draw'
+            : cpuHp <= 0
+              ? 'win'
+              : playerHp <= 0
+                ? 'lose'
+                : playerHp > cpuHp
+                  ? 'win'
+                  : playerHp < cpuHp
+                    ? 'lose'
+                    : 'draw'
+          : null
+        const entry = { n: exchange, player, cpu, playerScore: resolved.playerScore, cpuScore: resolved.cpuScore, bits: resolved.bits }
+        const next = {
+          ...match,
+          playerHp,
+          cpuHp,
+          exchange,
+          last: entry,
+          log: [...match.log, entry],
+          finished,
+          result,
+        }
+        if (finished) {
+          const issued = TT.Boxing.receipt(next)
+          next.receipt = { code: issued.code, fingerprint: issued.fingerprint, at: issued.payload.at }
+          next.verifyCode = issued.code
+        }
+        return { ...state, boxing: next }
+      }
+      case 'boxing/audit':
+        return TT.Boxing ? { ...state, boxing: { ...state.boxing, audit: TT.Boxing.audit() } } : state
+      case 'boxing/verifyCode':
+        return { ...state, boxing: { ...state.boxing, verifyCode: String(action.code || ''), verifyResult: null } }
+      case 'boxing/verify':
+        return TT.Boxing
+          ? { ...state, boxing: { ...state.boxing, verifyResult: TT.Boxing.verify(state.boxing.verifyCode) } }
+          : state
       case 'art/seed':
         return { ...state, art: { ...state.art, seed: String(action.seed || ''), index: 0, verifyResult: null } }
       case 'art/circuit':

@@ -275,6 +275,7 @@ TT.ArcadeUI = (function () {
     ['vote', 'arcade.game.vote', '🗳️'],
     ['debug', 'arcade.game.debug', '🐞'],
     ['snake', 'arcade.game.snake', '🐍'],
+    ['boxing', 'arcade.game.boxing', '🥊'],
   ]
 
   function Page(props) {
@@ -304,6 +305,7 @@ TT.ArcadeUI = (function () {
       arcade.game === 'vote' ? h(Vote, { arcade, t, api }) : null,
       arcade.game === 'debug' ? h(Debug, { arcade, t, api }) : null,
       arcade.game === 'snake' ? h(Snake, { arcade, t, api }) : null,
+      arcade.game === 'boxing' && TT.BoxingUI ? TT.BoxingUI.Page({ state, t, api }) : null,
     )
   }
 
