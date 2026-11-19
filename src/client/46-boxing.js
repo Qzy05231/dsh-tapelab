@@ -103,6 +103,8 @@ TT.Boxing = (function () {
       round: 1,
       wins: { player: 0, cpu: 0 },
       roundWins: 0,
+      combo: 0,
+      bestCombo: 0,
       playerHp: START_HP,
       cpuHp: START_HP,
       exchange: 0,
@@ -226,114 +228,119 @@ TT.Boxing = (function () {
 
 TT.BoxingUI = (function () {
   const h = TT.h
+  const FX_TEXT = { hit: 'boxing.hit', hurt: 'boxing.hurt', block: 'boxing.blocked', trade: 'boxing.trade' }
+
+  function Fighter(props) {
+    const { name, emoji, hp, wins, combo, side } = props
+    return h('div', { className: `tt-fighter ${side}` },
+      h('div', { className: 'tt-fighter-name' }, emoji, ' ', name),
+      h('div', { className: 'tt-hpseg' }, Array.from({ length: TT.Boxing.START_HP }, (_, index) =>
+        h('i', { key: index, 'data-on': index < hp ? 'true' : 'false' }))),
+      h('div', { className: 'tt-fighter-meta' },
+        h('span', null, wins ? '★'.repeat(wins) : '—'),
+        side === 'player' && combo >= 2 ? h('b', null, `COMBO ×${combo}`) : null,
+      ),
+    )
+  }
+
+  function Sprite(props) {
+    const { side, anim, low } = props
+    return h('div', {
+      className: 'tt-sprite',
+      'data-side': side,
+      'data-anim': anim || 'idle',
+      'data-low': low ? 'true' : 'false',
+    },
+      h('div', { className: 'tt-sprite-shadow' }),
+      h('div', { className: 'tt-sprite-glow' }),
+      h('div', { className: 'tt-sprite-body' }),
+      h('div', { className: 'tt-sprite-head' }),
+      h('div', { className: 'tt-sprite-glove g1' }),
+      h('div', { className: 'tt-sprite-glove g2' }),
+    )
+  }
 
   function Page(props) {
     const { state, t, api } = props
     const match = state.boxing
     const built = TT.Boxing.circuit()
-    const canAct = match && !match.finished
-    return h('div', { className: 'tt-labgrid' },
-      h('section', { className: 'tt-labcard' },
-        h('div', { className: 'tt-labcardhead' },
-          h('strong', null, t('boxing.title')),
-          h('span', null, t('boxing.sub')),
+    const last = match.last
+    const fx = last ? (last.playerScore > 0 && last.cpuScore > 0 ? 'trade' : last.playerScore > 0 ? 'hit' : last.cpuScore > 0 ? 'hurt' : 'block') : null
+    const finished = match.finished
+    React.useEffect(() => {
+      if (!last || !TT.Audio) return
+      if (finished && match.result === 'win') TT.Audio.play('success')
+      else if (finished && match.result === 'lose') TT.Audio.play('error')
+      else if (last.playerScore > 0 && last.cpuScore > 0) TT.Audio.play('mint')
+      else if (last.playerScore > 0) TT.Audio.play('mint')
+      else if (last.cpuScore > 0) TT.Audio.play('error')
+      else TT.Audio.play('verify')
+    }, [last && last.n, finished])
+    function act(action) {
+      if (finished) return
+      if (TT.Audio) TT.Audio.play('click')
+      api.dispatch({ type: 'boxing/action', action })
+    }
+    return h('div', { className: 'tt-fight' },
+      h('div', { className: 'tt-fight-hud' },
+        h(Fighter, { name: t('boxing.you'), emoji: '🥊', hp: match.playerHp, wins: match.wins.player, combo: match.combo || 0, side: 'player' }),
+        h('div', { className: 'tt-fight-round' },
+          h('span', null, `ROUND ${match.round}`),
+          h('b', null, `${match.wins.player} : ${match.wins.cpu}`),
+          h('small', null, `R${match.round} / 3`),
         ),
-        h('div', { className: 'tt-boxers' },
-          h('div', { className: 'tt-boxer' },
-            h('span', { className: 'tt-boxername' }, '🥊', ' ', t('boxing.you'),
-              h('i', { className: 'tt-roundwins' }, '★'.repeat(match.wins.player))),
-            h('div', { className: 'tt-hpbar' }, h('i', { style: { width: `${(match.playerHp / TT.Boxing.START_HP) * 100}%` } })),
-            h('span', { className: 'tt-hpnum' }, `${match.playerHp} / ${TT.Boxing.START_HP}`),
-          ),
-          h('div', { className: 'tt-vs' },
-            h('span', null, `R${match.round}`),
-            h('small', null, `${match.wins.player} : ${match.wins.cpu}`),
-          ),
-          h('div', { className: 'tt-boxer tt-cpu' },
-            h('span', { className: 'tt-boxername' }, '🤖', ' ', t('boxing.cpu'),
-              h('i', { className: 'tt-roundwins' }, '★'.repeat(match.wins.cpu))),
-            h('div', { className: 'tt-hpbar' }, h('i', { style: { width: `${(match.cpuHp / TT.Boxing.START_HP) * 100}%` } })),
-            h('span', { className: 'tt-hpnum' }, `${match.cpuHp} / ${TT.Boxing.START_HP}`),
-          ),
-        ),
-        match.last
-          ? h('div', { className: 'tt-boxinglast', 'data-out': match.last.playerScore > 0 && match.last.cpuScore > 0 ? 'trade' : match.last.playerScore > 0 ? 'hit' : match.last.cpuScore > 0 ? 'hurt' : 'block' },
-              h('span', null, `${t('boxing.you')}: ${t(`boxing.action.${match.last.player}`)}`),
-              h('b', null, '→'),
-              h('span', null, `${t('boxing.cpu')}: ${t(`boxing.action.${match.last.cpu}`)}`),
-              h('em', null, match.last.playerScore > 0 && match.last.cpuScore > 0 ? t('boxing.trade') : match.last.playerScore > 0 ? t('boxing.hit') : match.last.cpuScore > 0 ? t('boxing.hurt') : t('boxing.blocked')),
-            )
-          : h('p', { className: 'tt-labempty' }, t('boxing.ready')),
-        h('div', { className: 'tt-boxingactions' }, TT.Boxing.ACTIONS.map((action) =>
-          h('button', {
-            key: action.id,
-            type: 'button',
-            className: 'tt-actionbtn',
-            disabled: !canAct,
-            onClick: () => api.dispatch({ type: 'boxing/action', action: action.id }),
-          }, h('span', null, action.icon), h('b', null, t(action.labelKey))))),
-        match.finished
-          ? h('div', { className: 'tt-boxingresult', 'data-result': match.result || 'draw' },
-              h('strong', null, `${match.result === 'win' ? t('boxing.win') : match.result === 'lose' ? t('boxing.lose') : t('boxing.draw')} · ${match.wins.player}:${match.wins.cpu}`),
+        h(Fighter, { name: t('boxing.cpu'), emoji: '🤖', hp: match.cpuHp, wins: match.wins.cpu, combo: 0, side: 'cpu' }),
+      ),
+      h('div', { className: 'tt-ring', 'data-fx': fx || 'idle', key: `ring-${match.exchange}` },
+        h('div', { className: 'tt-ringfloor' }),
+        h('div', { className: 'tt-ringropes' }),
+        h(Sprite, { side: 'player', anim: last ? last.player : null, low: match.playerHp <= 2 }),
+        h(Sprite, { side: 'cpu', anim: last ? last.cpu : null, low: match.cpuHp <= 2 }),
+        h('div', { className: 'tt-roundbanner', key: `round-${match.round}` }, `ROUND ${match.round}`),
+        fx ? h('div', { className: 'tt-fx', 'data-type': fx, key: `fx-${match.exchange}` }, t(FX_TEXT[fx])) : null,
+        match.combo >= 2 && !finished ? h('div', { className: 'tt-combobadge' }, `${t('fight.combo')} ×${match.combo}`) : null,
+        finished
+          ? h('div', { className: 'tt-ko' },
+              h('h3', null, match.result === 'win' ? t('boxing.win') : match.result === 'lose' ? t('boxing.lose') : t('boxing.draw')),
+              h('p', null, `${t('boxing.roundScore')} ${match.wins.player} : ${match.wins.cpu} · ${t('fight.bestCombo')} ×${match.bestCombo || 0}`),
               h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
                 onClick: () => api.dispatch({ type: 'boxing/start' }) }, t('boxing.again')),
             )
-          : h('div', { className: 'tt-labrow' },
-              h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
-                onClick: () => api.dispatch({ type: 'boxing/start' }) }, t('boxing.restart')),
-              h('span', { className: 'tt-lablabel' },
-                `${t('boxing.round')} ${match.round} / 3 · ${t('boxing.roundScore')} ${match.wins.player}:${match.wins.cpu} · ${t('boxing.exchange')} ${(match.roundExchange || 0) + 1}/${TT.Boxing.MAX_EXCHANGES}`),
-            ),
-        match.log.length
-          ? h('table', { className: 'tt-table' },
-              h('thead', null, h('tr', null,
-                h('th', null, '#'),
-                h('th', null, t('boxing.round')),
-                h('th', null, t('boxing.you')),
-                h('th', null, t('boxing.cpu')),
-                h('th', null, t('boxing.score')),
-              )),
-              h('tbody', null, match.log.slice(-8).reverse().map((entry) =>
-                h('tr', { key: entry.n },
-                  h('td', null, entry.n),
-                  h('td', null, `R${entry.round || 1}`),
-                  h('td', null, t(`boxing.action.${entry.player}`)),
-                  h('td', null, t(`boxing.action.${entry.cpu}`)),
-                  h('td', { className: 'tt-bit' }, `${entry.playerScore} : ${entry.cpuScore}`),
-                ))),
-            )
           : null,
       ),
-      h('section', { className: 'tt-labcard' },
-        h('div', { className: 'tt-labcardhead' },
-          h('strong', null, t('boxing.referee.title')),
-          h('span', null, t('boxing.referee.hint')),
-        ),
+      h('div', { className: 'tt-fight-controls' }, TT.Boxing.ACTIONS.map((action, index) =>
+        h('button', {
+          key: action.id,
+          type: 'button',
+          className: 'tt-fightbtn',
+          'data-kind': action.id,
+          disabled: finished,
+          onClick: () => act(action.id),
+        }, h('span', null, action.icon), h('b', null, t(action.labelKey)), h('kbd', null, String(index + 1))))),
+      h('p', { className: 'tt-fight-hint' }, t('fight.hint')),
+      h('details', { className: 'tt-fight-details' },
+        h('summary', null, t('fight.details')),
         h('div', { className: 'tt-labstats' },
           h('div', { className: 'tt-labstat' }, h('b', null, built.gateCount), h('span', null, t('lab.synth.gates'))),
           h('div', { className: 'tt-labstat' }, h('b', null, built.depth), h('span', null, t('hud.depth'))),
           h('div', { className: 'tt-labstat' }, h('b', null, built.fingerprint), h('span', null, t('access.fingerprint'))),
         ),
-        h('div', { className: 'tt-hex tt-mono' }, built.hex.length > 140 ? built.hex.slice(0, 137) + '…' : built.hex),
         h('div', { className: 'tt-labrow' },
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
             onClick: () => api.dispatch({ type: 'boxing/audit' }) }, t('defi.audit')),
           h('span', { className: 'tt-lablabel' }, t('boxing.referee.auditHint')),
         ),
         match.audit
-          ? h('div', { className: 'tt-labrow' },
-              h('span', { className: 'tt-badge', 'data-tone': match.audit.passed ? 'good' : 'bad' },
-                `${match.audit.passed ? t('hud.verifyPass') : t('hud.verifyFail')} · ${match.audit.rows} ${t('hud.rowsUnit')}`))
+          ? h('div', { className: 'tt-badge', 'data-tone': match.audit.passed ? 'good' : 'bad' },
+              `${match.audit.passed ? t('hud.verifyPass') : t('hud.verifyFail')} · ${match.audit.rows}`)
           : null,
         match.receipt
           ? h('div', null,
-              h('div', { className: 'tt-lablabel', style: { marginTop: 4 } }, t('boxing.receipt.title')),
-              h('div', { className: 'tt-hex tt-mono', style: { maxHeight: 90 } }, match.receipt.code),
+              h('div', { className: 'tt-lablabel' }, t('boxing.receipt.title')),
+              h('div', { className: 'tt-hex tt-mono', style: { maxHeight: 80 } }, match.receipt.code),
               h('div', { className: 'tt-labrow' },
                 h('button', { type: 'button', className: 'tt-chip',
-                  onClick: () => copyText(api, match.receipt.code) }, t('access.receipt.copy')),
-                h('span', { className: 'tt-lablabel' }, `${t('access.receipt.fingerprint')} ${match.receipt.fingerprint}`),
-              ),
+                  onClick: () => copyText(api, match.receipt.code) }, t('access.receipt.copy'))),
               h('textarea', {
                 className: 'tt-archivebox',
                 placeholder: t('access.verify.codePlaceholder'),
@@ -351,23 +358,11 @@ TT.BoxingUI = (function () {
                       : `${t('access.verify.fail')}：${(match.verifyResult.reasons || []).join('；')}`)
                 : null,
             )
-          : h('p', { className: 'tt-labempty' }, t('boxing.receipt.empty')),
-      ),
-      h('section', { className: 'tt-labcard' },
-        h('div', { className: 'tt-labcardhead' }, h('strong', null, t('boxing.rules.title'))),
-        h('table', { className: 'tt-table' },
-          h('thead', null, h('tr', null, h('th', null, t('boxing.you')), h('th', null, t('boxing.cpu')), h('th', null, t('boxing.result')))),
-          h('tbody', null,
-            [['punch', 'guard', t('boxing.blocked')], ['punch', 'punch', t('boxing.trade')], ['punch', 'feint', t('boxing.hit')],
-             ['guard', 'feint', t('boxing.hurt')], ['feint', 'guard', t('boxing.hit')], ['feint', 'punch', t('boxing.hurt')],
-             ['guard', 'punch', t('boxing.blocked')], ['guard', 'guard', t('boxing.blocked')], ['feint', 'feint', t('boxing.blocked')]].map((row, index) =>
-              h('tr', { key: index },
-                h('td', null, t(`boxing.action.${row[0]}`)),
-                h('td', null, t(`boxing.action.${row[1]}`)),
-                h('td', null, row[2]),
-              ))),
+          : null,
+        h('details', { style: { marginTop: 8 } },
+          h('summary', null, t('boxing.rules.title')),
+          h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('boxing.why')),
         ),
-        h('p', { className: 'tt-finalenote', style: { marginTop: 10 } }, t('boxing.why')),
       ),
     )
   }

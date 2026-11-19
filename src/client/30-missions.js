@@ -1354,7 +1354,15 @@ TT.Missions = (function () {
               ? 'lose'
               : 'draw'
           : null
-        const entry = { n: exchange, round: match.round || 1, player, cpu, playerScore: resolved.playerScore, cpuScore: resolved.cpuScore, bits: resolved.bits }
+        let combo = match.combo || 0
+        let bestCombo = match.bestCombo || 0
+        if (resolved.playerScore > 0 && resolved.cpuScore === 0) {
+          combo += 1
+          bestCombo = Math.max(bestCombo, combo)
+        } else if (resolved.cpuScore > 0) {
+          combo = 0
+        }
+        const entry = { n: exchange, round: match.round || 1, player, cpu, playerScore: resolved.playerScore, cpuScore: resolved.cpuScore, bits: resolved.bits, combo }
         const next = {
           ...match,
           playerHp: nextPlayerHp,
@@ -1363,6 +1371,8 @@ TT.Missions = (function () {
           roundExchange: nextRoundExchange,
           round,
           wins,
+          combo,
+          bestCombo,
           last: entry,
           log: [...match.log, entry],
           finished,
