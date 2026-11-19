@@ -42,6 +42,13 @@ TT.dict = {
     'arcade.lock.failed': '尝试次数用尽，锁已锁定；点「重试」再来',
 
     'challenge.normalMode': '正常模式',
+    'tapeout.quizTitle': '流片前检查：这颗半加器有几颗与非门？',
+    'tapeout.gates': '颗门',
+    'tapeout.quizFirst': '流片前先完成检查：选择正确的门数。',
+    'tapeout.quizOk': '正确：5 颗门 = 半加器。可以流片了。',
+    'tapeout.quizFail': '不对：半加器由 5 颗与非门组成（挑战模式下会记为失误）。',
+    'mint.manualFirst': '先手动铸 2 颗，才能使用「一键铸满」。',
+
     'challenge.toChallenge': '切到挑战模式',
     'challenge.toNormal': '切回正常模式',
     'challenge.resetBtn': '重置',
@@ -935,6 +942,13 @@ TT.dict = {
     'arcade.lock.failed': 'Out of attempts — the lock is locked. Press restart.',
 
     'challenge.normalMode': 'Normal mode',
+    'tapeout.quizTitle': 'Pre tape-out check: how many NAND gates make a half adder?',
+    'tapeout.gates': 'gates',
+    'tapeout.quizFirst': 'Finish the pre tape-out check first: pick the correct gate count.',
+    'tapeout.quizOk': 'Correct: 5 gates make a half adder. Ready to tape out.',
+    'tapeout.quizFail': 'Not quite: a half adder uses 5 NAND gates (counts as a mistake in challenge mode).',
+    'mint.manualFirst': 'Mint two chips by hand before using “mint all”.',
+
     'challenge.toChallenge': 'Switch to challenge',
     'challenge.toNormal': 'Back to normal',
     'challenge.resetBtn': 'Reset',
@@ -2326,6 +2340,10 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   font-size:11px; color:var(--tt-dim); font-variant-numeric:tabular-nums; }
 .tt-arcade-records .tt-lablabel { margin-right:2px; }
 
+.tt-quiz { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:4px 0; padding:5px 7px;
+  border-radius:8px; background:rgba(86,225,255,.06); border:1px dashed rgba(86,225,255,.3); }
+.tt-quiztitle { font-size:11px; color:var(--tt-ink); margin-right:4px; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -2426,6 +2444,22 @@ function ChallengeBar(props) {
       ? `${t('challenge.best')} ${'★'.repeat(best.stars)} · ${(best.bestMs / 1000).toFixed(1)}s`
       : `${t('challenge.par')} ${config.par}`),
     last ? TT.h('span', { className: 'tt-challenge-timer' }, `${t('challenge.recent')} ${'★'.repeat(last.stars)} · ${(last.ms / 1000).toFixed(1)}s`) : null,
+  )
+}
+
+function TapeoutQuiz(props) {
+  const { state, t, api } = props
+  if (state.chapter !== 3 || state.mode !== 'missions') return null
+  const play = state.play || {}
+  if (play.quizPassed || play.taped || play.phase === 'running' || play.phase === 'done') return null
+  return TT.h('div', { className: 'tt-quiz' },
+    TT.h('span', { className: 'tt-quiztitle' }, `🧾 ${t('tapeout.quizTitle')}`),
+    [4, 5, 9].map((count) => TT.h('button', {
+      key: count,
+      type: 'button',
+      className: 'tt-chip',
+      onClick: () => api.dispatch({ type: 'tapeout/quiz', value: count }),
+    }, `${count} ${t('tapeout.gates')}`)),
   )
 }
 
@@ -2817,6 +2851,7 @@ TT.UI.Panel = function Panel(props) {
             TT.h('h3', { className: 'tt-mtitle' }, resolve(chapter.titleKey)),
             narrow ? null : TT.h('div', { className: 'tt-msub' }, resolve(chapter.subtitleKey)),
             TT.h(ChallengeBar, { state, t, api }),
+            TT.h(TapeoutQuiz, { state, t, api }),
             TT.h('ul', { className: 'tt-goals' }, goals.map((goal, index) =>
               TT.h('li', { key: index, className: 'tt-goal', 'data-done': goal.done ? 'true' : 'false' },
                 TT.h('span', { className: 'tt-check' }, '✓'),

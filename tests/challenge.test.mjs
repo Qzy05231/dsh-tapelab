@@ -53,7 +53,9 @@ test('the mode behaves normally after switching back', () => {
   state = M.reduce(state, { type: 'challenge/start' })
   state = M.reduce(state, { type: 'challenge/abandon' })
   assert.equal(state.challenge.active, false)
-  // normal mode shortcuts work again
+  // normal mode shortcuts work again (after minting two chips by hand)
+  state = M.reduce(state, { type: 'mint', chip: 'chip:0' })
+  state = M.reduce(state, { type: 'mint', chip: 'chip:1' })
   state = M.reduce(state, { type: 'mint/all' })
   assert.equal(state.completed[0], true)
   state = M.reduce(state, { type: 'challenge/start' })

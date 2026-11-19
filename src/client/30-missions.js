@@ -465,6 +465,8 @@ TT.Missions = (function () {
         halfNetlist: null,
         halfHex: '',
         demo: false,
+        quizPassed: false,
+        quizWrong: 0,
       }
     }
     if (index === 4) {
@@ -1917,6 +1919,7 @@ TT.Missions = (function () {
       case 'mint/all': {
         if (state.chapter !== 0) return state
         if (state.challenge && state.challenge.active) return pushToast(state, 'challenge.noShortcut', {}, 'warn')
+        if ((state.play.minted || []).length < 2) return pushToast(state, 'mint.manualFirst', {}, 'warn')
         const minted = []
         for (let i = 0; i < TT.layout.mint.chips.length; i += 1) minted.push(`chip:${i}`)
         let next = {
@@ -2017,8 +2020,21 @@ TT.Missions = (function () {
       }
 
       // ---------------------------------------------------------- chapter 3
+      case 'tapeout/quiz': {
+        if (state.chapter !== 3) return state
+        const value = Number(action.value)
+        const correct = value === 5
+        const play = { ...state.play, quizPassed: correct, quizWrong: correct ? state.play.quizWrong : (state.play.quizWrong || 0) + 1 }
+        if (correct) return pushToast({ ...state, play }, 'tapeout.quizOk', {}, 'good')
+        let next = { ...state, play }
+        if (state.challenge && state.challenge.active) {
+          next = { ...next, challenge: { ...state.challenge, mistakes: (state.challenge.mistakes || 0) + 1 } }
+        }
+        return pushToast(next, 'tapeout.quizFail', {}, 'warn')
+      }
       case 'tapeout/start': {
         if (state.chapter !== 3) return state
+        if (!state.play.quizPassed) return pushToast(state, 'tapeout.quizFirst', {}, 'warn')
         if (state.play.phase !== 'idle') return state
         const netlist = state.play.halfNetlist
         if (!netlist) return state
