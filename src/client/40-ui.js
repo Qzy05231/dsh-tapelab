@@ -25,6 +25,7 @@ TT.dict = {
     'panel.data': '数据面板',
     'panel.dataHide': '收起数据',
     'panel.introStart': '开始任务',
+    'panel.intro': '章节说明',
     'panel.introCodex': '先看协议档案',
     'panel.verifying': '穷举验证中…',
     'panel.foldCard': '收起任务卡',
@@ -764,6 +765,7 @@ TT.dict = {
     'panel.data': 'Data panel',
     'panel.dataHide': 'Hide data',
     'panel.introStart': 'Start mission',
+    'panel.intro': 'Chapter brief',
     'panel.introCodex': 'Read the codex',
     'panel.verifying': 'Exhaustively verifying…',
     'panel.foldCard': 'Collapse mission card',
@@ -2082,6 +2084,7 @@ TT.UI.Panel = function Panel(props) {
       const current = stateRef.current
       if (event.key === 'Escape') {
         if (current.codex) api.dispatch({ type: 'codex/close' })
+        else if (current.intro) api.dispatch({ type: 'intro/close' })
         else if (!current.finaleDismissed && TT.Missions.allDone(current)) api.dispatch({ type: 'finale/close' })
         return
       }
@@ -2151,7 +2154,10 @@ TT.UI.Panel = function Panel(props) {
       TT.h('div', { className: 'tt-introfact' }, resolve(chapter.factKey)),
       TT.h('div', { className: 'tt-introactions' },
         TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', onClick: () => api.dispatch({ type: 'intro/close' }) }, t('panel.introStart')),
-        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost', onClick: () => api.dispatch({ type: 'codex/open' }) }, t('panel.introCodex')),
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost', onClick: () => {
+          api.dispatch({ type: 'intro/close' })
+          api.dispatch({ type: 'codex/open' })
+        } }, t('panel.introCodex')),
       ),
     ),
   ) : null
@@ -2233,6 +2239,13 @@ TT.UI.Panel = function Panel(props) {
             onClick: () => api.dispatch({ type: 'arcade/open' }),
           }, t('panel.modeArcade')),
         ),
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-tool',
+          title: t('panel.intro'),
+          'data-active': state.intro ? 'true' : 'false',
+          onClick: () => api.dispatch({ type: state.intro ? 'intro/close' : 'intro/open' }),
+        }, '📖'),
         TT.h('button', { type: 'button', className: 'tt-tool', title: t('panel.hint'), onClick: () => api.dispatch({ type: 'hint' }) }, '💡'),
         TT.h('button', { type: 'button', className: 'tt-tool', title: t('panel.reset'), onClick: () => api.dispatch({ type: 'chapter/reset' }) }, '↺'),
         TT.h('button', { type: 'button', className: 'tt-tool', title: t('panel.camera'), onClick: () => api.resetCamera() }, '⌖'),
