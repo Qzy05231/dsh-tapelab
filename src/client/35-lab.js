@@ -37,17 +37,10 @@ TT.LabUI = (function () {
   function Lab(props) {
     const { state, t, resolve, api } = props
     const lab = state.lab
-    const tabs = [
-      ['synth', 'lab.tab.synth'],
-      ['museum', 'lab.tab.museum'],
-      ['sandbox', 'lab.tab.sandbox'],
-      ['library', 'lab.tab.library'],
-      ['hardware', 'lab.tab.hardware'],
-      ['access', 'lab.tab.access'],
-      ['lottery', 'lab.tab.lottery'],
-      ['art', 'lab.tab.art'],
-      ['sensors', 'lab.tab.sensors'],
-      ['defi', 'lab.tab.defi'],
+    const tabGroups = [
+      { key: 'lab.group.intro', tabs: [['synth', 'lab.tab.synth'], ['museum', 'lab.tab.museum'], ['sandbox', 'lab.tab.sandbox']] },
+      { key: 'lab.group.apps', tabs: [['access', 'lab.tab.access'], ['lottery', 'lab.tab.lottery'], ['sensors', 'lab.tab.sensors'], ['defi', 'lab.tab.defi'], ['art', 'lab.tab.art']] },
+      { key: 'lab.group.eng', tabs: [['library', 'lab.tab.library'], ['hardware', 'lab.tab.hardware']] },
     ]
     return h('div', { className: 'tt-labview' },
       h('div', { className: 'tt-labhero' },
@@ -55,16 +48,28 @@ TT.LabUI = (function () {
           h('div', { className: 'tt-labadge' }, t('lab.badge')),
           h('h2', null, t('lab.title')),
           h('p', null, t('lab.sub')),
+          h('div', { className: 'tt-labpaths' },
+            h('span', { className: 'tt-lablabel' }, t('lab.paths')),
+            h('button', { type: 'button', className: 'tt-chip', 'data-active': lab.tab === 'synth' ? 'true' : 'false',
+              onClick: () => api.dispatch({ type: 'lab/tab', tab: 'synth' }) }, t('lab.path.beginner')),
+            h('button', { type: 'button', className: 'tt-chip', 'data-active': lab.tab === 'access' ? 'true' : 'false',
+              onClick: () => api.dispatch({ type: 'lab/tab', tab: 'access' }) }, t('lab.path.apps')),
+            h('button', { type: 'button', className: 'tt-chip', 'data-active': lab.tab === 'hardware' ? 'true' : 'false',
+              onClick: () => api.dispatch({ type: 'lab/tab', tab: 'hardware' }) }, t('lab.path.eng')),
+            h('button', { type: 'button', className: 'tt-chip',
+              onClick: () => api.dispatch({ type: 'lab/close' }) }, t('lab.path.back')),
+          ),
         ),
-        h('div', { className: 'tt-labtabs' }, tabs.map(([id, key]) =>
-          h('button', {
+        h('div', { className: 'tt-labtabs' }, tabGroups.map((group) => [
+          h('span', { key: group.key, className: 'tt-labgroup' }, t(group.key)),
+          ...group.tabs.map(([id, key]) => h('button', {
             key: id,
             type: 'button',
             className: 'tt-labtab',
             'data-active': lab.tab === id ? 'true' : 'false',
             onClick: () => api.dispatch({ type: 'lab/tab', tab: id }),
-          }, t(key)),
-        )),
+          }, t(key))),
+        ])),
       ),
       lab.tab === 'synth' ? h(Synthesizer, { lab, t, api }) : null,
       lab.tab === 'museum' ? h(Museum, { lab, t, api }) : null,

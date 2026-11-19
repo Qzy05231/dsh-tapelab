@@ -535,6 +535,7 @@ TT.Missions = (function () {
     const state = {
       chapter: 0,
       intro: false,
+      welcome: true,
       codex: false,
       paused: false,
       speed: 1,
@@ -1153,6 +1154,10 @@ TT.Missions = (function () {
   function reduce(state, action) {
     if (!action || !action.type) return state
     switch (action.type) {
+      case 'welcome/open':
+        return { ...state, welcome: true }
+      case 'welcome/close':
+        return { ...state, welcome: false }
       case 'intro/open':
         return { ...state, intro: true }
       case 'intro/close':

@@ -9,7 +9,15 @@ const PANEL_ID = 'tapeout-lab'
 
 TT.App = (function () {
   function create(ctx, t) {
-    const store = TT.createStore(TT.Missions.reduce(TT.Missions.initial(), { type: 'chapter/select', index: 0 }))
+    const boot = TT.Missions.initial()
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('dsh-tapeout-lab:welcomed:v1') === '1') {
+        boot.welcome = false
+      }
+    } catch (error) {
+      /* private mode: show the guide once per session */
+    }
+    const store = TT.createStore(TT.Missions.reduce(boot, { type: 'chapter/select', index: 0 }))
     try {
       const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('dsh-tapeout-lab:library:v1') : null
       if (saved) {
@@ -35,6 +43,17 @@ TT.App = (function () {
     let world = null
 
     const get = () => store.get()
+
+    // Remember that the first-run guide was dismissed, so it only appears once.
+    try {
+      store.subscribe((state) => {
+        if (!state.welcome && typeof localStorage !== 'undefined') {
+          localStorage.setItem('dsh-tapeout-lab:welcomed:v1', '1')
+        }
+      })
+    } catch (error) {
+      /* ignore persistence failures */
+    }
 
     // restore the mute preference and require a gesture before WebAudio starts
     try {

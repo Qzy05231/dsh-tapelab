@@ -26,6 +26,22 @@ TT.dict = {
     'panel.dataHide': '收起数据',
     'panel.introStart': '开始任务',
     'panel.intro': '章节说明',
+    'panel.guide': '新手引导',
+    'welcome.tag': '第一次来？',
+    'welcome.title': '3 分钟找到你的入口',
+    'welcome.body': '这是个「把与非门做成 Token、把电路做成 NFT」的 3D 实验室。不确定从哪开始？选一个身份，我带你到合适的入口。',
+    'welcome.beginner': '我从零开始',
+    'welcome.beginnerDesc': '从第 1 章铸一颗与非门开始，有提示和双击式操作',
+    'welcome.player': '我想先玩',
+    'welcome.playerDesc': '直接进游乐场：链上贪吃蛇、音乐盒、点阵',
+    'welcome.tech': '我是技术型',
+    'welcome.techDesc': '直接进攻实验室：真值表综合器、3D 沙盒',
+    'welcome.skip': '先随便看看',
+    'welcome.foot': '之后随时点顶部 🧭 重新打开这个引导；协议细节在 📖 里。',
+    'welcome.goBeginner': '已进入第 1 章：先铸出 8 颗与非门。',
+    'welcome.goPlayer': '已进入游乐场：试试链上贪吃蛇。',
+    'welcome.goTech': '已进入实验室：从真值表综合器开始。',
+
     'panel.introCodex': '先看协议档案',
     'panel.verifying': '穷举验证中…',
     'panel.foldCard': '收起任务卡',
@@ -371,6 +387,15 @@ TT.dict = {
     'lab.title': '实验室',
     'lab.sub': '真值表综合、元件展厅、3D 电路沙盒与本地电路库。任务关卡里的电路也会出现在这里。',
     'lab.tab.synth': '综合器',
+    'lab.group.intro': '入门',
+    'lab.group.apps': '应用实验',
+    'lab.group.eng': '工程落地',
+    'lab.paths': '推荐路径',
+    'lab.path.beginner': '🐣 先学基础',
+    'lab.path.apps': '🎮 做应用',
+    'lab.path.eng': '🔧 落地硬件',
+    'lab.path.back': '↩ 回主线任务',
+
     'lab.tab.museum': '元件展厅',
     'lab.tab.sandbox': '电路沙盒',
     'lab.tab.library': '电路库',
@@ -773,6 +798,22 @@ TT.dict = {
     'panel.dataHide': 'Hide data',
     'panel.introStart': 'Start mission',
     'panel.intro': 'Chapter brief',
+    'panel.guide': 'Getting started',
+    'welcome.tag': 'First time here?',
+    'welcome.title': 'Find your entry in 3 minutes',
+    'welcome.body': 'This is a 3D lab where NAND gates become tokens and circuits become NFTs. Not sure where to start? Pick a path and I will take you there.',
+    'welcome.beginner': 'Start from zero',
+    'welcome.beginnerDesc': 'Begin at chapter 1 by minting a NAND gate, with hints and guided clicks',
+    'welcome.player': 'I want to play',
+    'welcome.playerDesc': 'Jump into the playground: chain snake, music box, matrix',
+    'welcome.tech': 'I am technical',
+    'welcome.techDesc': 'Go straight to the lab: truth-table synthesizer and 3D sandbox',
+    'welcome.skip': 'Just look around',
+    'welcome.foot': 'Reopen this guide anytime with 🧭 above; protocol details live in 📖.',
+    'welcome.goBeginner': 'Chapter 1 opened — mint 8 NAND gates first.',
+    'welcome.goPlayer': 'Playground opened — try chain snake.',
+    'welcome.goTech': 'Lab opened — start with the truth-table synthesizer.',
+
     'panel.introCodex': 'Read the codex',
     'panel.verifying': 'Exhaustively verifying…',
     'panel.foldCard': 'Collapse mission card',
@@ -1118,6 +1159,15 @@ TT.dict = {
     'lab.title': 'Laboratory',
     'lab.sub': 'Truth-table synthesis, a component museum, a 3D circuit sandbox and a local circuit library. Circuits from the missions show up here too.',
     'lab.tab.synth': 'Synthesizer',
+    'lab.group.intro': 'Basics',
+    'lab.group.apps': 'Apps',
+    'lab.group.eng': 'Engineering',
+    'lab.paths': 'Suggested paths',
+    'lab.path.beginner': '🐣 Learn basics',
+    'lab.path.apps': '🎮 Build apps',
+    'lab.path.eng': '🔧 Go hardware',
+    'lab.path.back': '↩ Back to missions',
+
     'lab.tab.museum': 'Museum',
     'lab.tab.sandbox': 'Sandbox',
     'lab.tab.library': 'Library',
@@ -1974,6 +2024,25 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 
 
 
+.tt-labgroup { align-self:center; font-size:9.5px; letter-spacing:.08em; color:var(--tt-faint);
+  padding:0 4px 0 10px; border-left:1px solid rgba(86,225,255,.14); text-transform:uppercase; }
+.tt-labgroup:first-child { border-left:0; padding-left:0; }
+.tt-labpaths { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; }
+.tt-labpaths .tt-lablabel { font-size:10px; color:var(--tt-faint); }
+.tt-welcome { position:absolute; inset:0; z-index:60; display:flex; align-items:center; justify-content:center;
+  padding:24px; background:rgba(3,8,14,.72); backdrop-filter:blur(7px); overflow:auto; }
+.tt-welcomecard { width:min(620px,92%); padding:22px 24px; border-radius:18px; background:linear-gradient(170deg,#0a1a27,#061019);
+  border:1px solid rgba(86,225,255,.28); box-shadow:0 30px 80px rgba(0,0,0,.6); }
+.tt-welcomepaths { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0 10px; }
+.tt-welcomepath { display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:11px 12px; border-radius:12px;
+  border:1px solid rgba(86,225,255,.22); background:rgba(86,225,255,.05); color:var(--tt-ink); cursor:pointer;
+  transition:transform .12s ease, border-color .12s ease, background .12s ease; }
+.tt-welcomepath:hover { transform:translateY(-2px); border-color:var(--tt-mint); background:rgba(43,230,194,.1); }
+.tt-welcomepath .tt-welcomeicon { font-size:22px; }
+.tt-welcomepath b { font-size:12.5px; }
+.tt-welcomepath em { font-style:normal; font-size:10px; color:var(--tt-dim); line-height:1.45; }
+.tt-welcomeactions { display:flex; justify-content:flex-end; margin-top:4px; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -2097,7 +2166,8 @@ TT.UI.Panel = function Panel(props) {
       // the first render's state would never see the arcade mode or the current chapter.
       const current = stateRef.current
       if (event.key === 'Escape') {
-        if (current.codex) api.dispatch({ type: 'codex/close' })
+        if (current.welcome) api.dispatch({ type: 'welcome/close' })
+        else if (current.codex) api.dispatch({ type: 'codex/close' })
         else if (current.intro) api.dispatch({ type: 'intro/close' })
         else if (!current.finaleDismissed && TT.Missions.allDone(current)) api.dispatch({ type: 'finale/close' })
         return
@@ -2173,6 +2243,44 @@ TT.UI.Panel = function Panel(props) {
           api.dispatch({ type: 'codex/open' })
         } }, t('panel.introCodex')),
       ),
+    ),
+  ) : null
+
+  const welcome = state.welcome ? TT.h('div', { className: 'tt-welcome' },
+    TT.h('div', { className: 'tt-welcomecard' },
+      TT.h('div', { className: 'tt-introtag' }, t('welcome.tag')),
+      TT.h('h2', { className: 'tt-introtitle' }, t('welcome.title')),
+      TT.h('p', { className: 'tt-introbody' }, t('welcome.body')),
+      TT.h('div', { className: 'tt-welcomepaths' },
+        [
+          ['beginner', '🐣', 'welcome.beginner', 'welcome.beginnerDesc'],
+          ['player', '🎮', 'welcome.player', 'welcome.playerDesc'],
+          ['tech', '🔬', 'welcome.tech', 'welcome.techDesc'],
+        ].map(([id, icon, title, desc]) => TT.h('button', {
+          key: id,
+          type: 'button',
+          className: 'tt-welcomepath',
+          onClick: () => {
+            api.dispatch({ type: 'welcome/close' })
+            if (TT.Audio) TT.Audio.play('click')
+            if (id === 'beginner') {
+              api.dispatch({ type: 'chapter/select', index: 0 })
+              api.dispatch({ type: 'intro/open' })
+            } else if (id === 'player') {
+              api.dispatch({ type: 'arcade/open' })
+              api.dispatch({ type: 'arcade/game', game: 'snake' })
+            } else {
+              api.dispatch({ type: 'lab/open' })
+              api.dispatch({ type: 'lab/tab', tab: 'synth' })
+            }
+            api.dispatch({ type: 'toast/show', key: id === 'beginner' ? 'welcome.goBeginner' : id === 'player' ? 'welcome.goPlayer' : 'welcome.goTech', tone: 'info' })
+          },
+        }, TT.h('span', { className: 'tt-welcomeicon' }, icon), TT.h('b', null, t(title)), TT.h('em', null, t(desc)))),
+      ),
+      TT.h('div', { className: 'tt-welcomeactions' },
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost', onClick: () => api.dispatch({ type: 'welcome/close' }) }, t('welcome.skip')),
+      ),
+      TT.h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t('welcome.foot')),
     ),
   ) : null
 
@@ -2253,6 +2361,12 @@ TT.UI.Panel = function Panel(props) {
             onClick: () => api.dispatch({ type: 'arcade/open' }),
           }, t('panel.modeArcade')),
         ),
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-tool',
+          title: t('panel.guide'),
+          onClick: () => api.dispatch({ type: 'welcome/open' }),
+        }, '🧭'),
         TT.h('button', {
           type: 'button',
           className: 'tt-tool',
@@ -2381,6 +2495,7 @@ TT.UI.Panel = function Panel(props) {
       inLab && TT.LabUI ? TT.LabUI.Lab({ state, t, resolve, api }) : null,
       inArcade && TT.ArcadeUI ? TT.ArcadeUI.Page({ state, t, resolve, api }) : null,
       intro,
+      welcome,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),
