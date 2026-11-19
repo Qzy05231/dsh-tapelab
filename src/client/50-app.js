@@ -43,6 +43,7 @@ TT.App = (function () {
     let musicTimer = null
     let pixelTimer = null
     let snakeTimer = null
+    let snakeTimerSpeed = null
     let artTimer = null
     let clockTimer = null
     let clockRunning = false
@@ -246,7 +247,10 @@ TT.App = (function () {
         artTimer = null
       }
       const snakeOn = inArcade && state.arcade.game === 'snake' && state.arcade.snake && state.arcade.snake.running
-      if (snakeOn && !snakeTimer) {
+      const snakeDelay = { slow: 680, normal: 440, fast: 280 }[state.arcade.snake ? state.arcade.snake.speed : 'normal'] || 440
+      if (snakeOn && (!snakeTimer || snakeTimerSpeed !== snakeDelay)) {
+        if (snakeTimer) clearInterval(snakeTimer)
+        snakeTimerSpeed = snakeDelay
         snakeTimer = setInterval(() => {
           const current = get()
           const game = current.arcade.snake
@@ -257,7 +261,7 @@ TT.App = (function () {
           if (!after) return
           if (after.score > scoreBefore && TT.Audio) TT.Audio.play('mint')
           if (!after.alive && TT.Audio) TT.Audio.play('error')
-        }, 420)
+        }, snakeDelay)
       } else if (!snakeOn && snakeTimer) {
         clearInterval(snakeTimer)
         snakeTimer = null

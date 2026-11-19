@@ -27,6 +27,33 @@ TT.dict = {
     'panel.introStart': '开始任务',
     'panel.intro': '章节说明',
     'panel.guide': '新手引导',
+    'arcade.records.title': '本机记录',
+    'arcade.records.snake': '贪吃蛇',
+    'arcade.records.guess': '猜数最少',
+    'arcade.records.score': '猜数最高分',
+    'arcade.records.lock': '开锁',
+    'arcade.records.debug': '排障',
+    'arcade.snake.speed': '速度',
+    'arcade.snake.slow': '慢',
+    'arcade.snake.normal': '中',
+    'arcade.snake.fast': '快',
+    'arcade.snake.leaderboard': '本机排行榜',
+    'arcade.guess.score': '得分',
+    'arcade.lock.failed': '尝试次数用尽，锁已锁定；点「重试」再来',
+
+    'challenge.startBtn': '挑战模式',
+    'challenge.start': '挑战开始！禁用助手与一键操作，尽快完成本章。',
+    'challenge.active': '挑战中',
+    'challenge.abandon': '放弃挑战',
+    'challenge.abandoned': '已放弃挑战。',
+    'challenge.locked': '先完成本章，才能解锁挑战模式。',
+    'challenge.lockedBar': '完成本章后解锁 ⚡ 挑战模式（计时 + 禁用助手与一键操作）',
+    'challenge.desc': '挑战：计时完成本章，禁用助手与快捷操作',
+    'challenge.best': '最佳',
+    'challenge.recent': '上次',
+    'challenge.done': '挑战完成 {stars} · 用时 {seconds}s',
+    'challenge.noShortcut': '挑战模式下不能使用助手或一键操作。',
+
     'welcome.tag': '第一次来？',
     'welcome.title': '3 分钟找到你的入口',
     'welcome.body': '这是个「把与非门做成 Token、把电路做成 NFT」的 3D 实验室。不确定从哪开始？选一个身份，我带你到合适的入口。',
@@ -48,6 +75,10 @@ TT.dict = {
     'achv.copyDone': '战绩已复制，可粘贴到聊天窗口',
     'achv.shareFail': '当前环境无法生成分享卡',
     'achv.stats.daily': '每日挑战完成',
+    'achv.challenge1.title': '挑战者',
+    'achv.challenge1.desc': '完成一次章节挑战模式',
+    'achv.challengeGold.title': '三星挑战',
+    'achv.challengeGold.desc': '在任意章节挑战中拿到 3 星',
     'achv.daily1.title': '每日第一题',
     'achv.daily1.desc': '完成任意一天的每日挑战',
     'achv.daily3.title': '每日连胜',
@@ -881,6 +912,33 @@ TT.dict = {
     'panel.introStart': 'Start mission',
     'panel.intro': 'Chapter brief',
     'panel.guide': 'Getting started',
+    'arcade.records.title': 'Local records',
+    'arcade.records.snake': 'Snake',
+    'arcade.records.guess': 'Best tries',
+    'arcade.records.score': 'Guess score',
+    'arcade.records.lock': 'Locks',
+    'arcade.records.debug': 'Debug',
+    'arcade.snake.speed': 'Speed',
+    'arcade.snake.slow': 'Slow',
+    'arcade.snake.normal': 'Normal',
+    'arcade.snake.fast': 'Fast',
+    'arcade.snake.leaderboard': 'Local leaderboard',
+    'arcade.guess.score': 'Score',
+    'arcade.lock.failed': 'Out of attempts — the lock is locked. Press restart.',
+
+    'challenge.startBtn': 'Challenge',
+    'challenge.start': 'Challenge started! Assists and shortcuts are disabled — finish the chapter fast.',
+    'challenge.active': 'Challenge running',
+    'challenge.abandon': 'Give up',
+    'challenge.abandoned': 'Challenge abandoned.',
+    'challenge.locked': 'Finish this chapter to unlock challenge mode.',
+    'challenge.lockedBar': 'Finish the chapter to unlock ⚡ challenge mode (timer, no assists/shortcuts)',
+    'challenge.desc': 'Challenge: timed run with assists and shortcuts disabled',
+    'challenge.best': 'Best',
+    'challenge.recent': 'Last',
+    'challenge.done': 'Challenge complete {stars} · {seconds}s',
+    'challenge.noShortcut': 'Assists and shortcuts are disabled in challenge mode.',
+
     'welcome.tag': 'First time here?',
     'welcome.title': 'Find your entry in 3 minutes',
     'welcome.body': 'This is a 3D lab where NAND gates become tokens and circuits become NFTs. Not sure where to start? Pick a path and I will take you there.',
@@ -902,6 +960,10 @@ TT.dict = {
     'achv.copyDone': 'Record copied — paste it anywhere',
     'achv.shareFail': 'Share card is unavailable here',
     'achv.stats.daily': 'Dailies solved',
+    'achv.challenge1.title': 'Challenger',
+    'achv.challenge1.desc': 'Complete a chapter challenge run',
+    'achv.challengeGold.title': 'Three-star run',
+    'achv.challengeGold.desc': 'Earn 3 stars in any chapter challenge',
     'achv.daily1.title': 'First daily',
     'achv.daily1.desc': 'Solve any daily challenge',
     'achv.daily3.title': 'Daily streak',
@@ -2237,6 +2299,17 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   font-family:var(--dsh-font-family-mono, monospace); font-size:13px; color:var(--tt-amber); border:1px dashed rgba(255,195,92,.45); }
 .tt-dailygiven[data-kind="clue"] { color:var(--tt-ink); border-color:rgba(86,225,255,.35); }
 
+.tt-challengebar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:5px 0 4px; padding:4px 6px;
+  border-radius:8px; background:rgba(255,195,92,.05); border:1px solid rgba(255,195,92,.16); }
+.tt-challengebar[data-active="true"] { border-color:rgba(255,195,92,.55); background:rgba(255,195,92,.1); }
+.tt-challengebar[data-locked="true"] { opacity:.65; background:transparent; border-style:dashed; }
+.tt-challenge-timer { font-family:var(--dsh-font-family-mono, monospace); font-size:12px; color:var(--tt-amber); font-weight:700; }
+
+.tt-arcade-records { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:7px 12px; margin:8px 0 2px;
+  border-radius:10px; background:rgba(255,195,92,.05); border:1px solid rgba(255,195,92,.14);
+  font-size:11px; color:var(--tt-dim); font-variant-numeric:tabular-nums; }
+.tt-arcade-records .tt-lablabel { margin-right:2px; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -2301,6 +2374,39 @@ TT.UI.SevenSeg = function SevenSeg(props) {
     TT.h('rect', { x: 5, y: 37, width: 5, height: 19, rx: 2.5, fill: color(4) }),
     TT.h('rect', { x: 5, y: 12, width: 5, height: 19, rx: 2.5, fill: color(5) }),
     TT.h('rect', { x: 11, y: 31.5, width: 22, height: 5, rx: 2.5, fill: color(6) }),
+  )
+}
+
+function ChallengeBar(props) {
+  const { state, t, api } = props
+  const chapter = state.chapter
+  const active = Boolean(state.challenge && state.challenge.active && state.challenge.chapter === chapter)
+  const [now, setNow] = React.useState(Date.now())
+  React.useEffect(() => {
+    if (!active) return undefined
+    const timer = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(timer)
+  }, [active])
+  const config = TT.Missions.challengeConfig ? TT.Missions.challengeConfig(chapter) : { gold: 40, silver: 90 }
+  const best = state.stats && state.stats.challenge ? state.stats.challenge[chapter] : null
+  if (active) {
+    const ms = Math.max(0, now - (state.challenge.startedAt || now))
+    return TT.h('div', { className: 'tt-challengebar', 'data-active': 'true' },
+      TT.h('span', { className: 'tt-challenge-timer' }, `⚡ ${(ms / 1000).toFixed(1)}s`),
+      TT.h('span', { className: 'tt-lablabel' }, `3★ ≤ ${config.gold}s · 2★ ≤ ${config.silver}s`),
+      TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'challenge/abandon' }) }, t('challenge.abandon')),
+    )
+  }
+  if (!state.completed[chapter]) {
+    return TT.h('div', { className: 'tt-challengebar', 'data-locked': 'true' }, TT.h('span', null, t('challenge.lockedBar')))
+  }
+  const last = state.challenge && state.challenge.lastResult
+  return TT.h('div', { className: 'tt-challengebar' },
+    TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => api.dispatch({ type: 'challenge/start' }) }, `⚡ ${t('challenge.startBtn')}`),
+    TT.h('span', { className: 'tt-lablabel' }, best
+      ? `${t('challenge.best')} ${'★'.repeat(best.stars)} · ${(best.bestMs / 1000).toFixed(1)}s`
+      : t('challenge.desc')),
+    last ? TT.h('span', { className: 'tt-challenge-timer' }, `${t('challenge.recent')} ${'★'.repeat(last.stars)} · ${(last.ms / 1000).toFixed(1)}s`) : null,
   )
 }
 
@@ -2691,6 +2797,7 @@ TT.UI.Panel = function Panel(props) {
             ),
             TT.h('h3', { className: 'tt-mtitle' }, resolve(chapter.titleKey)),
             narrow ? null : TT.h('div', { className: 'tt-msub' }, resolve(chapter.subtitleKey)),
+            TT.h(ChallengeBar, { state, t, api }),
             TT.h('ul', { className: 'tt-goals' }, goals.map((goal, index) =>
               TT.h('li', { key: index, className: 'tt-goal', 'data-done': goal.done ? 'true' : 'false' },
                 TT.h('span', { className: 'tt-check' }, '✓'),

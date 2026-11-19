@@ -21,6 +21,8 @@ TT.Achievements = (function () {
     { id: 'verilog', tier: 'silver', titleKey: 'achv.verilog.title', descKey: 'achv.verilog.desc', check: (s) => stats(s).imports >= 1 },
     { id: 'daily1', tier: 'bronze', titleKey: 'achv.daily1.title', descKey: 'achv.daily1.desc', check: (s) => Object.keys(stats(s).daily || {}).length >= 1 },
     { id: 'daily3', tier: 'gold', titleKey: 'achv.daily3.title', descKey: 'achv.daily3.desc', check: (s) => Object.keys(stats(s).daily || {}).length >= 3 },
+    { id: 'challenge1', tier: 'silver', titleKey: 'achv.challenge1.title', descKey: 'achv.challenge1.desc', check: (s) => Object.keys(stats(s).challenge || {}).length >= 1 },
+    { id: 'challengeGold', tier: 'gold', titleKey: 'achv.challengeGold.title', descKey: 'achv.challengeGold.desc', check: (s) => Object.values(stats(s).challenge || {}).some((entry) => entry && entry.stars >= 3) },
   ]
 
   function stats(state) {

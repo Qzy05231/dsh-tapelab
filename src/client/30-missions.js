@@ -8,6 +8,16 @@
  */
 
 TT.Missions = (function () {
+  // Per-chapter challenge targets in seconds: [3 stars, 2 stars], completion is 1 star.
+  const CHALLENGE_TIMES = [
+    [18, 40], [30, 70], [50, 110], [15, 35], [25, 55], [50, 110],
+    [25, 55], [35, 75], [40, 85], [30, 65], [25, 60],
+  ]
+  function challengeConfig(index) {
+    const entry = CHALLENGE_TIMES[index] || [40, 90]
+    return { gold: entry[0], silver: entry[1] }
+  }
+
   const CHAPTERS = TT.protocol.CHAPTERS
   const CH = {
     MINT: 0,
@@ -538,7 +548,8 @@ TT.Missions = (function () {
       welcome: true,
       achvOpen: false,
       unlocked: [],
-      stats: { snakeBest: 0, debugSolved: 0, guessBest: null, lockWins: 0, synth: 0, imports: 0, receipts: 0, daily: {} },
+      stats: { snakeBest: 0, snakeBySpeed: {}, snakeScores: [], debugSolved: 0, guessBest: null, guessScoreBest: 0, lockWins: 0, lockBestAttempts: null, synth: 0, imports: 0, receipts: 0, daily: {}, challenge: {} },
+      challenge: { active: false, chapter: 0, startedAt: 0, hadCompleted: false, lastResult: null },
       daily: null,
       codex: false,
       paused: false,
@@ -654,8 +665,8 @@ TT.Missions = (function () {
       game: 'music',
       music: { playing: false, tempo: 420, scale: 0, tune: 0, step: 0 },
       pixel: { bits: pattern, anim: false },
-      lock: { code: 9, guess: 0, attempts: 0, last: null, solved: false },
-      guess: { secret: 11, guess: 0, tries: 0, history: [], solved: false },
+      lock: { code: 9, guess: 0, attempts: 0, maxAttempts: 6, last: null, solved: false, failed: false, bestAttempts: null },
+      guess: { secret: 11, guess: 0, tries: 0, maxTries: 5, history: [], solved: false, score: 0 },
       vote: { a: 0, b: 0, c: 0 },
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
       snake: null,
@@ -672,7 +683,7 @@ TT.Missions = (function () {
 
   function ensureSnake(arcade) {
     if (arcade.snake || !TT.Arcade) return arcade
-    return { ...arcade, snake: TT.Arcade.snakeInitial() }
+    return { ...arcade, snake: TT.Arcade.snakeInitial(undefined, 'normal') }
   }
 
   function ensureArcadePuzzles(arcade) {
@@ -726,7 +737,33 @@ TT.Missions = (function () {
   function markComplete(state, index, key) {
     if (state.completed[index]) return state
     let next = { ...state, completed: { ...state.completed, [index]: true } }
+    if (next.challenge && next.challenge.active && next.challenge.chapter === index) {
+      const elapsed = Math.max(0, Date.now() - (next.challenge.startedAt || Date.now()))
+      const config = challengeConfig(index)
+      const stars = elapsed <= config.gold * 1000 ? 3 : elapsed <= config.silver * 1000 ? 2 : 1
+      const previous = next.stats.challenge[index]
+      next = {
+        ...next,
+        stats: {
+          ...next.stats,
+          challenge: {
+            ...next.stats.challenge,
+            [index]: {
+              stars: Math.max(stars, previous ? previous.stars : 0),
+              bestMs: previous && previous.bestMs < elapsed ? previous.bestMs : elapsed,
+            },
+          },
+        },
+        challenge: { active: false, chapter: index, startedAt: 0, hadCompleted: true, lastResult: { stars, ms: elapsed } },
+        unlocked: next.unlocked || [],
+      }
+      next.challengeToast = { stars: '★'.repeat(stars), seconds: (elapsed / 1000).toFixed(1) }
+    }
     next = pushToast(next, key || 'toast.chapterDone', {}, 'good')
+    if (next.challengeToast) {
+      next = pushToast(next, 'challenge.done', next.challengeToast, 'good')
+      delete next.challengeToast
+    }
     if (completedCount(next) >= CHAPTERS.length && !next.allDoneNotified) {
       next = {
         ...next,
@@ -1564,10 +1601,16 @@ TT.Missions = (function () {
         const snake = state.arcade.snake || (TT.Arcade ? TT.Arcade.snakeInitial() : null)
         if (!snake) return state
         if (!snake.alive) {
-          const reset = TT.Arcade.snakeInitial()
+          const reset = TT.Arcade.snakeInitial(undefined, snake.speed || 'normal')
           return { ...state, arcade: { ...state.arcade, snake: { ...reset, running: true } } }
         }
         return { ...state, arcade: { ...state.arcade, snake: { ...snake, running: !snake.running } } }
+      }
+      case 'snake/speed': {
+        const snake = state.arcade.snake
+        const speed = ['slow', 'normal', 'fast'].indexOf(action.speed) >= 0 ? action.speed : 'normal'
+        if (!snake || snake.running) return state
+        return { ...state, arcade: { ...state.arcade, snake: { ...snake, speed } } }
       }
       case 'snake/dir': {
         const snake = state.arcade.snake || (TT.Arcade ? TT.Arcade.snakeInitial() : null)
@@ -1578,11 +1621,23 @@ TT.Missions = (function () {
         const snake = state.arcade.snake
         if (!snake || !snake.running || !TT.Arcade) return state
         const next = TT.Arcade.snakeStep(snake)
-        const stats = { ...state.stats, snakeBest: Math.max(state.stats.snakeBest || 0, next.score || 0) }
+        const speed = snake.speed || 'normal'
+        let stats = {
+          ...state.stats,
+          snakeBest: Math.max(state.stats.snakeBest || 0, next.score || 0),
+          snakeBySpeed: { ...(state.stats.snakeBySpeed || {}), [speed]: Math.max((state.stats.snakeBySpeed || {})[speed] || 0, next.score || 0) },
+        }
+        if (!next.alive && snake.alive) {
+          const entry = { score: next.score, speed, at: Date.now() }
+          stats = {
+            ...stats,
+            snakeScores: [entry, ...(stats.snakeScores || [])].sort((a, b) => b.score - a.score).slice(0, 5),
+          }
+        }
         return { ...state, stats, arcade: { ...state.arcade, snake: next } }
       }
       case 'snake/reset':
-        return { ...state, arcade: { ...state.arcade, snake: TT.Arcade ? TT.Arcade.snakeInitial() : null } }
+        return { ...state, arcade: { ...state.arcade, snake: TT.Arcade ? TT.Arcade.snakeInitial(undefined, (state.arcade.snake && state.arcade.snake.speed) || 'normal') : null } }
       case 'music/toggle':
         return {
           ...state,
@@ -1635,19 +1690,30 @@ TT.Missions = (function () {
       }
       case 'lock/check': {
         const lock = state.arcade.lock
-        if (lock.solved) return state
+        if (lock.solved || lock.failed) return state
+        const attempts = lock.attempts + 1
         const solved = lock.guess === lock.code
+        const maxAttempts = lock.maxAttempts || 6
+        const failed = !solved && attempts >= maxAttempts
+        let stats = state.stats
+        if (solved) {
+          stats = {
+            ...stats,
+            lockWins: (stats.lockWins || 0) + 1,
+            lockBestAttempts: stats.lockBestAttempts === null || stats.lockBestAttempts === undefined ? attempts : Math.min(stats.lockBestAttempts, attempts),
+          }
+        }
         return {
           ...state,
-          stats: solved ? { ...state.stats, lockWins: (state.stats.lockWins || 0) + 1 } : state.stats,
+          stats,
           arcade: {
             ...state.arcade,
-            lock: { ...lock, attempts: lock.attempts + 1, last: lock.guess, solved },
+            lock: { ...lock, attempts, last: lock.guess, solved, failed, bestAttempts: stats.lockBestAttempts },
           },
         }
       }
       case 'lock/reset':
-        return { ...state, arcade: { ...state.arcade, lock: { ...state.arcade.lock, guess: 0, attempts: 0, last: null, solved: false } } }
+        return { ...state, arcade: { ...state.arcade, lock: { ...state.arcade.lock, guess: 0, attempts: 0, last: null, solved: false, failed: false } } }
       case 'guess/toggle': {
         const index = Math.max(0, Math.min(3, Number(action.index) || 0))
         const value = (state.arcade.guess.guess || 0) ^ (1 << index)
@@ -1655,19 +1721,23 @@ TT.Missions = (function () {
       }
       case 'guess/submit': {
         const game = state.arcade.guess
-        if (game.solved || game.tries >= 8) return state
+        const maxTries = game.maxTries || 5
+        if (game.solved || game.tries >= maxTries) return state
         const cmp = game.guess === game.secret ? 0 : game.guess > game.secret ? 1 : -1
         const tries = game.tries + 1
-        const best = cmp === 0 ? (state.stats.guessBest === null || state.stats.guessBest === undefined ? tries : Math.min(state.stats.guessBest, tries)) : state.stats.guessBest
+        const solved = cmp === 0
+        const score = solved ? Math.max(10, (maxTries + 1 - tries) * 10) : 0
+        const best = solved ? (state.stats.guessBest === null || state.stats.guessBest === undefined ? tries : Math.min(state.stats.guessBest, tries)) : state.stats.guessBest
         return {
           ...state,
-          stats: { ...state.stats, guessBest: best },
+          stats: { ...state.stats, guessBest: best, guessScoreBest: Math.max(state.stats.guessScoreBest || 0, score) },
           arcade: {
             ...state.arcade,
             guess: {
               ...game,
               tries,
-              solved: cmp === 0,
+              solved,
+              score,
               history: [...(game.history || []), { value: game.guess, cmp }],
             },
           },
@@ -1755,6 +1825,34 @@ TT.Missions = (function () {
       }
       case 'chapter/next':
         return selectChapter(state, Math.min(CHAPTERS.length - 1, state.chapter + 1))
+      case 'challenge/start': {
+        if (state.challenge && state.challenge.active) return state
+        if (!state.completed[state.chapter]) return pushToast(state, 'challenge.locked', {}, 'warn')
+        const chapter = state.chapter
+        const completed = { ...state.completed, [chapter]: false }
+        const flags = chapter === 0 ? { ...state.flags, mintedChips: [] } : state.flags
+        const play = setupChapterPlay({ ...state, flags, play: playFor({ ...state, flags }, chapter) }, chapter)
+        return {
+          ...state,
+          play,
+          completed,
+          intro: false,
+          epoch: (state.epoch || 1) + 1,
+          challenge: { active: true, chapter, startedAt: Date.now(), hadCompleted: true },
+          toast: { key: 'challenge.start', params: { seconds: challengeConfig(chapter).gold }, tone: 'info', at: Date.now() },
+        }
+      }
+      case 'challenge/abandon': {
+        if (!state.challenge || !state.challenge.active) return state
+        const chapter = state.challenge.chapter
+        const completed = state.challenge.hadCompleted ? { ...state.completed, [chapter]: true } : state.completed
+        return {
+          ...state,
+          completed,
+          challenge: { active: false, chapter, startedAt: 0, hadCompleted: false },
+          toast: { key: 'challenge.abandoned', params: {}, tone: 'info', at: Date.now() },
+        }
+      }
       case 'chapter/reset': {
         const next = {
           ...state,
@@ -1787,6 +1885,7 @@ TT.Missions = (function () {
         }
       case 'mint/all': {
         if (state.chapter !== 0) return state
+        if (state.challenge && state.challenge.active) return pushToast(state, 'challenge.noShortcut', {}, 'warn')
         const minted = []
         for (let i = 0; i < TT.layout.mint.chips.length; i += 1) minted.push(`chip:${i}`)
         let next = {
@@ -1864,6 +1963,7 @@ TT.Missions = (function () {
       }
       case 'wire/assist': {
         if (![1, 2, 5].includes(state.chapter)) return state
+        if (state.challenge && state.challenge.active) return pushToast(state, 'challenge.noShortcut', {}, 'warn')
         const wire = nextAssistWire(state)
         if (!wire) return state
         return connect(state, wire.from, wire.to)
@@ -2544,6 +2644,7 @@ TT.Missions = (function () {
   }
 
   return {
+    challengeConfig,
     chapterMeta,
     chapterGoals,
     completedCount,

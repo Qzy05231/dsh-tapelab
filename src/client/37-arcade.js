@@ -198,8 +198,8 @@ TT.Arcade = (function () {
   // ------------------------------------------------------------ snake on the matrix
   const SNAKE_DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
 
-  function snakeInitial(seed) {
-    const start = { cells: [27, 26, 25], dir: 'right', food: 12, score: 0, alive: true, running: false, ticks: 0 }
+  function snakeInitial(seed, speed) {
+    const start = { cells: [27, 26, 25], dir: 'right', food: 12, score: 0, alive: true, running: false, ticks: 0, speed: speed || 'normal' }
     return placeFood(start, seed || 7)
   }
 
@@ -289,6 +289,14 @@ TT.ArcadeUI = (function () {
           h('p', null, t('arcade.sub')),
         ),
       ),
+      h('div', { className: 'tt-arcade-records' },
+        h('span', { className: 'tt-lablabel' }, t('arcade.records.title')),
+        h('span', null, `${t('arcade.records.snake')} ${(state.stats && state.stats.snakeBest) || 0}`),
+        h('span', null, `${t('arcade.records.guess')} ${state.stats && state.stats.guessBest !== null && state.stats.guessBest !== undefined ? state.stats.guessBest : '—'}`),
+        h('span', null, `${t('arcade.records.score')} ${(state.stats && state.stats.guessScoreBest) || 0}`),
+        h('span', null, `${t('arcade.records.lock')} ${(state.stats && state.stats.lockWins) || 0}`),
+        h('span', null, `${t('arcade.records.debug')} ${(state.stats && state.stats.debugSolved) || 0}/5`),
+      ),
       h('div', { className: 'tt-arcadecards' }, GAMES.map(([id, key, icon]) =>
         h('button', {
           key: id,
@@ -304,7 +312,7 @@ TT.ArcadeUI = (function () {
       arcade.game === 'guess' ? h(Guess, { arcade, t, api }) : null,
       arcade.game === 'vote' ? h(Vote, { arcade, t, api }) : null,
       arcade.game === 'debug' ? h(Debug, { arcade, t, api }) : null,
-      arcade.game === 'snake' ? h(Snake, { arcade, t, api }) : null,
+      arcade.game === 'snake' ? h(Snake, { arcade, t, api, state }) : null,
       arcade.game === 'daily' && TT.DailyUI ? h(TT.DailyUI.Page, { state, t, api }) : null,
     )
   }
@@ -457,9 +465,10 @@ TT.ArcadeUI = (function () {
             disabled: lock.solved, onClick: () => api.dispatch({ type: 'lock/check' }) }, t('arcade.lock.check')),
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
             onClick: () => api.dispatch({ type: 'lock/reset' }) }, t('arcade.lock.reset')),
-          h('span', { className: 'tt-lablabel' }, `${t('arcade.lock.attempts')} ${lock.attempts}`),
+          h('span', { className: 'tt-lablabel' }, `${t('arcade.lock.attempts')} ${lock.attempts}/${lock.maxAttempts || 6}`),
         ),
         lock.solved ? h('div', { className: 'tt-badge', 'data-tone': 'good' }, t('arcade.lock.solved')) : null,
+        lock.failed ? h('div', { className: 'tt-badge', 'data-tone': 'bad' }, t('arcade.lock.failed')) : null,
         lock.last ? h('div', { className: 'tt-leds' }, [0, 1, 2, 3].map((index) =>
           h('span', { key: index, className: 'tt-led', 'data-on': ((lock.last >> index) & 1) ? 'true' : 'false' },
             h('i', null), `B${index} ${((lock.code >> index) & 1) ? '✓' : '✗'}`),
@@ -492,7 +501,8 @@ TT.ArcadeUI = (function () {
             disabled: game.solved, onClick: () => api.dispatch({ type: 'guess/submit' }) }, t('arcade.guess.submit')),
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
             onClick: () => api.dispatch({ type: 'guess/restart' }) }, t('arcade.guess.restart')),
-          h('span', { className: 'tt-lablabel' }, `${t('arcade.guess.tries')} ${game.tries}/8`),
+          h('span', { className: 'tt-lablabel' }, `${t('arcade.guess.tries')} ${game.tries}/${game.maxTries || 5}`),
+          game.solved ? h('span', { className: 'tt-badge', 'data-tone': 'good' }, `${t('arcade.guess.score')} +${game.score || 0}`) : null,
         ),
         game.solved ? h('div', { className: 'tt-badge', 'data-tone': 'good' }, `${t('arcade.guess.solved')} ${game.secret}`) : null,
         h('div', { className: 'tt-librarylist' }, game.history.slice(-6).map((entry, index) =>
@@ -609,7 +619,7 @@ TT.ArcadeUI = (function () {
   }
 
   function Snake(props) {
-    const { arcade, t, api } = props
+    const { arcade, t, api, state } = props
     const game = arcade.snake || TT.Arcade.snakeInitial()
     const cellAt = (index) => {
       if (index === game.food) return 'food'
@@ -648,6 +658,18 @@ TT.ArcadeUI = (function () {
           h('span', { className: 'tt-lablabel' }, `${t('arcade.snake.dir')} ${game.dir}`),
         ),
         h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('arcade.snake.speed')),
+          [['slow', 'arcade.snake.slow'], ['normal', 'arcade.snake.normal'], ['fast', 'arcade.snake.fast']].map(([speed, key]) =>
+            h('button', {
+              key: speed,
+              type: 'button',
+              className: 'tt-chip',
+              'data-active': (game.speed || 'normal') === speed ? 'true' : 'false',
+              disabled: game.running,
+              onClick: () => api.dispatch({ type: 'snake/speed', speed }),
+            }, t(key))),
+        ),
+        h('div', { className: 'tt-labrow' },
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'up' }) }, '↑'),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'down' }) }, '↓'),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'snake/dir', dir: 'left' }) }, '←'),
@@ -658,6 +680,15 @@ TT.ArcadeUI = (function () {
       h(Card, { title: t('arcade.snake.how'), hint: '' },
         h('p', { className: 'tt-labempty' }, t('arcade.snake.body')),
         h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.snake.clock')),
+        (arcade.snake && state.stats && state.stats.snakeScores && state.stats.snakeScores.length)
+          ? h('div', null,
+              h('div', { className: 'tt-lablabel', style: { marginTop: 6 } }, t('arcade.snake.leaderboard')),
+              h('div', { className: 'tt-librarylist' }, state.stats.snakeScores.map((entry, index) =>
+                h('div', { key: index, className: 'tt-libraryrow' },
+                  h('span', { className: 'tt-libraryname' }, `#${index + 1} ${entry.score}`),
+                  h('span', { className: 'tt-libraryhex' }, t(entry.speed === 'fast' ? 'arcade.snake.fast' : entry.speed === 'slow' ? 'arcade.snake.slow' : 'arcade.snake.normal')),
+                ))))
+          : null,
       ),
     )
   }
