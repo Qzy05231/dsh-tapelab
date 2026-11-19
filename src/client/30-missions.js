@@ -1248,6 +1248,10 @@ TT.Missions = (function () {
         return { ...state, welcome: true }
       case 'welcome/close':
         return { ...state, welcome: false }
+      case 'news/open':
+        return { ...state, mode: 'news' }
+      case 'news/close':
+        return { ...state, mode: 'missions' }
       case 'intro/open':
         return { ...state, intro: true }
       case 'intro/close':

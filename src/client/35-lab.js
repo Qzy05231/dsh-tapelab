@@ -39,7 +39,7 @@ TT.LabUI = (function () {
     const lab = state.lab
     const tabGroups = [
       { key: 'lab.group.intro', tabs: [['synth', 'lab.tab.synth'], ['museum', 'lab.tab.museum'], ['sandbox', 'lab.tab.sandbox']] },
-      { key: 'lab.group.apps', tabs: [['access', 'lab.tab.access'], ['lottery', 'lab.tab.lottery'], ['sensors', 'lab.tab.sensors'], ['defi', 'lab.tab.defi'], ['art', 'lab.tab.art'], ['news', 'lab.tab.news']] },
+      { key: 'lab.group.apps', tabs: [['access', 'lab.tab.access'], ['lottery', 'lab.tab.lottery'], ['sensors', 'lab.tab.sensors'], ['defi', 'lab.tab.defi'], ['art', 'lab.tab.art']] },
       { key: 'lab.group.eng', tabs: [['library', 'lab.tab.library'], ['hardware', 'lab.tab.hardware']] },
     ]
     return h('div', { className: 'tt-labview' },
@@ -79,7 +79,6 @@ TT.LabUI = (function () {
       lab.tab === 'access' && TT.AccessUI ? TT.AccessUI.Page({ state, t, api }) : null,
       lab.tab === 'lottery' && TT.LotteryUI ? TT.LotteryUI.Page({ state, t, api }) : null,
       lab.tab === 'art' && TT.ArtUI ? TT.ArtUI.Page({ state, t, api }) : null,
-      lab.tab === 'news' && TT.NewsUI ? TT.NewsUI.Page({ state, t, api }) : null,
       lab.tab === 'sensors' && TT.SensorsUI ? TT.SensorsUI.Page({ state, t, api }) : null,
       lab.tab === 'defi' && TT.DefiUI ? TT.DefiUI.Page({ state, t, api }) : null,
     )

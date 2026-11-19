@@ -89,28 +89,144 @@ TT.News = (function () {
   return { ITEMS, QUIZZES, UPDATES, hash32, dateKey, briefing }
 })()
 
-// --------------------------------------------------------------------------- UI
+// --------------------------------------------------------------------------- crawling + UI
+
+/** Parse the r.jina.ai markdown of https://tapeout.link/news into feed items. */
+TT.News.parseFeed = function parseFeed(markdown) {
+  const lines = String(markdown || '').split('\n')
+  const items = []
+  let currentDate = ''
+  let currentTime = ''
+  let pending = null
+  const clean = (text) => String(text || '').replace(/\s+/g, ' ').trim()
+  const title = (raw) => {
+    const text = clean(raw)
+    let last = -1
+    for (let index = 0; index < text.length; index += 1) if (/[\u4e00-\u9fff]/.test(text[index])) last = index
+    return last > 3 && /[A-Za-z]/.test(text.slice(last + 1)) ? text.slice(0, last + 1) : text
+  }
+  for (const raw of lines) {
+    const line = raw.trim()
+    const date = line.match(/^##\s*(.+?)(?:\s*·.*)?$/)
+    if (date && /月|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct/.test(date[1])) currentDate = clean(date[1])
+    const time = line.match(/^\d+\.\s+(\d{2}:\d{2})$/)
+    if (time) currentTime = time[1]
+    const heading = line.match(/^###\s*\[(.+?)\]\((https:\/\/tapeout\.link\/news\/\d+)\)/)
+    if (heading) {
+      if (pending) items.push(pending)
+      pending = { title: title(heading[1]), url: heading[2], time: currentTime, date: currentDate, summary: '' }
+      continue
+    }
+    if (pending && !pending.summary && line && !line.startsWith('!') && !line.startsWith('*') && !line.startsWith('展开') && !/^###/.test(line) && !/^\d+\.\s+/.test(line) && line.length > 30) {
+      pending.summary = clean(line).slice(0, 240)
+    }
+  }
+  if (pending) items.push(pending)
+  return items.slice(0, 14)
+}
+
+TT.News.snapshot = function snapshot() {
+  if (typeof TT.NewsFeed !== 'undefined' && TT.NewsFeed && Array.isArray(TT.NewsFeed.items) && TT.NewsFeed.items.length) return TT.NewsFeed
+  return null
+}
+
+const NEWS_READER = 'https://r.jina.ai/https://tapeout.link/news'
+const NEWS_CACHE = 'dsh-tapelab-lab:news:v1'
 
 TT.NewsUI = (function () {
   const h = TT.h
 
+  function loadFeed() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem(NEWS_CACHE)
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (parsed && Array.isArray(parsed.items) && parsed.items.length) return parsed
+        }
+      }
+    } catch (error) {
+      /* fall back to the embedded snapshot */
+    }
+    return TT.News.snapshot() || { source: '', crawledAt: '', items: [] }
+  }
+
   function Page(props) {
     const { state, t } = props
     const brief = TT.News.briefing()
+    const [feed, setFeed] = React.useState(loadFeed)
+    const [status, setStatus] = React.useState('idle')
     const [picked, setPicked] = React.useState(null)
     const [revealed, setRevealed] = React.useState(false)
     const correct = picked === brief.quiz.answer
-    return h('div', { className: 'tt-labgrid' },
+
+    async function refresh() {
+      if (typeof fetch !== 'function') {
+        setStatus('fail')
+        return
+      }
+      setStatus('loading')
+      try {
+        const response = await fetch(NEWS_READER, { headers: { accept: 'text/plain' } })
+        if (!response.ok) throw new Error('HTTP ' + response.status)
+        const text = await response.text()
+        const items = TT.News.parseFeed(text)
+        if (!items.length) throw new Error('empty feed')
+        const next = { source: 'https://tapeout.link/news', crawledAt: new Date().toISOString(), items }
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.setItem(NEWS_CACHE, JSON.stringify(next))
+        } catch (error) {
+          /* cache is optional */
+        }
+        setFeed(next)
+        setStatus('ok')
+      } catch (error) {
+        setStatus('fail')
+      }
+    }
+
+    const crawled = feed.crawledAt ? new Date(feed.crawledAt).toLocaleString() : ''
+    return h('div', { className: 'tt-labview tt-newsview' },
+      h('div', { className: 'tt-labhero' },
+        h('div', { className: 'tt-labherotxt' },
+          h('div', { className: 'tt-labadge' }, t('news.badge')),
+          h('h2', null, t('news.title')),
+          h('p', null, t('news.sub')),
+          h('div', { className: 'tt-labpaths' },
+            h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', disabled: status === 'loading', onClick: refresh }, status === 'loading' ? t('news.refreshing') : `🔄 ${t('news.refresh')}`),
+            h('span', { className: 'tt-lablabel' }, status === 'fail' ? t('news.refreshFail') : status === 'ok' ? t('news.refreshed') : feed.crawledAt ? `${t('news.crawled')} ${crawled}` : t('news.noFeed')),
+            feed.source ? h('a', { className: 'tt-chip', href: feed.source, target: '_blank', rel: 'noreferrer noopener' }, t('news.source')) : null,
+          ),
+        ),
+      ),
+      h('section', { className: 'tt-labcard' },
+        h('div', { className: 'tt-labcardhead' },
+          h('strong', null, t('news.latest')),
+          h('span', null, feed.source ? (feed.crawledAt ? `${t('news.snapshot')} ${crawled}` : '') : t('news.noFeed')),
+        ),
+        feed.items.length
+          ? h('div', { className: 'tt-feedlist' }, feed.items.map((item) =>
+              h('article', { key: item.url, className: 'tt-feeditem' },
+                h('div', { className: 'tt-feedmeta' },
+                  h('span', { className: 'tt-newstag' }, t('news.tag.live')),
+                  h('time', null, `${item.date || ''} ${item.time || ''}`.trim() || '—'),
+                ),
+                h('a', { className: 'tt-feedtitle', href: item.url, target: '_blank', rel: 'noreferrer noopener' }, item.title),
+                item.summary ? h('p', null, item.summary) : null,
+                h('a', { className: 'tt-feedsource', href: item.url, target: '_blank', rel: 'noreferrer noopener' }, 'tapeout.link ↗'),
+              )))
+          : h('p', { className: 'tt-labempty' }, t('news.noFeed')),
+        h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t('news.crawlNote')),
+      ),
       h('section', { className: 'tt-labcard' },
         h('div', { className: 'tt-labcardhead' },
           h('strong', null, t('news.title')),
           h('span', null, `${brief.date} · ${t('news.local')}`),
         ),
-        h('p', { className: 'tt-labempty' }, t('news.sub')),
         h('div', { className: 'tt-labstats' },
           h('div', { className: 'tt-labstat' }, h('b', null, TT.util.int(brief.metrics.blocks)), h('span', null, t('news.metric.blocks'))),
-          h('div', { className: 'tt-labstat' }, h('b', null, stringify(brief.metrics.nand)), h('span', null, t('news.metric.nand'))),
-          h('div', { className: 'tt-labstat' }, h('b', null, stringify(brief.metrics.circuits)), h('span', null, t('news.metric.circuits'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, String(brief.metrics.nand)), h('span', null, t('news.metric.nand'))),
+          h('div', { className: 'tt-labstat' }, h('b', null, String(brief.metrics.circuits)), h('span', null, t('news.metric.circuits'))),
           h('div', { className: 'tt-labstat' }, h('b', null, `${state.circuits ? state.circuits.length : 0}`), h('span', null, t('news.metric.mine'))),
         ),
         h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } }, t('news.demo')),
@@ -126,9 +242,7 @@ TT.NewsUI = (function () {
           h('h4', null, t(brief.quiz.questionKey)),
           h('div', { className: 'tt-newsoptions' }, brief.quiz.optionsKey.map((key, index) =>
             h('button', {
-              key,
-              type: 'button',
-              className: 'tt-chip',
+              key, type: 'button', className: 'tt-chip',
               'data-active': picked === index ? 'true' : 'false',
               'data-correct': picked !== null && index === brief.quiz.answer ? 'true' : 'false',
               onClick: () => { setPicked(index); setRevealed(true) },
@@ -149,10 +263,6 @@ TT.NewsUI = (function () {
         h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t('news.foot')),
       ),
     )
-  }
-
-  function stringify(value) {
-    return String(value)
   }
 
   return { Page }

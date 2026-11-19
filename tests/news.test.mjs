@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const read = (name) => readFileSync(join(HERE, '..', 'src', 'client', name), 'utf8')
 const TT = new Function(read('00-core.js') + '\nreturn TT')()
+new Function('TT', read('news-feed.js'))(TT)
 new Function('TT', read('46-news.js'))(TT)
 const N = TT.News
 
@@ -34,4 +35,23 @@ test('each day rotates content and offers a valid question', () => {
   }
   assert.equal(N.ITEMS.length >= 10, true)
   assert.equal(N.UPDATES.length >= 4, true)
+})
+
+
+test('real feed snapshot and markdown parser work', () => {
+  assert.ok(TT.NewsFeed && TT.NewsFeed.items.length >= 10)
+  const first = TT.NewsFeed.items[0]
+  assert.ok(first.url.startsWith('https://tapeout.link/news/'))
+  assert.ok(first.title.length > 4)
+  const markdown = [
+    '## 11月20日 · 周五',
+    '1.   21:53',
+    '### [TapeRelay 官方详解：三副本 TapeRelay explainer](https://tapeout.link/news/2123414239326970035)**72**分 pts',
+    'TapeOut 官方连发多条推文详解 TapeRelay，文件被切分为 1 MiB 分块并用两级索引组织，支持断点续传。',
+  ].join('\n')
+  const parsed = TT.News.parseFeed(markdown)
+  assert.equal(parsed.length, 1)
+  assert.equal(parsed[0].url, 'https://tapeout.link/news/2123414239326970035')
+  assert.equal(parsed[0].time, '21:53')
+  assert.ok(parsed[0].summary.includes('TapeRelay'))
 })

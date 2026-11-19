@@ -157,6 +157,20 @@ TT.dict = {
     'panel.unfoldCard': '展开任务卡',
     'panel.controls': '拖动旋转镜头 · 滚轮缩放 · 点击端口连线 · 点空白取消 · 1–9 跳章 · [ ] 前后章 · H 提示',
     'panel.modeArcade': '游乐场',
+    'panel.modeNews': '资讯',
+    'news.badge': '每日资讯',
+    'news.refresh': '刷新资讯',
+    'news.refreshing': '抓取中…',
+    'news.refreshed': '已更新，显示最新抓取',
+    'news.refreshFail': '在线抓取失败，显示本地快照',
+    'news.crawled': '抓取于',
+    'news.snapshot': '快照',
+    'news.noFeed': '暂无资讯',
+    'news.source': '来源 tapeout.link',
+    'news.latest': '最新动态',
+    'news.tag.live': '动态',
+    'news.crawlNote': '资讯抓取自 tapeout.link/news（经 r.jina.ai 文本代理）；点「刷新资讯」可在浏览器内在线更新，失败时展示内置快照。内容为外部数据，仅作展示。',
+
     'arcade.badge': 'PLAYGROUND · 游乐场',
     'arcade.title': '逻辑游乐场',
     'arcade.sub': '用出块当节拍演奏、点亮 LED 点阵、解逻辑谜题，或者当一次电路医生。',
@@ -1139,6 +1153,20 @@ TT.dict = {
     'panel.unfoldCard': 'Expand mission card',
     'panel.controls': 'Drag to orbit · wheel to zoom · click pins to wire · click empty space to cancel · 1–9 chapters · [ ] step · H hint',
     'panel.modeArcade': 'Playground',
+    'panel.modeNews': 'News',
+    'news.badge': 'Daily news',
+    'news.refresh': 'Refresh',
+    'news.refreshing': 'Fetching…',
+    'news.refreshed': 'Updated with the latest crawl',
+    'news.refreshFail': 'Live fetch failed — showing the local snapshot',
+    'news.crawled': 'Crawled',
+    'news.snapshot': 'snapshot',
+    'news.noFeed': 'No items yet',
+    'news.source': 'Source tapeout.link',
+    'news.latest': 'Latest updates',
+    'news.tag.live': 'Update',
+    'news.crawlNote': 'Items are crawled from tapeout.link/news through the r.jina.ai text proxy; the Refresh button tries a live fetch in the browser and falls back to the embedded snapshot. External data, shown for reference only.',
+
     'arcade.badge': 'PLAYGROUND',
     'arcade.title': 'Logic playground',
     'arcade.sub': 'Play a NAND music box, light an 8×8 matrix, solve logic puzzles, or play circuit doctor.',
@@ -2282,6 +2310,12 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-lab[data-mode="lab"] .tt-stamp,
 .tt-lab[data-mode="lab"] .tt-fade,
 .tt-lab[data-mode="lab"] .tt-tooltip,
+.tt-lab[data-mode="news"] .tt-canvas,
+.tt-lab[data-mode="news"] .tt-scrim,
+.tt-lab[data-mode="news"] .tt-hud,
+.tt-lab[data-mode="news"] .tt-stamp,
+.tt-lab[data-mode="news"] .tt-fade,
+.tt-lab[data-mode="news"] .tt-tooltip,
 .tt-lab[data-mode="arcade"] .tt-canvas,
 .tt-lab[data-mode="arcade"] .tt-scrim,
 .tt-lab[data-mode="arcade"] .tt-hud,
@@ -2524,6 +2558,18 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-updateitem b { font-size:11px; color:var(--tt-ink); white-space:nowrap; }
 .tt-updateitem span { font-size:10.5px; color:var(--tt-dim); }
 
+.tt-newsview { max-height:100%; overflow:auto; }
+.tt-feedlist { display:flex; flex-direction:column; gap:6px; max-height:46vh; overflow:auto; padding-right:4px; }
+.tt-feeditem { display:flex; flex-direction:column; gap:3px; padding:9px 11px; border-radius:10px;
+  background:rgba(4,12,20,.4); border:1px solid rgba(86,225,255,.12); }
+.tt-feeditem:hover { border-color:rgba(86,225,255,.35); }
+.tt-feedmeta { display:flex; align-items:center; gap:8px; font-size:9.5px; color:var(--tt-faint); }
+.tt-feedtitle { font-size:13px; font-weight:600; color:var(--tt-ink); text-decoration:none; line-height:1.4; }
+.tt-feedtitle:hover { color:var(--tt-mint); }
+.tt-feeditem p { margin:0; font-size:10.5px; line-height:1.5; color:var(--tt-dim); }
+.tt-feedsource { font-size:9.5px; color:var(--tt-faint); text-decoration:none; }
+.tt-feedsource:hover { color:var(--tt-mint); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -2684,6 +2730,7 @@ TT.UI.Panel = function Panel(props) {
   const totalChapters = TT.protocol.CHAPTERS.length
   const inLab = state.mode === 'lab'
   const inArcade = state.mode === 'arcade'
+  const inNews = state.mode === 'news'
 
   React.useEffect(() => {
     const canvas = canvasRef.current
@@ -2698,7 +2745,7 @@ TT.UI.Panel = function Panel(props) {
   }, [canvasRef, store, api, t])
 
   React.useEffect(() => {
-    if (api.setWorldActive) api.setWorldActive(!inLab && !inArcade)
+    if (api.setWorldActive) api.setWorldActive(!inLab && !inArcade && !inNews)
   }, [inLab, inArcade, api])
 
   React.useEffect(() => {
@@ -2964,6 +3011,12 @@ TT.UI.Panel = function Panel(props) {
             'data-active': inArcade ? 'true' : 'false',
             onClick: () => api.dispatch({ type: 'arcade/open' }),
           }, t('panel.modeArcade')),
+          TT.h('button', {
+            type: 'button',
+            className: 'tt-modebtn',
+            'data-active': inNews ? 'true' : 'false',
+            onClick: () => api.dispatch({ type: 'news/open' }),
+          }, t('panel.modeNews')),
         ),
         TT.h('button', {
           type: 'button',
@@ -3100,6 +3153,7 @@ TT.UI.Panel = function Panel(props) {
       state.toast ? TT.h('div', { className: 'tt-toast', 'data-tone': state.toast.tone || 'info' }, resolve(state.toast.key, state.toast.params)) : null,
       inLab && TT.LabUI ? TT.LabUI.Lab({ state, t, resolve, api }) : null,
       inArcade && TT.ArcadeUI ? TT.ArcadeUI.Page({ state, t, resolve, api }) : null,
+      inNews && TT.NewsUI ? TT.h(TT.NewsUI.Page, { state, t, resolve, api }) : null,
       intro,
       welcome,
       achievements,
