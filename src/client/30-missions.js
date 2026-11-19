@@ -561,9 +561,23 @@ TT.Missions = (function () {
       access: freshAccess(),
       lottery: freshLottery(),
       art: freshArt(),
+      sensors: freshSensors(),
     }
     state.play = playFor(state, 0)
     return state
+  }
+
+  function freshSensors() {
+    return {
+      scenarioId: 'home',
+      values: {},
+      thresholds: {},
+      audit: null,
+      receipt: null,
+      verifyCode: '',
+      verifyHash: '',
+      verifyResult: null,
+    }
   }
 
   function freshArt() {
@@ -1133,6 +1147,56 @@ TT.Missions = (function () {
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
         }
+      case 'sensors/scenario':
+        return {
+          ...state,
+          sensors: { ...state.sensors, scenarioId: action.id || 'home', audit: null, receipt: null, verifyResult: null },
+        }
+      case 'sensors/value':
+        return {
+          ...state,
+          sensors: {
+            ...state.sensors,
+            values: { ...state.sensors.values, [action.key]: Number(action.value) || 0 },
+            audit: null,
+            receipt: null,
+            verifyResult: null,
+          },
+        }
+      case 'sensors/threshold':
+        return {
+          ...state,
+          sensors: {
+            ...state.sensors,
+            thresholds: { ...state.sensors.thresholds, [action.key]: Number(action.value) || 0 },
+            audit: null,
+            receipt: null,
+            verifyResult: null,
+          },
+        }
+      case 'sensors/audit': {
+        if (!TT.Sensors) return state
+        const audit = TT.Sensors.audit(state.sensors.scenarioId)
+        return { ...state, sensors: { ...state.sensors, audit } }
+      }
+      case 'sensors/issue': {
+        if (!TT.Sensors) return state
+        const issued = TT.Sensors.receipt(state.sensors.scenarioId, state.sensors.values, state.sensors.thresholds)
+        const entry = { code: issued.code, fingerprint: issued.fingerprint, at: issued.payload.at }
+        return {
+          ...state,
+          sensors: { ...state.sensors, receipt: entry, verifyCode: entry.code, verifyResult: null },
+        }
+      }
+      case 'sensors/verifyCode':
+        return { ...state, sensors: { ...state.sensors, verifyCode: String(action.code || ''), verifyResult: null } }
+      case 'sensors/verifyHash':
+        return { ...state, sensors: { ...state.sensors, verifyHash: String(action.hash || ''), verifyResult: null } }
+      case 'sensors/verify': {
+        if (!TT.Sensors) return state
+        const result = TT.Sensors.verify(state.sensors.verifyCode, state.sensors.verifyHash)
+        return { ...state, sensors: { ...state.sensors, verifyResult: result } }
+      }
       case 'art/seed':
         return { ...state, art: { ...state.art, seed: String(action.seed || ''), index: 0, verifyResult: null } }
       case 'art/circuit':

@@ -376,6 +376,61 @@ TT.dict = {
     'lab.tab.access': '门禁资格',
     'lab.tab.lottery': '可验证抽奖',
     'lab.tab.art': '生成艺术',
+    'lab.tab.sensors': '传感器规则',
+    'sensor.title': '传感器规则引擎',
+    'sensor.sub': '模拟量 → 阈值 → NAND 逻辑 → 多个执行器；规则可穷举审计，凭证可离线复算。',
+    'sensor.inputs': '传感器输入',
+    'sensor.actuators': '执行器',
+    'sensor.actuatorTitle': '执行器输出（实时）',
+    'sensor.on': '触发',
+    'sensor.off': '正常',
+    'sensor.firing': '动作',
+    'sensor.idle': '空闲',
+    'sensor.threshold': '阈值',
+    'sensor.rows': '项',
+    'sensor.none': '无',
+    'sensor.auditHint': '穷举布尔组合，验证每条规则',
+    'sensor.receipt.title': '可验证凭证',
+    'sensor.receipt.hint': '记录原始读数、阈值、布尔位、执行器与网表指纹。',
+    'sensor.receipt.empty': '先调好传感器，再签发凭证。',
+    'sensor.why.title': '为什么这样做',
+    'sensor.why.body': '真实规则引擎先把模拟量按阈值变成布尔位，再用门电路算执行器；本页把两步都摊开：阈值可调、布尔位可见、门数与深度可查、全部组合可穷举。',
+    'sensor.why.note': '凭证包含原始读数与阈值，验证器重算布尔位与电路输出；改读数、改阈值、改电路都会被发现。演示为离线复算，真实 TapeOut eval 是链上只读调用。',
+    'sensor.scenario.home': '家庭安防',
+    'sensor.scenario.homeDesc': '(门磁 OR 窗磁) AND 离家模式 → 报警。',
+    'sensor.scenario.fire': '火灾联动',
+    'sensor.scenario.fireDesc': '烟雾 AND (高温 OR CO) → 报警；烟雾 AND 高温 → 断电；烟雾 AND CO → 喷淋。',
+    'sensor.scenario.air': '新风联动',
+    'sensor.scenario.airDesc': '(CO₂高 OR 高温) AND NOT 烟雾 → 开新风；烟雾 → 净化（防串烟）。',
+    'sensor.scenario.interlock': '工业联锁',
+    'sensor.scenario.interlockDesc': '急停 OR (安全门开 AND 运行中) → 停机；急停 OR 安全门开 → 报警。',
+    'sensor.scenario.server': '机房环境',
+    'sensor.scenario.serverDesc': '高温 AND 高湿 → 空调；漏水 → 断电；漏水 OR (高温 AND 高湿) → 报警。',
+    'sensor.door': '门磁',
+    'sensor.window': '窗磁',
+    'sensor.away': '离家模式',
+    'sensor.smoke': '烟雾',
+    'sensor.heat': '温度',
+    'sensor.co': '一氧化碳',
+    'sensor.co2': '二氧化碳',
+    'sensor.humidity': '湿度',
+    'sensor.water': '漏水',
+    'sensor.estop': '急停',
+    'sensor.gate': '安全门',
+    'sensor.running': '机器运行',
+    'sensor.smoke.th': '烟雾阈值',
+    'sensor.heat.th': '温度阈值',
+    'sensor.co.th': 'CO 阈值',
+    'sensor.co2.th': 'CO₂ 阈值',
+    'sensor.humidity.th': '湿度阈值',
+    'actuator.alarm': '报警',
+    'actuator.powerCut': '断电',
+    'actuator.sprinkler': '喷淋',
+    'actuator.fan': '新风',
+    'actuator.purify': '净化',
+    'actuator.stop': '停机',
+    'actuator.ac': '空调',
+
     'art.title': '生成艺术 / 每区块一帧',
     'art.sub': '电路状态决定画面：同一份种子与区块序号永远得到同一帧，可导出、可验证、可收藏。',
     'art.play': '▶ 播放动画',
@@ -1029,6 +1084,61 @@ TT.dict = {
     'lab.tab.access': 'Access',
     'lab.tab.lottery': 'Lottery',
     'lab.tab.art': 'Art',
+    'lab.tab.sensors': 'Sensors',
+    'sensor.title': 'Sensor rule engine',
+    'sensor.sub': 'Analog sensors → thresholds → NAND logic → multiple actuators; rules are exhaustively auditable and receipts verify offline.',
+    'sensor.inputs': 'Sensor inputs',
+    'sensor.actuators': 'Actuators',
+    'sensor.actuatorTitle': 'Actuator outputs (live)',
+    'sensor.on': 'Triggered',
+    'sensor.off': 'Normal',
+    'sensor.firing': 'FIRING',
+    'sensor.idle': 'idle',
+    'sensor.threshold': 'threshold',
+    'sensor.rows': 'checks',
+    'sensor.none': 'none',
+    'sensor.auditHint': 'Exhaustively check every boolean combination',
+    'sensor.receipt.title': 'Verifiable receipt',
+    'sensor.receipt.hint': 'Records raw readings, thresholds, boolean bits, actuators and netlist fingerprint.',
+    'sensor.receipt.empty': 'Set the sensors, then issue a receipt.',
+    'sensor.why.title': 'Why this design',
+    'sensor.why.body': 'A real rule engine first turns analog readings into boolean bits with thresholds, then computes actuators with gates. This page exposes both steps: adjustable thresholds, visible bits, gate/depth stats and exhaustive checks.',
+    'sensor.why.note': 'The receipt carries raw readings and thresholds; the verifier recomputes the bits and circuit outputs. Changing readings, thresholds or the circuit is detected. This is an offline demo; real TapeOut eval is an on-chain read-only call.',
+    'sensor.scenario.home': 'Home security',
+    'sensor.scenario.homeDesc': '(door OR window) AND away mode → alarm.',
+    'sensor.scenario.fire': 'Fire interlock',
+    'sensor.scenario.fireDesc': 'smoke AND (heat OR CO) → alarm; smoke AND heat → power cut; smoke AND CO → sprinkler.',
+    'sensor.scenario.air': 'Ventilation',
+    'sensor.scenario.airDesc': '(CO₂ high OR heat high) AND NOT smoke → fan; smoke → purifier (avoid recirculating smoke).',
+    'sensor.scenario.interlock': 'Machine interlock',
+    'sensor.scenario.interlockDesc': 'E-stop OR (gate open AND running) → stop; E-stop OR gate open → alarm.',
+    'sensor.scenario.server': 'Server room',
+    'sensor.scenario.serverDesc': 'Heat AND humidity → AC; water leak → power cut; leak OR (heat AND humidity) → alarm.',
+    'sensor.door': 'Door contact',
+    'sensor.window': 'Window contact',
+    'sensor.away': 'Away mode',
+    'sensor.smoke': 'Smoke',
+    'sensor.heat': 'Temperature',
+    'sensor.co': 'Carbon monoxide',
+    'sensor.co2': 'Carbon dioxide',
+    'sensor.humidity': 'Humidity',
+    'sensor.water': 'Water leak',
+    'sensor.estop': 'E-stop',
+    'sensor.gate': 'Safety gate',
+    'sensor.running': 'Machine running',
+    'sensor.smoke.th': 'Smoke threshold',
+    'sensor.heat.th': 'Heat threshold',
+    'sensor.co.th': 'CO threshold',
+    'sensor.co2.th': 'CO₂ threshold',
+    'sensor.humidity.th': 'Humidity threshold',
+    'actuator.alarm': 'Alarm',
+    'actuator.powerCut': 'Power cut',
+    'actuator.sprinkler': 'Sprinkler',
+    'actuator.fan': 'Ventilation',
+    'actuator.purify': 'Purifier',
+    'actuator.stop': 'Machine stop',
+    'actuator.ac': 'Air conditioning',
+
     'art.title': 'Generative art / one frame per block',
     'art.sub': 'Circuit state determines the picture: the same seed and block index always yield the same frame — exportable, verifiable, collectible.',
     'art.play': '▶ Animate',
@@ -1760,6 +1870,29 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   overflow:hidden; cursor:pointer; display:block; }
 .tt-artthumb:hover { border-color:rgba(86,225,255,.6); }
 .tt-artthumb canvas { display:block; width:100%; height:auto; }
+
+.tt-sensorrow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:5px 0;
+  border-bottom:1px solid rgba(86,225,255,.07); }
+.tt-sensorname { display:flex; align-items:center; gap:6px; min-width:96px; font-size:11.5px; color:var(--tt-dim); }
+.tt-sensorname i { width:7px; height:7px; border-radius:50%; background:#12303f; border:1px solid rgba(120,190,220,.35); }
+.tt-sensorname i[data-on="true"] { background:var(--tt-red); border-color:var(--tt-red); box-shadow:0 0 8px rgba(255,93,108,.8); }
+.tt-slider { flex:1 1 160px; accent-color:var(--tt-mint); height:20px; }
+.tt-sensorval { display:flex; align-items:center; gap:5px; font-size:10.5px; color:var(--tt-ink);
+  font-variant-numeric:tabular-nums; min-width:120px; }
+.tt-sensorthreshold { width:56px; height:24px; border-radius:6px; border:1px solid rgba(86,225,255,.25);
+  background:rgba(4,12,20,.6); color:var(--tt-ink); font-size:10.5px; padding:0 4px; }
+.tt-actuators { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:6px; }
+.tt-actuator { display:flex; align-items:center; gap:7px; padding:7px 9px; border-radius:9px; font-size:11.5px;
+  border:1px solid rgba(120,190,220,.2); background:rgba(4,12,20,.45); color:var(--tt-dim); }
+.tt-actuator i { width:9px; height:9px; border-radius:50%; background:#0e2534; border:1px solid rgba(120,190,220,.35); }
+.tt-actuator span { flex:1; }
+.tt-actuator b { font-size:10px; font-weight:600; }
+.tt-actuator[data-on="true"][data-tone="bad"] { color:#ffd7db; border-color:rgba(255,93,108,.6); background:rgba(255,93,108,.12); }
+.tt-actuator[data-on="true"][data-tone="bad"] i { background:var(--tt-red); border-color:var(--tt-red); box-shadow:0 0 10px rgba(255,93,108,.85); }
+.tt-actuator[data-on="true"][data-tone="warn"] { color:#ffe9ae; border-color:rgba(255,195,92,.6); background:rgba(255,195,92,.1); }
+.tt-actuator[data-on="true"][data-tone="warn"] i { background:var(--tt-amber); border-color:var(--tt-amber); box-shadow:0 0 10px rgba(255,195,92,.8); }
+.tt-actuator[data-on="true"][data-tone="good"] { color:#bfffe9; border-color:rgba(43,230,194,.6); background:rgba(43,230,194,.1); }
+.tt-actuator[data-on="true"][data-tone="good"] i { background:var(--tt-mint); border-color:var(--tt-mint); box-shadow:0 0 10px rgba(43,230,194,.8); }
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
