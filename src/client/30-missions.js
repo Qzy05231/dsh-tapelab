@@ -558,9 +558,23 @@ TT.Missions = (function () {
       soundMuted: false,
       cinema: false,
       arcade: freshArcade(),
+      access: freshAccess(),
     }
     state.play = playFor(state, 0)
     return state
+  }
+
+  function freshAccess() {
+    return {
+      policyId: 'simple',
+      inputs: 0,
+      audit: null,
+      receipt: null,
+      receipts: [],
+      verifyCode: '',
+      verifyHash: '',
+      verifyResult: null,
+    }
   }
 
   function freshArcade() {
@@ -1088,6 +1102,58 @@ TT.Missions = (function () {
           ...state,
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
+        }
+      case 'access/policy':
+        return {
+          ...state,
+          access: { ...state.access, policyId: action.id || 'simple', inputs: 0, audit: null, receipt: null, verifyResult: null },
+        }
+      case 'access/toggle': {
+        if (!TT.Access) return state
+        const policy = TT.Access.policy(state.access.policyId)
+        const index = Math.max(0, Math.min(policy.inputs.length - 1, Number(action.index) || 0))
+        const inputs = (state.access.inputs || 0) ^ (1 << index)
+        return { ...state, access: { ...state.access, inputs, audit: null, verifyResult: null } }
+      }
+      case 'access/audit': {
+        if (!TT.Access) return state
+        const audit = TT.Access.audit(state.access.policyId)
+        return { ...state, access: { ...state.access, audit } }
+      }
+      case 'access/issue': {
+        if (!TT.Access) return state
+        const issued = TT.Access.receipt(state.access.policyId, state.access.inputs || 0)
+        const entry = {
+          code: issued.code,
+          policy: state.access.policyId,
+          allow: issued.allow,
+          fingerprint: issued.fingerprint,
+          at: issued.payload.at,
+        }
+        return {
+          ...state,
+          access: {
+            ...state.access,
+            receipt: entry,
+            receipts: [entry, ...(state.access.receipts || [])].slice(0, 6),
+            verifyCode: entry.code,
+            verifyResult: null,
+          },
+        }
+      }
+      case 'access/verifyCode':
+        return { ...state, access: { ...state.access, verifyCode: String(action.code || ''), verifyResult: null } }
+      case 'access/verifyHash':
+        return { ...state, access: { ...state.access, verifyHash: String(action.hash || ''), verifyResult: null } }
+      case 'access/verify': {
+        if (!TT.Access) return state
+        const result = TT.Access.verify(state.access.verifyCode, state.access.verifyHash)
+        return { ...state, access: { ...state.access, verifyResult: result } }
+      }
+      case 'access/loadReceipt':
+        return {
+          ...state,
+          access: { ...state.access, verifyCode: String(action.code || ''), verifyResult: TT.Access ? TT.Access.verify(action.code, state.access.verifyHash) : null },
         }
       case 'lab/hardware':
         return { ...state, lab: { ...state.lab, tab: 'hardware', hardwareFrom: action.from === 'sandbox' ? 'sandbox' : 'result' } }
