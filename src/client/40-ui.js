@@ -2029,6 +2029,8 @@ TT.UI.Panel = function Panel(props) {
   const state = TT.UI.useGame(store)
   const rootRef = React.useRef(null)
   const canvasRef = React.useRef(null)
+  const stateRef = React.useRef(state)
+  stateRef.current = state
   const width = TT.UI.useWidth(rootRef)
   const [hover, setHover] = React.useState(null)
   const [dataOpen, setDataOpen] = React.useState(false)
@@ -2071,16 +2073,20 @@ TT.UI.Panel = function Panel(props) {
       const tag = (target && target.tagName) || ''
       if (event.metaKey || event.ctrlKey || event.altKey) return
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || (target && target.isContentEditable)) return
+      // Read live state through a ref: the listener is bound once, so a closure over
+      // the first render's state would never see the arcade mode or the current chapter.
+      const current = stateRef.current
       if (event.key === 'Escape') {
-        if (state.codex) api.dispatch({ type: 'codex/close' })
-        else if (!state.finaleDismissed && TT.Missions.allDone(state)) api.dispatch({ type: 'finale/close' })
+        if (current.codex) api.dispatch({ type: 'codex/close' })
+        else if (!current.finaleDismissed && TT.Missions.allDone(current)) api.dispatch({ type: 'finale/close' })
         return
       }
-      if (state.mode === 'arcade' && state.arcade.game === 'snake') {
+      if (current.mode === 'arcade' && current.arcade.game === 'snake') {
         const dirs = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', a: 'left', s: 'down', d: 'right' }
-        const dir = dirs[event.key] || dirs[event.key.toLowerCase()]
+        const dir = dirs[event.key] || dirs[(event.key || '').toLowerCase()]
         if (dir) {
           event.preventDefault()
+          event.stopPropagation()
           api.dispatch({ type: 'snake/dir', dir })
           return
         }
@@ -2090,19 +2096,19 @@ TT.UI.Panel = function Panel(props) {
         return
       }
       if (event.key === '[') {
-        api.dispatch({ type: 'chapter/select', index: Math.max(0, state.chapter - 1) })
+        api.dispatch({ type: 'chapter/select', index: Math.max(0, current.chapter - 1) })
         return
       }
       if (event.key === ']') {
-        api.dispatch({ type: 'chapter/select', index: Math.min(TT.protocol.CHAPTERS.length - 1, state.chapter + 1) })
+        api.dispatch({ type: 'chapter/select', index: Math.min(TT.protocol.CHAPTERS.length - 1, current.chapter + 1) })
         return
       }
-      const key = event.key.toLowerCase()
+      const key = (event.key || '').toLowerCase()
       if (key === 'h') api.dispatch({ type: 'hint' })
       else if (key === 'r') api.dispatch({ type: 'chapter/reset' })
       else if (key === 'c') api.dispatch({ type: 'codex/toggle' })
       else if (key === 'm') api.dispatch({ type: 'sound/toggle' })
-      else if (key === 'f') api.dispatch({ type: state.cinema ? 'cinema/stop' : 'cinema/start' })
+      else if (key === 'f') api.dispatch({ type: current.cinema ? 'cinema/stop' : 'cinema/start' })
       else if (key === ' ') {
         event.preventDefault()
         api.dispatch({ type: 'pause/toggle' })
@@ -2110,7 +2116,7 @@ TT.UI.Panel = function Panel(props) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [state.codex, state.finaleDismissed, state.completed, api])
+  }, [api])
 
   const chapter = TT.Missions.chapterMeta(state.chapter)
   const goals = status.goals
