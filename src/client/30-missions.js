@@ -559,9 +559,24 @@ TT.Missions = (function () {
       cinema: false,
       arcade: freshArcade(),
       access: freshAccess(),
+      lottery: freshLottery(),
     }
     state.play = playFor(state, 0)
     return state
+  }
+
+  function freshLottery() {
+    return {
+      seed: '0x' + (11842913).toString(16),
+      participants: 'Alice\nBob\nCarol\nDave\nEve\nFrank\nGrace\nHeidi',
+      count: 1,
+      result: null,
+      receipt: null,
+      history: [],
+      verifyCode: '',
+      verifySeedHash: '',
+      verifyResult: null,
+    }
   }
 
   function freshAccess() {
@@ -1103,6 +1118,59 @@ TT.Missions = (function () {
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
         }
+      case 'lottery/seed':
+        return { ...state, lottery: { ...state.lottery, seed: String(action.seed || ''), result: null, receipt: null, verifyResult: null } }
+      case 'lottery/participants':
+        return { ...state, lottery: { ...state.lottery, participants: String(action.text || ''), result: null, receipt: null, verifyResult: null } }
+      case 'lottery/count': {
+        const pool = TT.Lottery ? TT.Lottery.parseParticipants(state.lottery.participants).length : 1
+        const count = Math.max(1, Math.min(Math.max(1, pool), Number(action.count) || 1))
+        return { ...state, lottery: { ...state.lottery, count } }
+      }
+      case 'lottery/randomSeed': {
+        if (!TT.Lottery) return state
+        const seed = '0x' + TT.Lottery.hash32(String(state.blocks) + ':' + Date.now()).toString(16).padStart(8, '0')
+        return { ...state, lottery: { ...state.lottery, seed, result: null, receipt: null, verifyResult: null } }
+      }
+      case 'lottery/draw': {
+        if (!TT.Lottery) return state
+        try {
+          const result = TT.Lottery.draw({
+            seed: state.lottery.seed,
+            participants: TT.Lottery.parseParticipants(state.lottery.participants),
+            count: state.lottery.count,
+          })
+          const issued = TT.Lottery.receipt(result)
+          const entry = { code: issued.code, winners: result.winners, seedHash: result.seedHash, at: Date.now() }
+          return {
+            ...state,
+            lottery: {
+              ...state.lottery,
+              result,
+              receipt: entry,
+              history: [entry, ...(state.lottery.history || [])].slice(0, 6),
+              verifyCode: entry.code,
+              verifyResult: null,
+            },
+          }
+        } catch (error) {
+          return pushToast(state, 'lottery.error', { error: String(error && error.message ? error.message : error) }, 'warn')
+        }
+      }
+      case 'lottery/verifyCode':
+        return { ...state, lottery: { ...state.lottery, verifyCode: String(action.code || ''), verifyResult: null } }
+      case 'lottery/verifySeedHash':
+        return { ...state, lottery: { ...state.lottery, verifySeedHash: String(action.hash || ''), verifyResult: null } }
+      case 'lottery/verify': {
+        if (!TT.Lottery) return state
+        const result = TT.Lottery.verify(state.lottery.verifyCode, state.lottery.verifySeedHash)
+        return { ...state, lottery: { ...state.lottery, verifyResult: result } }
+      }
+      case 'lottery/load': {
+        if (!TT.Lottery) return state
+        const result = TT.Lottery.verify(action.code, state.lottery.verifySeedHash)
+        return { ...state, lottery: { ...state.lottery, verifyCode: String(action.code || ''), verifyResult: result } }
+      }
       case 'access/policy':
         return {
           ...state,

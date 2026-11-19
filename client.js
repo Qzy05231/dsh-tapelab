@@ -5551,9 +5551,24 @@ TT.Missions = (function () {
       cinema: false,
       arcade: freshArcade(),
       access: freshAccess(),
+      lottery: freshLottery(),
     }
     state.play = playFor(state, 0)
     return state
+  }
+
+  function freshLottery() {
+    return {
+      seed: '0x' + (11842913).toString(16),
+      participants: 'Alice\nBob\nCarol\nDave\nEve\nFrank\nGrace\nHeidi',
+      count: 1,
+      result: null,
+      receipt: null,
+      history: [],
+      verifyCode: '',
+      verifySeedHash: '',
+      verifyResult: null,
+    }
   }
 
   function freshAccess() {
@@ -6095,6 +6110,59 @@ TT.Missions = (function () {
           mode: 'arcade',
           arcade: ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game }),
         }
+      case 'lottery/seed':
+        return { ...state, lottery: { ...state.lottery, seed: String(action.seed || ''), result: null, receipt: null, verifyResult: null } }
+      case 'lottery/participants':
+        return { ...state, lottery: { ...state.lottery, participants: String(action.text || ''), result: null, receipt: null, verifyResult: null } }
+      case 'lottery/count': {
+        const pool = TT.Lottery ? TT.Lottery.parseParticipants(state.lottery.participants).length : 1
+        const count = Math.max(1, Math.min(Math.max(1, pool), Number(action.count) || 1))
+        return { ...state, lottery: { ...state.lottery, count } }
+      }
+      case 'lottery/randomSeed': {
+        if (!TT.Lottery) return state
+        const seed = '0x' + TT.Lottery.hash32(String(state.blocks) + ':' + Date.now()).toString(16).padStart(8, '0')
+        return { ...state, lottery: { ...state.lottery, seed, result: null, receipt: null, verifyResult: null } }
+      }
+      case 'lottery/draw': {
+        if (!TT.Lottery) return state
+        try {
+          const result = TT.Lottery.draw({
+            seed: state.lottery.seed,
+            participants: TT.Lottery.parseParticipants(state.lottery.participants),
+            count: state.lottery.count,
+          })
+          const issued = TT.Lottery.receipt(result)
+          const entry = { code: issued.code, winners: result.winners, seedHash: result.seedHash, at: Date.now() }
+          return {
+            ...state,
+            lottery: {
+              ...state.lottery,
+              result,
+              receipt: entry,
+              history: [entry, ...(state.lottery.history || [])].slice(0, 6),
+              verifyCode: entry.code,
+              verifyResult: null,
+            },
+          }
+        } catch (error) {
+          return pushToast(state, 'lottery.error', { error: String(error && error.message ? error.message : error) }, 'warn')
+        }
+      }
+      case 'lottery/verifyCode':
+        return { ...state, lottery: { ...state.lottery, verifyCode: String(action.code || ''), verifyResult: null } }
+      case 'lottery/verifySeedHash':
+        return { ...state, lottery: { ...state.lottery, verifySeedHash: String(action.hash || ''), verifyResult: null } }
+      case 'lottery/verify': {
+        if (!TT.Lottery) return state
+        const result = TT.Lottery.verify(state.lottery.verifyCode, state.lottery.verifySeedHash)
+        return { ...state, lottery: { ...state.lottery, verifyResult: result } }
+      }
+      case 'lottery/load': {
+        if (!TT.Lottery) return state
+        const result = TT.Lottery.verify(action.code, state.lottery.verifySeedHash)
+        return { ...state, lottery: { ...state.lottery, verifyCode: String(action.code || ''), verifyResult: result } }
+      }
       case 'access/policy':
         return {
           ...state,
@@ -7192,6 +7260,7 @@ TT.LabUI = (function () {
       ['library', 'lab.tab.library'],
       ['hardware', 'lab.tab.hardware'],
       ['access', 'lab.tab.access'],
+      ['lottery', 'lab.tab.lottery'],
     ]
     return h('div', { className: 'tt-labview' },
       h('div', { className: 'tt-labhero' },
@@ -7216,6 +7285,7 @@ TT.LabUI = (function () {
       lab.tab === 'library' ? h(Library, { lab, t, api }) : null,
       lab.tab === 'hardware' ? h(Hardware, { lab, t, api }) : null,
       lab.tab === 'access' && TT.AccessUI ? TT.AccessUI.Page({ state, t, api }) : null,
+      lab.tab === 'lottery' && TT.LotteryUI ? TT.LotteryUI.Page({ state, t, api }) : null,
     )
   }
 
@@ -9191,6 +9261,307 @@ TT.AccessUI = (function () {
   return { Page }
 })()
 
+// ---- 42-lottery.js ----
+/**
+ * 42-lottery — verifiable lottery / randomness service.
+ *
+ * Deterministic and self-contained: a public seed plus the participant list fully
+ * determines the winners, so anyone can recompute and verify a receipt offline.
+ * Also shows the LFSR view: on-chain randomness is usually derived from a seed via
+ * a shift register (8 latches + a few XOR gates ≈ 20 NAND gates).
+ */
+
+TT.Lottery = (function () {
+  const ALGORITHM = 'fnv1a-sort-v1'
+
+  function hash32(text) {
+    let hash = 0x811c9dc5
+    const string = String(text)
+    for (let i = 0; i < string.length; i += 1) {
+      hash ^= string.charCodeAt(i)
+      hash = Math.imul(hash, 0x01000193) >>> 0
+    }
+    return hash >>> 0
+  }
+
+  function parseParticipants(text) {
+    const seen = new Set()
+    const names = []
+    for (const raw of String(text || '').split(/\r?\n/)) {
+      const name = raw.trim().replace(/\s+/g, ' ')
+      if (!name) continue
+      const key = name.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      names.push(name)
+    }
+    return names
+  }
+
+  function draw(options) {
+    const seed = String(options.seed || '')
+    const names = Array.isArray(options.participants) ? options.participants : parseParticipants(options.text)
+    const count = Math.max(1, Math.min(names.length || 1, Number(options.count) || 1))
+    if (!seed) throw new Error('draw: seed required')
+    if (names.length === 0) throw new Error('draw: participants required')
+    const pool = names.map((name, index) => ({
+      name,
+      index,
+      key: hash32(seed + '|' + index + '|' + name),
+    }))
+    const sorted = pool.slice().sort((a, b) => a.key - b.key || a.index - b.index)
+    const winners = sorted.slice(0, count).map((entry, rank) => ({
+      rank: rank + 1,
+      name: entry.name,
+      index: entry.index,
+      key: entry.key.toString(16).padStart(8, '0'),
+    }))
+    return {
+      algorithm: ALGORITHM,
+      seed,
+      seedHash: hash32(seed).toString(16).padStart(8, '0'),
+      participantsHash: hash32(names.join('\u0001')).toString(16).padStart(8, '0'),
+      participants: names,
+      count,
+      poolSize: names.length,
+      winners,
+    }
+  }
+
+  /** 8-bit maximal-length LFSR (taps 8,6,5,4) — the "circuit view" of a PRNG. */
+  function lfsrStates(seedText, rounds) {
+    const length = Math.max(1, Math.min(32, Number(rounds) || 8))
+    let state = hash32(seedText) & 0xff || 0x5a
+    const states = []
+    for (let i = 0; i < length; i += 1) {
+      states.push(state)
+      const feedback = ((state >> 7) ^ (state >> 5) ^ (state >> 4) ^ (state >> 3)) & 1
+      state = ((state << 1) | feedback) & 0xff
+    }
+    return states
+  }
+
+  function b64url(text) {
+    return TT.Export.b64encode(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
+  function unb64url(code) {
+    const base64 = String(code || '').trim().replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+    return TT.Export.b64decode(padded)
+  }
+
+  function receipt(result) {
+    const payload = {
+      schema: 'dsh-tapelab.lottery.v1',
+      algorithm: ALGORITHM,
+      seed: result.seed,
+      seedHash: result.seedHash,
+      participantsHash: result.participantsHash,
+      participants: result.participants,
+      count: result.count,
+      winners: result.winners.map((entry) => ({ rank: entry.rank, name: entry.name, index: entry.index })),
+      at: Date.now(),
+    }
+    return { code: b64url(JSON.stringify(payload)), payload, seedHash: result.seedHash }
+  }
+
+  function verify(code, expectedSeedHash) {
+    const reasons = []
+    let payload
+    try {
+      payload = JSON.parse(unb64url(code))
+    } catch (error) {
+      return { ok: false, reasons: ['凭证码无法解码'], payload: null }
+    }
+    if (!payload || payload.schema !== 'dsh-tapelab.lottery.v1') return { ok: false, reasons: ['凭证格式不匹配'], payload: null }
+    if (payload.algorithm !== ALGORITHM) reasons.push(`算法版本不匹配：${payload.algorithm}`)
+    let recomputed
+    try {
+      recomputed = draw({ seed: payload.seed, participants: payload.participants, count: payload.count })
+    } catch (error) {
+      return { ok: false, reasons: ['无法复算：' + String(error && error.message ? error.message : error)], payload }
+    }
+    if (recomputed.seedHash !== payload.seedHash) reasons.push('种子哈希不一致')
+    if (recomputed.participantsHash !== payload.participantsHash) reasons.push('参与者名单哈希不一致（可能被篡改）')
+    if (expectedSeedHash && String(expectedSeedHash).trim().toLowerCase() !== recomputed.seedHash) {
+      reasons.push(`种子哈希不匹配：凭证 ${recomputed.seedHash}，期望 ${String(expectedSeedHash).trim().toLowerCase()}`)
+    }
+    const expectedWinners = recomputed.winners
+    const claimed = Array.isArray(payload.winners) ? payload.winners : []
+    if (claimed.length !== expectedWinners.length) {
+      reasons.push(`中奖人数不一致：凭证 ${claimed.length}，复算 ${expectedWinners.length}`)
+    } else {
+      for (let i = 0; i < claimed.length; i += 1) {
+        if (claimed[i].name !== expectedWinners[i].name || claimed[i].index !== expectedWinners[i].index) {
+          reasons.push(`第 ${i + 1} 名不一致：凭证 ${claimed[i].name}，复算 ${expectedWinners[i].name}`)
+          break
+        }
+      }
+    }
+    return {
+      ok: reasons.length === 0,
+      reasons,
+      payload,
+      winners: expectedWinners,
+      seedHash: recomputed.seedHash,
+      participantsHash: recomputed.participantsHash,
+    }
+  }
+
+  return {
+    ALGORITHM,
+    hash32,
+    parseParticipants,
+    draw,
+    lfsrStates,
+    receipt,
+    verify,
+    b64url,
+    unb64url,
+  }
+})()
+
+// --------------------------------------------------------------------------- UI
+
+TT.LotteryUI = (function () {
+  const h = TT.h
+
+  function Page(props) {
+    const { state, t, api } = props
+    const lottery = state.lottery
+    const participants = TT.Lottery.parseParticipants(lottery.participants)
+    const lfsr = TT.Lottery.lfsrStates(lottery.seed, 8)
+    return h('div', { className: 'tt-labgrid' },
+      h('section', { className: 'tt-labcard' },
+        h('div', { className: 'tt-labcardhead' },
+          h('strong', null, t('lottery.title')),
+          h('span', null, t('lottery.sub')),
+        ),
+        h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('lottery.seed')),
+          h('input', {
+            className: 'tt-archivebox',
+            style: { minHeight: 0, height: 30, flex: '1 1 220px' },
+            value: lottery.seed,
+            onChange: (event) => api.dispatch({ type: 'lottery/seed', seed: event.target.value }),
+          }),
+          h('button', { type: 'button', className: 'tt-chip',
+            onClick: () => api.dispatch({ type: 'lottery/randomSeed' }) }, t('lottery.newSeed')),
+        ),
+        h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('lottery.count')),
+          h('input', {
+            className: 'tt-archivebox',
+            style: { minHeight: 0, height: 30, width: 70 },
+            type: 'number',
+            min: 1,
+            max: Math.max(1, participants.length),
+            value: lottery.count,
+            onChange: (event) => api.dispatch({ type: 'lottery/count', count: Number(event.target.value) }),
+          }),
+          h('span', { className: 'tt-lablabel' },
+            `${participants.length} ${t('lottery.people')} · ${t('lottery.seedHash')} ${TT.Lottery.hash32(lottery.seed).toString(16).padStart(8, '0')}`),
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
+            onClick: () => api.dispatch({ type: 'lottery/draw' }) }, t('lottery.draw')),
+        ),
+        h('textarea', {
+          className: 'tt-archivebox',
+          style: { minHeight: 96 },
+          placeholder: t('lottery.peoplePlaceholder'),
+          value: lottery.participants,
+          onChange: (event) => api.dispatch({ type: 'lottery/participants', text: event.target.value }),
+        }),
+        lottery.result
+          ? h('div', null,
+              h('div', { className: 'tt-lablabel', style: { marginTop: 6 } },
+                `${t('lottery.winners')} · ${t('lottery.algorithm')} ${lottery.result.algorithm}`),
+              h('div', { className: 'tt-winners' }, lottery.result.winners.map((winner) =>
+                h('div', { key: winner.rank, className: 'tt-winner' },
+                  h('b', null, `#${winner.rank}`),
+                  h('span', null, winner.name),
+                  h('em', null, winner.key),
+                ))),
+            )
+          : h('p', { className: 'tt-labempty' }, t('lottery.empty')),
+      ),
+      h('section', { className: 'tt-labcard' },
+        h('div', { className: 'tt-labcardhead' },
+          h('strong', null, t('lottery.receipt.title')),
+          h('span', null, t('lottery.receipt.hint')),
+        ),
+        lottery.receipt
+          ? h('div', null,
+              h('div', { className: 'tt-hex tt-mono', style: { maxHeight: 90 } }, lottery.receipt.code),
+              h('div', { className: 'tt-labrow' },
+                h('button', { type: 'button', className: 'tt-chip',
+                  onClick: () => copyText(api, lottery.receipt.code) }, t('lottery.receipt.copy')),
+                h('span', { className: 'tt-lablabel' }, `${t('lottery.seedHash')} ${lottery.receipt.seedHash}`),
+              ),
+            )
+          : h('p', { className: 'tt-labempty' }, t('lottery.receipt.empty')),
+        h('div', { className: 'tt-lablabel' }, t('lottery.verify.title')),
+        h('textarea', {
+          className: 'tt-archivebox',
+          placeholder: t('lottery.verify.placeholder'),
+          value: lottery.verifyCode || '',
+          onChange: (event) => api.dispatch({ type: 'lottery/verifyCode', code: event.target.value }),
+        }),
+        h('div', { className: 'tt-labrow' },
+          h('input', {
+            className: 'tt-archivebox',
+            style: { minHeight: 0, height: 30, width: 170 },
+            placeholder: t('lottery.verify.hashPlaceholder'),
+            value: lottery.verifySeedHash || '',
+            onChange: (event) => api.dispatch({ type: 'lottery/verifySeedHash', hash: event.target.value }),
+          }),
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
+            onClick: () => api.dispatch({ type: 'lottery/verify' }) }, t('lottery.verify.run')),
+        ),
+        lottery.verifyResult
+          ? h('div', { className: 'tt-finalenote', style: { borderLeftColor: lottery.verifyResult.ok ? 'var(--tt-mint)' : 'var(--tt-red)' } },
+              lottery.verifyResult.ok
+                ? `${t('lottery.verify.pass')} · ${t('lottery.seedHash')} ${lottery.verifyResult.seedHash}`
+                : `${t('lottery.verify.fail')}：${(lottery.verifyResult.reasons || []).join('；')}`)
+          : null,
+        lottery.history && lottery.history.length
+          ? h('div', { className: 'tt-librarylist' }, lottery.history.map((entry, index) =>
+              h('div', { key: index, className: 'tt-libraryrow' },
+                h('span', { className: 'tt-libraryname' }, `${entry.winners.map((winner) => winner.name).join(', ')}`),
+                h('span', { className: 'tt-libraryhex' }, `seed ${entry.seedHash}`),
+                h('button', { type: 'button', className: 'tt-chip',
+                  onClick: () => api.dispatch({ type: 'lottery/load', code: entry.code }) }, t('lottery.verify.use')),
+              )))
+          : null,
+      ),
+      h('section', { className: 'tt-labcard' },
+        h('div', { className: 'tt-labcardhead' }, h('strong', null, t('lottery.how.title'))),
+        h('p', { className: 'tt-labempty' }, t('lottery.how.body')),
+        h('div', { className: 'tt-lablabel' }, t('lottery.lfsr.title')),
+        h('div', { className: 'tt-hex tt-mono' }, lfsr.map((value) => (value < 16 ? '0' : '') + value.toString(16)).join(' '),
+          h('br'), h('span', { style: { color: 'var(--tt-dim)' } }, t('lottery.lfsr.note'))),
+        h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('lottery.how.warn')),
+      ),
+    )
+  }
+
+  function copyText(api, text) {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          () => api.dispatch({ type: 'toast/show', key: 'lab.copied', tone: 'good' }),
+          () => api.dispatch({ type: 'toast/show', key: 'lab.copyFail', tone: 'warn' }),
+        )
+        return
+      }
+    } catch (error) {
+      /* fall through */
+    }
+    api.dispatch({ type: 'toast/show', key: 'lab.copied', tone: 'good' })
+  }
+
+  return { Page }
+})()
+
 // ---- 40-ui.js ----
 /**
  * 40-ui — locale dictionaries, panel chrome, HUD, codex.
@@ -9568,6 +9939,37 @@ TT.dict = {
     'lab.tab.library': '电路库',
     'lab.tab.hardware': '硬件搭建',
     'lab.tab.access': '门禁资格',
+    'lab.tab.lottery': '可验证抽奖',
+    'lottery.title': '可验证抽奖 / 随机数',
+    'lottery.sub': '公开种子 + 参与者名单 → 确定性选人；任何人都能离线复算，事后改不了。',
+    'lottery.seed': '公开种子 / 区块哈希',
+    'lottery.newSeed': '用当前区块生成',
+    'lottery.count': '中奖人数',
+    'lottery.people': '位参与者',
+    'lottery.peoplePlaceholder': '每行一个名字…',
+    'lottery.seedHash': '种子哈希',
+    'lottery.draw': '抽奖',
+    'lottery.winners': '中奖名单',
+    'lottery.algorithm': '算法',
+    'lottery.empty': '填好参与者名单和种子，点「抽奖」。',
+    'lottery.receipt.title': '抽奖凭证',
+    'lottery.receipt.hint': '种子、名单、结果打包成一段文本，可离线验证。',
+    'lottery.receipt.empty': '抽完奖会自动生成凭证。',
+    'lottery.receipt.copy': '复制凭证',
+    'lottery.verify.title': '验证凭证',
+    'lottery.verify.placeholder': '粘贴抽奖凭证…',
+    'lottery.verify.hashPlaceholder': '期望的种子哈希（可选）',
+    'lottery.verify.run': '验证',
+    'lottery.verify.pass': '验证通过',
+    'lottery.verify.fail': '验证失败',
+    'lottery.verify.use': '载入',
+    'lottery.how.title': '它怎么做到可验证',
+    'lottery.how.body': '每位参与者得到 key = FNV1a(种子 | 序号 | 名字)，按 key 升序取前 N 名。种子公开后，任何人用同样的名单重算就能核对结果；改名字、改种子、改中奖顺序都会被发现。',
+    'lottery.how.warn': '真实抽奖要防止「事后挑种子」：应先公布承诺再揭晓，或用 drand / VRF 等可验证随机源。本页是离线算法演示。',
+    'lottery.lfsr.title': 'LFSR 电路视角（8 位）',
+    'lottery.lfsr.note': '真实随机数常由 8 个锁存器 + 3 个异或（约 20 个 NAND）的移位寄存器派生；本演示用软件复算。',
+    'lottery.error': '抽奖失败：{error}',
+
     'access.title': '可验证门禁 / 资格判定',
     'access.sub': '选一条策略，插件把它综合成 NAND 电路；拨动条件看放行，再签发可离线复算的凭证。',
     'access.policy.simple': '简单门禁',
@@ -10156,6 +10558,37 @@ TT.dict = {
     'lab.tab.library': 'Library',
     'lab.tab.hardware': 'Hardware',
     'lab.tab.access': 'Access',
+    'lab.tab.lottery': 'Lottery',
+    'lottery.title': 'Verifiable lottery / randomness',
+    'lottery.sub': 'Public seed + participant list determines the winners; anyone can recompute offline and nobody can change it afterwards.',
+    'lottery.seed': 'Public seed / block hash',
+    'lottery.newSeed': 'Use current block',
+    'lottery.count': 'Winners',
+    'lottery.people': 'participants',
+    'lottery.peoplePlaceholder': 'One name per line…',
+    'lottery.seedHash': 'Seed hash',
+    'lottery.draw': 'Draw',
+    'lottery.winners': 'Winners',
+    'lottery.algorithm': 'Algorithm',
+    'lottery.empty': 'Fill in participants and a seed, then press “Draw”.',
+    'lottery.receipt.title': 'Lottery receipt',
+    'lottery.receipt.hint': 'Seed, list and result packed into one text for offline verification.',
+    'lottery.receipt.empty': 'A receipt is generated automatically after a draw.',
+    'lottery.receipt.copy': 'Copy receipt',
+    'lottery.verify.title': 'Verify receipt',
+    'lottery.verify.placeholder': 'Paste a lottery receipt…',
+    'lottery.verify.hashPlaceholder': 'Expected seed hash (optional)',
+    'lottery.verify.run': 'Verify',
+    'lottery.verify.pass': 'Verified',
+    'lottery.verify.fail': 'Verification failed',
+    'lottery.verify.use': 'Load',
+    'lottery.how.title': 'How verifiability works',
+    'lottery.how.body': 'Each participant gets key = FNV1a(seed | index | name); sort ascending and take the top N. Once the seed is public anyone can recompute the same result; changing names, seed or order is detected.',
+    'lottery.how.warn': 'Real lotteries must prevent “seed shopping”: commit to the seed first, or use drand / a VRF. This page is an offline algorithm demo.',
+    'lottery.lfsr.title': 'LFSR circuit view (8-bit)',
+    'lottery.lfsr.note': 'Real randomness is often derived by an 8-latch shift register with 3 XORs (≈20 NAND gates); this demo recomputes in software.',
+    'lottery.error': 'Draw failed: {error}',
+
     'access.title': 'Verifiable access / eligibility',
     'access.sub': 'Pick a policy, the plugin synthesizes it into NAND gates; flip conditions and issue an offline-verifiable receipt.',
     'access.policy.simple': 'Simple gate',
@@ -10804,6 +11237,13 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-hardwarewire { display:flex; gap:6px; align-items:baseline; font-size:10.5px; color:var(--tt-dim); flex-wrap:wrap; }
 .tt-hardwarewire b { color:var(--tt-mint); }
 .tt-hardwarewire em { color:var(--tt-faint); font-style:normal; font-size:9.5px; }
+
+.tt-winners { display:flex; flex-direction:column; gap:4px; }
+.tt-winner { display:flex; align-items:baseline; gap:8px; padding:5px 9px; border-radius:8px;
+  background:rgba(255,195,92,.07); border:1px solid rgba(255,195,92,.2); font-size:12px; color:#ffe9ae; }
+.tt-winner b { color:var(--tt-amber); }
+.tt-winner span { flex:1; color:var(--tt-ink); }
+.tt-winner em { color:var(--tt-faint); font-style:normal; font-family:var(--dsh-font-family-mono, monospace); font-size:10px; }
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }

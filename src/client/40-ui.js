@@ -374,6 +374,37 @@ TT.dict = {
     'lab.tab.library': '电路库',
     'lab.tab.hardware': '硬件搭建',
     'lab.tab.access': '门禁资格',
+    'lab.tab.lottery': '可验证抽奖',
+    'lottery.title': '可验证抽奖 / 随机数',
+    'lottery.sub': '公开种子 + 参与者名单 → 确定性选人；任何人都能离线复算，事后改不了。',
+    'lottery.seed': '公开种子 / 区块哈希',
+    'lottery.newSeed': '用当前区块生成',
+    'lottery.count': '中奖人数',
+    'lottery.people': '位参与者',
+    'lottery.peoplePlaceholder': '每行一个名字…',
+    'lottery.seedHash': '种子哈希',
+    'lottery.draw': '抽奖',
+    'lottery.winners': '中奖名单',
+    'lottery.algorithm': '算法',
+    'lottery.empty': '填好参与者名单和种子，点「抽奖」。',
+    'lottery.receipt.title': '抽奖凭证',
+    'lottery.receipt.hint': '种子、名单、结果打包成一段文本，可离线验证。',
+    'lottery.receipt.empty': '抽完奖会自动生成凭证。',
+    'lottery.receipt.copy': '复制凭证',
+    'lottery.verify.title': '验证凭证',
+    'lottery.verify.placeholder': '粘贴抽奖凭证…',
+    'lottery.verify.hashPlaceholder': '期望的种子哈希（可选）',
+    'lottery.verify.run': '验证',
+    'lottery.verify.pass': '验证通过',
+    'lottery.verify.fail': '验证失败',
+    'lottery.verify.use': '载入',
+    'lottery.how.title': '它怎么做到可验证',
+    'lottery.how.body': '每位参与者得到 key = FNV1a(种子 | 序号 | 名字)，按 key 升序取前 N 名。种子公开后，任何人用同样的名单重算就能核对结果；改名字、改种子、改中奖顺序都会被发现。',
+    'lottery.how.warn': '真实抽奖要防止「事后挑种子」：应先公布承诺再揭晓，或用 drand / VRF 等可验证随机源。本页是离线算法演示。',
+    'lottery.lfsr.title': 'LFSR 电路视角（8 位）',
+    'lottery.lfsr.note': '真实随机数常由 8 个锁存器 + 3 个异或（约 20 个 NAND）的移位寄存器派生；本演示用软件复算。',
+    'lottery.error': '抽奖失败：{error}',
+
     'access.title': '可验证门禁 / 资格判定',
     'access.sub': '选一条策略，插件把它综合成 NAND 电路；拨动条件看放行，再签发可离线复算的凭证。',
     'access.policy.simple': '简单门禁',
@@ -962,6 +993,37 @@ TT.dict = {
     'lab.tab.library': 'Library',
     'lab.tab.hardware': 'Hardware',
     'lab.tab.access': 'Access',
+    'lab.tab.lottery': 'Lottery',
+    'lottery.title': 'Verifiable lottery / randomness',
+    'lottery.sub': 'Public seed + participant list determines the winners; anyone can recompute offline and nobody can change it afterwards.',
+    'lottery.seed': 'Public seed / block hash',
+    'lottery.newSeed': 'Use current block',
+    'lottery.count': 'Winners',
+    'lottery.people': 'participants',
+    'lottery.peoplePlaceholder': 'One name per line…',
+    'lottery.seedHash': 'Seed hash',
+    'lottery.draw': 'Draw',
+    'lottery.winners': 'Winners',
+    'lottery.algorithm': 'Algorithm',
+    'lottery.empty': 'Fill in participants and a seed, then press “Draw”.',
+    'lottery.receipt.title': 'Lottery receipt',
+    'lottery.receipt.hint': 'Seed, list and result packed into one text for offline verification.',
+    'lottery.receipt.empty': 'A receipt is generated automatically after a draw.',
+    'lottery.receipt.copy': 'Copy receipt',
+    'lottery.verify.title': 'Verify receipt',
+    'lottery.verify.placeholder': 'Paste a lottery receipt…',
+    'lottery.verify.hashPlaceholder': 'Expected seed hash (optional)',
+    'lottery.verify.run': 'Verify',
+    'lottery.verify.pass': 'Verified',
+    'lottery.verify.fail': 'Verification failed',
+    'lottery.verify.use': 'Load',
+    'lottery.how.title': 'How verifiability works',
+    'lottery.how.body': 'Each participant gets key = FNV1a(seed | index | name); sort ascending and take the top N. Once the seed is public anyone can recompute the same result; changing names, seed or order is detected.',
+    'lottery.how.warn': 'Real lotteries must prevent “seed shopping”: commit to the seed first, or use drand / a VRF. This page is an offline algorithm demo.',
+    'lottery.lfsr.title': 'LFSR circuit view (8-bit)',
+    'lottery.lfsr.note': 'Real randomness is often derived by an 8-latch shift register with 3 XORs (≈20 NAND gates); this demo recomputes in software.',
+    'lottery.error': 'Draw failed: {error}',
+
     'access.title': 'Verifiable access / eligibility',
     'access.sub': 'Pick a policy, the plugin synthesizes it into NAND gates; flip conditions and issue an offline-verifiable receipt.',
     'access.policy.simple': 'Simple gate',
@@ -1610,6 +1672,13 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-hardwarewire { display:flex; gap:6px; align-items:baseline; font-size:10.5px; color:var(--tt-dim); flex-wrap:wrap; }
 .tt-hardwarewire b { color:var(--tt-mint); }
 .tt-hardwarewire em { color:var(--tt-faint); font-style:normal; font-size:9.5px; }
+
+.tt-winners { display:flex; flex-direction:column; gap:4px; }
+.tt-winner { display:flex; align-items:baseline; gap:8px; padding:5px 9px; border-radius:8px;
+  background:rgba(255,195,92,.07); border:1px solid rgba(255,195,92,.2); font-size:12px; color:#ffe9ae; }
+.tt-winner b { color:var(--tt-amber); }
+.tt-winner span { flex:1; color:var(--tt-ink); }
+.tt-winner em { color:var(--tt-faint); font-style:normal; font-family:var(--dsh-font-family-mono, monospace); font-size:10px; }
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }

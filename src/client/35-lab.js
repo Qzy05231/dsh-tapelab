@@ -44,6 +44,7 @@ TT.LabUI = (function () {
       ['library', 'lab.tab.library'],
       ['hardware', 'lab.tab.hardware'],
       ['access', 'lab.tab.access'],
+      ['lottery', 'lab.tab.lottery'],
     ]
     return h('div', { className: 'tt-labview' },
       h('div', { className: 'tt-labhero' },
@@ -68,6 +69,7 @@ TT.LabUI = (function () {
       lab.tab === 'library' ? h(Library, { lab, t, api }) : null,
       lab.tab === 'hardware' ? h(Hardware, { lab, t, api }) : null,
       lab.tab === 'access' && TT.AccessUI ? TT.AccessUI.Page({ state, t, api }) : null,
+      lab.tab === 'lottery' && TT.LotteryUI ? TT.LotteryUI.Page({ state, t, api }) : null,
     )
   }
 
