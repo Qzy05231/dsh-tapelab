@@ -42,6 +42,17 @@ TT.dict = {
     'welcome.goPlayer': '已进入游乐场：试试链上贪吃蛇。',
     'welcome.goTech': '已进入实验室：从真值表综合器开始。',
     'achv.title': '成就墙',
+    'achv.share': '生成分享卡',
+    'achv.copy': '复制战绩文本',
+    'achv.shareDone': '分享卡已生成，正在下载…',
+    'achv.copyDone': '战绩已复制，可粘贴到聊天窗口',
+    'achv.shareFail': '当前环境无法生成分享卡',
+    'achv.stats.daily': '每日挑战完成',
+    'achv.daily1.title': '每日第一题',
+    'achv.daily1.desc': '完成任意一天的每日挑战',
+    'achv.daily3.title': '每日连胜',
+    'achv.daily3.desc': '累计完成 3 天每日挑战',
+
     'achv.sub': '主线、街机与实验记录都会点亮徽章；进度只保存在本机。',
     'achv.close': '关闭',
     'achv.got': '成就解锁：{name}',
@@ -96,6 +107,32 @@ TT.dict = {
     'arcade.game.vote': '表决器',
     'arcade.game.debug': '故障排查',
     'arcade.game.snake': '链上贪吃蛇',
+    'arcade.game.daily': '每日挑战',
+    'daily.title': '每日挑战',
+    'daily.sub': '今天所有人拿到同一道隐藏真值表：题面给 2 行，你还有 7 次查询机会，尽量少用查询把它补全。',
+    'daily.loading': '正在生成今天的题目…',
+    'daily.hidden': '隐藏函数',
+    'daily.budget': '查询预算',
+    'daily.used': '已用',
+    'daily.given': '题面给出',
+    'daily.queried': '你查询的',
+    'daily.query': '查询这一行',
+    'daily.submit': '提交答案',
+    'daily.reset': '重来',
+    'daily.win': '解出！查询次数',
+    'daily.fail': '还有几行不对',
+    'daily.solved': '已解出',
+    'daily.best': '今日最佳',
+    'daily.attempts': '提交次数',
+    'daily.how.title': '它怎么生成',
+    'daily.how.body': '函数和题面行由本地日期做哈希确定性选出：同一天所有人题目相同，不联网、不随机；提交时逐行对比，错的会标红。',
+    'daily.fn.and3': '三输入与（AND3）',
+    'daily.fn.or3': '三输入或（OR3）',
+    'daily.fn.xor3': '三输入异或（XOR3）',
+    'daily.fn.nand3': '三输入与非（NAND3）',
+    'daily.fn.majority': '多数门（≥2）',
+    'daily.fn.custom': '日期派生的随机函数',
+
 
     'arcade.snake.title': '链上贪吃蛇',
     'arcade.snake.hint': '蛇每 0.45 秒走一格——它的状态就是几个寄存器，时钟就是出块。',
@@ -859,6 +896,17 @@ TT.dict = {
     'welcome.goPlayer': 'Playground opened — try chain snake.',
     'welcome.goTech': 'Lab opened — start with the truth-table synthesizer.',
     'achv.title': 'Achievements',
+    'achv.share': 'Share card',
+    'achv.copy': 'Copy record text',
+    'achv.shareDone': 'Share card generated — downloading…',
+    'achv.copyDone': 'Record copied — paste it anywhere',
+    'achv.shareFail': 'Share card is unavailable here',
+    'achv.stats.daily': 'Dailies solved',
+    'achv.daily1.title': 'First daily',
+    'achv.daily1.desc': 'Solve any daily challenge',
+    'achv.daily3.title': 'Daily streak',
+    'achv.daily3.desc': 'Solve 3 daily challenges in total',
+
     'achv.sub': 'Missions, playground records and lab work light up badges; progress stays on this machine.',
     'achv.close': 'Close',
     'achv.got': 'Achievement unlocked: {name}',
@@ -913,6 +961,32 @@ TT.dict = {
     'arcade.game.vote': 'Voter',
     'arcade.game.debug': 'Debug lab',
     'arcade.game.snake': 'Chain snake',
+    'arcade.game.daily': 'Daily',
+    'daily.title': 'Daily challenge',
+    'daily.sub': 'Everyone gets the same hidden truth table today: two rows are given, you have 7 queries — fill all 8 rows with as few queries as possible.',
+    'daily.loading': 'Generating today’s puzzle…',
+    'daily.hidden': 'Hidden function',
+    'daily.budget': 'Query budget',
+    'daily.used': 'used',
+    'daily.given': 'given',
+    'daily.queried': 'queried',
+    'daily.query': 'Query this row',
+    'daily.submit': 'Submit',
+    'daily.reset': 'Reset',
+    'daily.win': 'Solved! queries used',
+    'daily.fail': 'Rows still wrong',
+    'daily.solved': 'Solved',
+    'daily.best': 'Today best',
+    'daily.attempts': 'Submissions',
+    'daily.how.title': 'How it is generated',
+    'daily.how.body': 'The function and clue rows are deterministically hashed from the local date: everyone sees the same puzzle that day, offline and without randomness. Submitting diffs row by row and highlights mistakes.',
+    'daily.fn.and3': '3-input AND',
+    'daily.fn.or3': '3-input OR',
+    'daily.fn.xor3': '3-input XOR',
+    'daily.fn.nand3': '3-input NAND',
+    'daily.fn.majority': 'Majority (≥2)',
+    'daily.fn.custom': 'Date-derived random function',
+
 
     'arcade.snake.title': 'Chain snake',
     'arcade.snake.hint': 'The snake moves one cell every 0.45 s — its state is a few registers, the clock is block production.',
@@ -2150,6 +2224,19 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-achv em { font-style:normal; font-size:10px; color:var(--tt-dim); line-height:1.4; }
 .tt-achv[data-done="true"] em { color:var(--tt-dim); }
 
+.tt-dailyrows { display:flex; flex-direction:column; gap:4px; margin:6px 0; }
+.tt-dailyrow { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:8px;
+  background:rgba(4,12,20,.4); border:1px solid rgba(120,190,220,.1); }
+.tt-dailyrow[data-wrong="true"] { border-color:rgba(255,93,108,.55); background:rgba(255,93,108,.07); }
+.tt-dailybits { width:42px; font-family:var(--dsh-font-family-mono, monospace); font-size:11px; color:var(--tt-dim); letter-spacing:2px; }
+.tt-dailytoggle { width:34px; height:28px; border-radius:7px; border:1px solid rgba(86,225,255,.3); background:rgba(86,225,255,.06);
+  color:var(--tt-dim); font-family:var(--dsh-font-family-mono, monospace); font-size:13px; cursor:pointer; }
+.tt-dailytoggle[data-on="true"] { color:#08221c; background:var(--tt-mint); border-color:var(--tt-mint); font-weight:700; }
+.tt-dailytoggle:disabled { cursor:default; opacity:.8; }
+.tt-dailygiven { width:34px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px;
+  font-family:var(--dsh-font-family-mono, monospace); font-size:13px; color:var(--tt-amber); border:1px dashed rgba(255,195,92,.45); }
+.tt-dailygiven[data-kind="clue"] { color:var(--tt-ink); border-color:rgba(86,225,255,.35); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -2404,6 +2491,7 @@ TT.UI.Panel = function Panel(props) {
         ['achv.stats.synth', (state.stats && state.stats.synth) || 0],
         ['achv.stats.guess', state.stats && state.stats.guessBest !== null && state.stats.guessBest !== undefined ? state.stats.guessBest : '—'],
         ['achv.stats.lock', (state.stats && state.stats.lockWins) || 0],
+        ['achv.stats.daily', Object.keys((state.stats && state.stats.daily) || {}).length],
       ].map(([key, value]) => TT.h('div', { key, className: 'tt-labstat' },
         TT.h('b', null, String(value)), TT.h('span', null, t(key))))),
       TT.h('div', { className: 'tt-achvgrid' }, TT.Achievements.evaluate(state).map((item) =>
@@ -2413,6 +2501,23 @@ TT.UI.Panel = function Panel(props) {
           TT.h('em', null, t(item.descKey)),
         ))),
       TT.h('div', { className: 'tt-welcomeactions' },
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => {
+          const url = TT.Achievements && TT.Achievements.cardDataUrl ? TT.Achievements.cardDataUrl(state, t) : null
+          if (!url || typeof document === 'undefined') {
+            api.dispatch({ type: 'toast/show', key: 'achv.shareFail', tone: 'warn' })
+            return
+          }
+          const link = document.createElement('a')
+          link.href = url
+          link.download = `tapeout-achievements-${new Date().toISOString().slice(0, 10)}.png`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          api.dispatch({ type: 'toast/show', key: 'achv.shareDone', tone: 'good' })
+        } }, t('achv.share')),
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost', onClick: () => {
+          if (TT.Achievements) copyToClipboard(api, TT.Achievements.shareText(state, t), 'achv.copyDone')
+        } }, t('achv.copy')),
         TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost', onClick: () => api.dispatch({ type: 'achv/close' }) }, t('achv.close')),
       ),
     ),

@@ -35,6 +35,7 @@ const SOURCES = [
   '45-defi.js',
   '47-achievements.js',
   '48-verilog.js',
+  '49-daily.js',
   '40-ui.js',
   '50-app.js',
 ]

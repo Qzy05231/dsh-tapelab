@@ -538,7 +538,8 @@ TT.Missions = (function () {
       welcome: true,
       achvOpen: false,
       unlocked: [],
-      stats: { snakeBest: 0, debugSolved: 0, guessBest: null, lockWins: 0, synth: 0, imports: 0, receipts: 0 },
+      stats: { snakeBest: 0, debugSolved: 0, guessBest: null, lockWins: 0, synth: 0, imports: 0, receipts: 0, daily: {} },
+      daily: null,
       codex: false,
       paused: false,
       speed: 1,
@@ -659,6 +660,14 @@ TT.Missions = (function () {
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
       snake: null,
     }
+  }
+
+  function ensureDaily(next) {
+    if (!TT.Daily) return next
+    const today = TT.Daily.dateKey()
+    if (next.daily && next.daily.date === today) return next
+    const puzzle = TT.Daily.puzzle(today)
+    return { ...next, daily: TT.Daily.start(puzzle, next.stats) }
   }
 
   function ensureSnake(arcade) {
@@ -1178,19 +1187,19 @@ TT.Missions = (function () {
       case 'intro/close':
         return { ...state, intro: false }
       case 'arcade/open':
-        return {
+        return ensureDaily({
           ...state,
           mode: 'arcade',
           arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
-        }
+        })
       case 'arcade/close':
         return { ...state, mode: 'missions' }
       case 'arcade/game':
-        return {
+        return ensureDaily({
           ...state,
           mode: 'arcade',
           arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
-        }
+        })
       case 'defi/pool':
         return { ...state, defi: { ...state.defi, poolId: action.id || 'eth-usdc', audit: null, receipt: null, verifyResult: null } }
       case 'defi/amount':
@@ -1502,6 +1511,54 @@ TT.Missions = (function () {
         } catch (error) {
           return pushToast(state, 'lab.importFail', { error: String(error && error.message ? error.message : error) }, 'warn')
         }
+      }
+      case 'daily/toggle': {
+        if (!state.daily) return state
+        const index = Math.max(0, Math.min(7, Number(action.index) || 0))
+        if (state.daily.solved) return state
+        const answers = state.daily.answers.slice()
+        answers[index] = answers[index] ? 0 : 1
+        return { ...state, daily: { ...state.daily, answers } }
+      }
+      case 'daily/query': {
+        if (!state.daily || state.daily.solved || !TT.Daily) return state
+        const index = Math.max(0, Math.min(7, Number(action.index) || 0))
+        if (state.daily.used >= (state.daily.puzzle ? state.daily.puzzle.budget : TT.Daily.BUDGET)) return state
+        if (state.daily.revealed.some((entry) => entry.index === index)) return state
+        const puzzle = TT.Daily.puzzle(state.daily.date)
+        const reveal = TT.Daily.query(puzzle, index)
+        const answers = state.daily.answers.slice()
+        answers[index] = reveal.out
+        return {
+          ...state,
+          daily: { ...state.daily, used: state.daily.used + 1, answers, revealed: [...state.daily.revealed, { ...reveal, kind: 'query' }] },
+        }
+      }
+      case 'daily/submit': {
+        if (!state.daily || state.daily.solved || !TT.Daily) return state
+        const puzzle = TT.Daily.puzzle(state.daily.date)
+        const result = TT.Daily.evaluate(puzzle, state.daily.answers)
+        if (!result.solved) {
+          return {
+            ...state,
+            daily: { ...state.daily, diff: result.diff, attempts: (state.daily.attempts || 0) + 1 },
+            toast: { key: 'daily.fail', params: { n: result.diff.length }, tone: 'warn', at: Date.now() },
+          }
+        }
+        const bestMap = { ...(state.stats.daily || {}) }
+        const previous = bestMap[state.daily.date]
+        bestMap[state.daily.date] = previous === undefined ? state.daily.used : Math.min(previous, state.daily.used)
+        return {
+          ...state,
+          stats: { ...state.stats, daily: bestMap },
+          daily: { ...state.daily, solved: true, diff: [], best: bestMap[state.daily.date] },
+          toast: { key: 'daily.win', params: { n: state.daily.used }, tone: 'good', at: Date.now() },
+        }
+      }
+      case 'daily/reset': {
+        if (!TT.Daily) return state
+        const day = state.daily ? state.daily.date : TT.Daily.dateKey()
+        return { ...state, daily: TT.Daily.start(TT.Daily.puzzle(day), state.stats) }
       }
       case 'snake/toggle': {
         const snake = state.arcade.snake || (TT.Arcade ? TT.Arcade.snakeInitial() : null)

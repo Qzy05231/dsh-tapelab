@@ -5530,7 +5530,8 @@ TT.Missions = (function () {
       welcome: true,
       achvOpen: false,
       unlocked: [],
-      stats: { snakeBest: 0, debugSolved: 0, guessBest: null, lockWins: 0, synth: 0, imports: 0, receipts: 0 },
+      stats: { snakeBest: 0, debugSolved: 0, guessBest: null, lockWins: 0, synth: 0, imports: 0, receipts: 0, daily: {} },
+      daily: null,
       codex: false,
       paused: false,
       speed: 1,
@@ -5651,6 +5652,14 @@ TT.Missions = (function () {
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
       snake: null,
     }
+  }
+
+  function ensureDaily(next) {
+    if (!TT.Daily) return next
+    const today = TT.Daily.dateKey()
+    if (next.daily && next.daily.date === today) return next
+    const puzzle = TT.Daily.puzzle(today)
+    return { ...next, daily: TT.Daily.start(puzzle, next.stats) }
   }
 
   function ensureSnake(arcade) {
@@ -6170,19 +6179,19 @@ TT.Missions = (function () {
       case 'intro/close':
         return { ...state, intro: false }
       case 'arcade/open':
-        return {
+        return ensureDaily({
           ...state,
           mode: 'arcade',
           arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
-        }
+        })
       case 'arcade/close':
         return { ...state, mode: 'missions' }
       case 'arcade/game':
-        return {
+        return ensureDaily({
           ...state,
           mode: 'arcade',
           arcade: ensureSnake(ensureArcadePuzzles({ ...state.arcade, game: action.game || state.arcade.game })),
-        }
+        })
       case 'defi/pool':
         return { ...state, defi: { ...state.defi, poolId: action.id || 'eth-usdc', audit: null, receipt: null, verifyResult: null } }
       case 'defi/amount':
@@ -6494,6 +6503,54 @@ TT.Missions = (function () {
         } catch (error) {
           return pushToast(state, 'lab.importFail', { error: String(error && error.message ? error.message : error) }, 'warn')
         }
+      }
+      case 'daily/toggle': {
+        if (!state.daily) return state
+        const index = Math.max(0, Math.min(7, Number(action.index) || 0))
+        if (state.daily.solved) return state
+        const answers = state.daily.answers.slice()
+        answers[index] = answers[index] ? 0 : 1
+        return { ...state, daily: { ...state.daily, answers } }
+      }
+      case 'daily/query': {
+        if (!state.daily || state.daily.solved || !TT.Daily) return state
+        const index = Math.max(0, Math.min(7, Number(action.index) || 0))
+        if (state.daily.used >= (state.daily.puzzle ? state.daily.puzzle.budget : TT.Daily.BUDGET)) return state
+        if (state.daily.revealed.some((entry) => entry.index === index)) return state
+        const puzzle = TT.Daily.puzzle(state.daily.date)
+        const reveal = TT.Daily.query(puzzle, index)
+        const answers = state.daily.answers.slice()
+        answers[index] = reveal.out
+        return {
+          ...state,
+          daily: { ...state.daily, used: state.daily.used + 1, answers, revealed: [...state.daily.revealed, { ...reveal, kind: 'query' }] },
+        }
+      }
+      case 'daily/submit': {
+        if (!state.daily || state.daily.solved || !TT.Daily) return state
+        const puzzle = TT.Daily.puzzle(state.daily.date)
+        const result = TT.Daily.evaluate(puzzle, state.daily.answers)
+        if (!result.solved) {
+          return {
+            ...state,
+            daily: { ...state.daily, diff: result.diff, attempts: (state.daily.attempts || 0) + 1 },
+            toast: { key: 'daily.fail', params: { n: result.diff.length }, tone: 'warn', at: Date.now() },
+          }
+        }
+        const bestMap = { ...(state.stats.daily || {}) }
+        const previous = bestMap[state.daily.date]
+        bestMap[state.daily.date] = previous === undefined ? state.daily.used : Math.min(previous, state.daily.used)
+        return {
+          ...state,
+          stats: { ...state.stats, daily: bestMap },
+          daily: { ...state.daily, solved: true, diff: [], best: bestMap[state.daily.date] },
+          toast: { key: 'daily.win', params: { n: state.daily.used }, tone: 'good', at: Date.now() },
+        }
+      }
+      case 'daily/reset': {
+        if (!TT.Daily) return state
+        const day = state.daily ? state.daily.date : TT.Daily.dateKey()
+        return { ...state, daily: TT.Daily.start(TT.Daily.puzzle(day), state.stats) }
       }
       case 'snake/toggle': {
         const snake = state.arcade.snake || (TT.Arcade ? TT.Arcade.snakeInitial() : null)
@@ -8486,6 +8543,7 @@ TT.ArcadeUI = (function () {
     ['vote', 'arcade.game.vote', '🗳️'],
     ['debug', 'arcade.game.debug', '🐞'],
     ['snake', 'arcade.game.snake', '🐍'],
+    ['daily', 'arcade.game.daily', '📅'],
   ]
 
   function Page(props) {
@@ -8515,6 +8573,7 @@ TT.ArcadeUI = (function () {
       arcade.game === 'vote' ? h(Vote, { arcade, t, api }) : null,
       arcade.game === 'debug' ? h(Debug, { arcade, t, api }) : null,
       arcade.game === 'snake' ? h(Snake, { arcade, t, api }) : null,
+      arcade.game === 'daily' && TT.DailyUI ? h(TT.DailyUI.Page, { state, t, api }) : null,
     )
   }
 
@@ -11074,6 +11133,8 @@ TT.Achievements = (function () {
     { id: 'guess3', tier: 'silver', titleKey: 'achv.guess3.title', descKey: 'achv.guess3.desc', check: (s) => stats(s).guessBest !== null && stats(s).guessBest <= 3 },
     { id: 'lock1', tier: 'bronze', titleKey: 'achv.lock1.title', descKey: 'achv.lock1.desc', check: (s) => stats(s).lockWins >= 1 },
     { id: 'verilog', tier: 'silver', titleKey: 'achv.verilog.title', descKey: 'achv.verilog.desc', check: (s) => stats(s).imports >= 1 },
+    { id: 'daily1', tier: 'bronze', titleKey: 'achv.daily1.title', descKey: 'achv.daily1.desc', check: (s) => Object.keys(stats(s).daily || {}).length >= 1 },
+    { id: 'daily3', tier: 'gold', titleKey: 'achv.daily3.title', descKey: 'achv.daily3.desc', check: (s) => Object.keys(stats(s).daily || {}).length >= 3 },
   ]
 
   function stats(state) {
@@ -11101,12 +11162,111 @@ TT.Achievements = (function () {
     return LIST.filter((item) => item.check(state) && !unlocked.has(item.id)).map((item) => item.id)
   }
 
+  function shareText(state, t) {
+    const list = evaluate(state)
+    const done = list.filter((item) => item.done)
+    const daily = Object.keys(stats(state).daily || {}).length
+    const lines = [
+      `TapeOut 3D 实验室 · 我的战绩`,
+      `徽章 ${done.length}/${list.length} · 每日挑战 ${daily} 天`,
+      `贪吃蛇最高分 ${stats(state).snakeBest || 0} · 排障 ${stats(state).debugSolved || 0} 关 · 综合 ${stats(state).synth || 0} 次`,
+      `猜数最佳 ${stats(state).guessBest || '—'} 次 · 密码锁 ${stats(state).lockWins || 0} 次`,
+      `—— 从一颗与非门到链上巨兽`,
+    ]
+    return lines.join('\n')
+  }
+
+  function drawCard(ctx, state, t, width, height) {
+    const w = width || 1200
+    const h = height || 630
+    const list = evaluate(state)
+    const done = list.filter((item) => item.done)
+    const gradient = ctx.createLinearGradient(0, 0, w, h)
+    gradient.addColorStop(0, '#07121d')
+    gradient.addColorStop(0.55, '#0a1f2e')
+    gradient.addColorStop(1, '#11283a')
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, w, h)
+    // subtle circuit grid
+    ctx.strokeStyle = 'rgba(86,225,255,.07)'
+    ctx.lineWidth = 1
+    for (let x = 0; x < w; x += 48) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke()
+    }
+    for (let y = 0; y < h; y += 48) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke()
+    }
+    ctx.fillStyle = '#2be6c2'
+    ctx.font = '700 22px ui-monospace, monospace'
+    ctx.fillText('TAPEOUT 3D LAB', 64, 82)
+    ctx.fillStyle = '#e8f6ff'
+    ctx.font = '800 46px ui-sans-serif, -apple-system, sans-serif'
+    ctx.fillText('我的成就战绩', 64, 142)
+    ctx.fillStyle = '#8fb3c8'
+    ctx.font = '18px ui-sans-serif, -apple-system, sans-serif'
+    ctx.fillText(`徽章 ${done.length} / ${list.length} · 每日挑战 ${Object.keys(stats(state).daily || {}).length} 天`, 64, 180)
+    // stats row
+    const statRows = [
+      ['贪吃蛇最高分', stats(state).snakeBest || 0],
+      ['排障通关', stats(state).debugSolved || 0],
+      ['综合次数', stats(state).synth || 0],
+      ['猜数最佳', stats(state).guessBest || '—'],
+      ['密码锁', stats(state).lockWins || 0],
+    ]
+    statRows.forEach(([label, value], index) => {
+      const x = 64 + index * 210
+      ctx.fillStyle = '#56e1ff'
+      ctx.font = '700 34px ui-monospace, monospace'
+      ctx.fillText(String(value), x, 262)
+      ctx.fillStyle = '#8fb3c8'
+      ctx.font = '15px ui-sans-serif, -apple-system, sans-serif'
+      ctx.fillText(label, x, 290)
+    })
+    // badges: 5 columns
+    const cols = 5
+    const cellW = (w - 128) / cols
+    done.slice(0, 15).forEach((item, index) => {
+      const col = index % cols
+      const row = Math.floor(index / cols)
+      const x = 64 + col * cellW
+      const y = 340 + row * 84
+      ctx.fillStyle = 'rgba(43,230,194,.08)'
+      const radius = 12
+      ctx.beginPath()
+      ctx.roundRect(x, y, cellW - 14, 70, radius)
+      ctx.fill()
+      ctx.strokeStyle = item.tier === 'gold' ? 'rgba(255,195,92,.6)' : item.tier === 'silver' ? 'rgba(86,225,255,.55)' : 'rgba(43,230,194,.45)'
+      ctx.stroke()
+      ctx.fillStyle = '#ffc35c'
+      ctx.font = '22px ui-sans-serif, -apple-system, sans-serif'
+      ctx.fillText('🏅', x + 12, y + 38)
+      ctx.fillStyle = '#e8f6ff'
+      ctx.font = '600 14px ui-sans-serif, -apple-system, sans-serif'
+      const title = t ? t(item.titleKey) : item.id
+      ctx.fillText(title.length > 10 ? title.slice(0, 10) + '…' : title, x + 44, y + 34)
+    })
+    ctx.fillStyle = '#4d738a'
+    ctx.font = '14px ui-monospace, monospace'
+    ctx.fillText(`dsh-tapelab · ${new Date().toISOString().slice(0, 10)} · 从一颗与非门到链上巨兽`, 64, h - 32)
+  }
+
+  function cardDataUrl(state, t) {
+    if (typeof document === 'undefined') return null
+    const canvas = document.createElement('canvas')
+    canvas.width = 1200
+    canvas.height = 630
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    drawCard(ctx, state, t, 1200, 630)
+    return canvas.toDataURL('image/png')
+  }
+
   function unlockedList(state) {
     const ids = new Set((state && state.unlocked) || [])
     return LIST.filter((item) => ids.has(item.id) || item.check(state))
   }
 
-  return { LIST, evaluate, doneIds, unlockedList, stats, allDone }
+  return { LIST, evaluate, doneIds, unlockedList, stats, allDone, shareText, drawCard, cardDataUrl }
 })()
 
 // ---- 48-verilog.js ----
@@ -11398,6 +11558,172 @@ TT.VerilogImport = (function () {
   return { parse }
 })()
 
+// ---- 49-daily.js ----
+/**
+ * 49-daily — deterministic daily truth-table deduction challenge.
+ *
+ * A hidden 3-input boolean function is derived from the local date, so everyone gets
+ * the same puzzle on the same day. Two rows are given as clues; the player may query
+ * up to 7 inputs, then fill the full 8-row truth table and submit. Fewer queries = better.
+ */
+
+TT.Daily = (function () {
+  const BUDGET = 7
+  const N = 8
+
+  const FNS = [
+    { id: 'and3', nameKey: 'daily.fn.and3', fn: (b) => (b[0] & b[1] & b[2]) },
+    { id: 'or3', nameKey: 'daily.fn.or3', fn: (b) => (b[0] | b[1] | b[2]) },
+    { id: 'xor3', nameKey: 'daily.fn.xor3', fn: (b) => (b[0] ^ b[1] ^ b[2]) },
+    { id: 'nand3', nameKey: 'daily.fn.nand3', fn: (b) => 1 - (b[0] & b[1] & b[2]) },
+    { id: 'majority', nameKey: 'daily.fn.majority', fn: (b) => (b[0] + b[1] + b[2] >= 2 ? 1 : 0) },
+    { id: 'custom', nameKey: 'daily.fn.custom', fn: null },
+  ]
+
+  function hash32(text) {
+    let hash = 0x811c9dc5
+    const string = String(text)
+    for (let i = 0; i < string.length; i += 1) {
+      hash ^= string.charCodeAt(i)
+      hash = Math.imul(hash, 0x01000193) >>> 0
+    }
+    return hash >>> 0
+  }
+
+  function dateKey(date) {
+    const d = date || new Date()
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  }
+
+  function bitsOf(index, count) {
+    const bits = []
+    for (let i = 0; i < count; i += 1) bits.push((index >> i) & 1)
+    return bits
+  }
+
+  function puzzle(key) {
+    const day = key || dateKey()
+    const seed = hash32(day)
+    const chosen = FNS[seed % FNS.length]
+    const fn = chosen.fn || ((bits) => hash32(day + '|' + bits.join('')) & 1)
+    const truth = []
+    for (let index = 0; index < N; index += 1) truth.push(fn(bitsOf(index, 3)))
+    const clueA = seed % N
+    let clueB = (seed >> 4) % N
+    if (clueB === clueA) clueB = (clueA + 3) % N
+    const clues = [clueA, clueB].map((index) => ({ index, bits: bitsOf(index, 3), out: truth[index] }))
+    return { date: day, seed, nameKey: chosen.nameKey, truth, clues, budget: BUDGET, solved: false }
+  }
+
+  function label(index) {
+    return bitsOf(index, 3).join('')
+  }
+
+  function query(dayPuzzle, index) {
+    return { index, bits: bitsOf(index, 3), out: dayPuzzle.truth[index] }
+  }
+
+  function evaluate(dayPuzzle, answers) {
+    const diff = []
+    for (let index = 0; index < N; index += 1) {
+      if ((Number((answers || [])[index]) ? 1 : 0) !== dayPuzzle.truth[index]) diff.push(index)
+    }
+    return { solved: diff.length === 0, diff }
+  }
+
+  function start(dayPuzzle, stats) {
+    const best = stats && stats.daily && stats.daily[dayPuzzle.date] ? stats.daily[dayPuzzle.date] : null
+    return {
+      date: dayPuzzle.date,
+      answers: new Array(N).fill(0),
+      used: 0,
+      revealed: dayPuzzle.clues.map((clue) => ({ ...clue, kind: 'clue' })),
+      solved: false,
+      diff: [],
+      best,
+      attempts: 0,
+    }
+  }
+
+  return { BUDGET, N, FNS, hash32, dateKey, bitsOf, label, puzzle, query, evaluate, start }
+})()
+
+// --------------------------------------------------------------------------- UI
+
+TT.DailyUI = (function () {
+  const h = TT.h
+
+  function Page(props) {
+    const { state, t, api } = props
+    const daily = state.daily
+    if (!daily) return h('div', { className: 'tt-labcard' }, h('p', { className: 'tt-labempty' }, t('daily.loading')))
+    const puzzle = TT.Daily.puzzle(daily.date)
+    const revealed = new Map((daily.revealed || []).map((entry) => [entry.index, entry]))
+    const outOfQueries = daily.used >= puzzle.budget
+    return h('div', { className: 'tt-labgrid' },
+      h('section', { className: 'tt-labcard' },
+        h('div', { className: 'tt-labcardhead' },
+          h('strong', null, `${t('daily.title')} · ${daily.date}`),
+          h('span', null, daily.solved ? `${t('daily.solved')} ✓` : `${t('daily.budget')} ${daily.used}/${puzzle.budget}`),
+        ),
+        h('p', { className: 'tt-labempty' }, t('daily.sub')),
+        h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('daily.hidden')),
+          h('span', { className: 'tt-badge', 'data-tone': daily.solved ? 'good' : 'info' },
+            daily.solved ? t(puzzle.nameKey) : '???'),
+          daily.best !== null && daily.best !== undefined
+            ? h('span', { className: 'tt-lablabel' }, `${t('daily.best')} ${daily.best}`)
+            : null,
+        ),
+        h('div', { className: 'tt-dailyrows' }, Array.from({ length: 8 }, (_, index) => {
+          const entry = revealed.get(index)
+          const answer = (daily.answers || [])[index] ? 1 : 0
+          return h('div', { key: index, className: 'tt-dailyrow', 'data-wrong': (daily.diff || []).indexOf(index) >= 0 ? 'true' : 'false' },
+            h('span', { className: 'tt-dailybits' }, TT.Daily.label(index)),
+            entry
+              ? h('span', { className: 'tt-dailygiven', 'data-kind': entry.kind }, `${entry.out}`)
+              : h('button', {
+                  type: 'button',
+                  className: 'tt-dailytoggle',
+                  'data-on': answer ? 'true' : 'false',
+                  disabled: daily.solved,
+                  onClick: () => api.dispatch({ type: 'daily/toggle', index }),
+                }, String(answer)),
+            entry
+              ? h('span', { className: 'tt-lablabel', style: { fontSize: 9 } }, t(entry.kind === 'clue' ? 'daily.given' : 'daily.queried'))
+              : h('button', {
+                  type: 'button',
+                  className: 'tt-chip',
+                  disabled: daily.solved || outOfQueries,
+                  onClick: () => api.dispatch({ type: 'daily/query', index }),
+                }, t('daily.query')),
+          )
+        })),
+        h('div', { className: 'tt-labrow' },
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
+            disabled: daily.solved, onClick: () => api.dispatch({ type: 'daily/submit' }) }, t('daily.submit')),
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
+            onClick: () => api.dispatch({ type: 'daily/reset' }) }, t('daily.reset')),
+          daily.solved
+            ? h('span', { className: 'tt-badge', 'data-tone': 'good' }, `${t('daily.win')} ${daily.used}`)
+            : null,
+          (daily.diff || []).length
+            ? h('span', { className: 'tt-badge', 'data-tone': 'bad' }, `${t('daily.fail')} ${daily.diff.length}`)
+            : null,
+        ),
+        daily.attempts ? h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, `${t('daily.attempts')} ${daily.attempts}`) : null,
+      ),
+      h('section', { className: 'tt-labcard' },
+        h('div', { className: 'tt-labcardhead' }, h('strong', null, t('daily.how.title'))),
+        h('p', { className: 'tt-labempty' }, t('daily.how.body')),
+      ),
+    )
+  }
+
+  return { Page }
+})()
+
 // ---- 40-ui.js ----
 /**
  * 40-ui — locale dictionaries, panel chrome, HUD, codex.
@@ -11443,6 +11769,17 @@ TT.dict = {
     'welcome.goPlayer': '已进入游乐场：试试链上贪吃蛇。',
     'welcome.goTech': '已进入实验室：从真值表综合器开始。',
     'achv.title': '成就墙',
+    'achv.share': '生成分享卡',
+    'achv.copy': '复制战绩文本',
+    'achv.shareDone': '分享卡已生成，正在下载…',
+    'achv.copyDone': '战绩已复制，可粘贴到聊天窗口',
+    'achv.shareFail': '当前环境无法生成分享卡',
+    'achv.stats.daily': '每日挑战完成',
+    'achv.daily1.title': '每日第一题',
+    'achv.daily1.desc': '完成任意一天的每日挑战',
+    'achv.daily3.title': '每日连胜',
+    'achv.daily3.desc': '累计完成 3 天每日挑战',
+
     'achv.sub': '主线、街机与实验记录都会点亮徽章；进度只保存在本机。',
     'achv.close': '关闭',
     'achv.got': '成就解锁：{name}',
@@ -11497,6 +11834,32 @@ TT.dict = {
     'arcade.game.vote': '表决器',
     'arcade.game.debug': '故障排查',
     'arcade.game.snake': '链上贪吃蛇',
+    'arcade.game.daily': '每日挑战',
+    'daily.title': '每日挑战',
+    'daily.sub': '今天所有人拿到同一道隐藏真值表：题面给 2 行，你还有 7 次查询机会，尽量少用查询把它补全。',
+    'daily.loading': '正在生成今天的题目…',
+    'daily.hidden': '隐藏函数',
+    'daily.budget': '查询预算',
+    'daily.used': '已用',
+    'daily.given': '题面给出',
+    'daily.queried': '你查询的',
+    'daily.query': '查询这一行',
+    'daily.submit': '提交答案',
+    'daily.reset': '重来',
+    'daily.win': '解出！查询次数',
+    'daily.fail': '还有几行不对',
+    'daily.solved': '已解出',
+    'daily.best': '今日最佳',
+    'daily.attempts': '提交次数',
+    'daily.how.title': '它怎么生成',
+    'daily.how.body': '函数和题面行由本地日期做哈希确定性选出：同一天所有人题目相同，不联网、不随机；提交时逐行对比，错的会标红。',
+    'daily.fn.and3': '三输入与（AND3）',
+    'daily.fn.or3': '三输入或（OR3）',
+    'daily.fn.xor3': '三输入异或（XOR3）',
+    'daily.fn.nand3': '三输入与非（NAND3）',
+    'daily.fn.majority': '多数门（≥2）',
+    'daily.fn.custom': '日期派生的随机函数',
+
 
     'arcade.snake.title': '链上贪吃蛇',
     'arcade.snake.hint': '蛇每 0.45 秒走一格——它的状态就是几个寄存器，时钟就是出块。',
@@ -12260,6 +12623,17 @@ TT.dict = {
     'welcome.goPlayer': 'Playground opened — try chain snake.',
     'welcome.goTech': 'Lab opened — start with the truth-table synthesizer.',
     'achv.title': 'Achievements',
+    'achv.share': 'Share card',
+    'achv.copy': 'Copy record text',
+    'achv.shareDone': 'Share card generated — downloading…',
+    'achv.copyDone': 'Record copied — paste it anywhere',
+    'achv.shareFail': 'Share card is unavailable here',
+    'achv.stats.daily': 'Dailies solved',
+    'achv.daily1.title': 'First daily',
+    'achv.daily1.desc': 'Solve any daily challenge',
+    'achv.daily3.title': 'Daily streak',
+    'achv.daily3.desc': 'Solve 3 daily challenges in total',
+
     'achv.sub': 'Missions, playground records and lab work light up badges; progress stays on this machine.',
     'achv.close': 'Close',
     'achv.got': 'Achievement unlocked: {name}',
@@ -12314,6 +12688,32 @@ TT.dict = {
     'arcade.game.vote': 'Voter',
     'arcade.game.debug': 'Debug lab',
     'arcade.game.snake': 'Chain snake',
+    'arcade.game.daily': 'Daily',
+    'daily.title': 'Daily challenge',
+    'daily.sub': 'Everyone gets the same hidden truth table today: two rows are given, you have 7 queries — fill all 8 rows with as few queries as possible.',
+    'daily.loading': 'Generating today’s puzzle…',
+    'daily.hidden': 'Hidden function',
+    'daily.budget': 'Query budget',
+    'daily.used': 'used',
+    'daily.given': 'given',
+    'daily.queried': 'queried',
+    'daily.query': 'Query this row',
+    'daily.submit': 'Submit',
+    'daily.reset': 'Reset',
+    'daily.win': 'Solved! queries used',
+    'daily.fail': 'Rows still wrong',
+    'daily.solved': 'Solved',
+    'daily.best': 'Today best',
+    'daily.attempts': 'Submissions',
+    'daily.how.title': 'How it is generated',
+    'daily.how.body': 'The function and clue rows are deterministically hashed from the local date: everyone sees the same puzzle that day, offline and without randomness. Submitting diffs row by row and highlights mistakes.',
+    'daily.fn.and3': '3-input AND',
+    'daily.fn.or3': '3-input OR',
+    'daily.fn.xor3': '3-input XOR',
+    'daily.fn.nand3': '3-input NAND',
+    'daily.fn.majority': 'Majority (≥2)',
+    'daily.fn.custom': 'Date-derived random function',
+
 
     'arcade.snake.title': 'Chain snake',
     'arcade.snake.hint': 'The snake moves one cell every 0.45 s — its state is a few registers, the clock is block production.',
@@ -13551,6 +13951,19 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-achv em { font-style:normal; font-size:10px; color:var(--tt-dim); line-height:1.4; }
 .tt-achv[data-done="true"] em { color:var(--tt-dim); }
 
+.tt-dailyrows { display:flex; flex-direction:column; gap:4px; margin:6px 0; }
+.tt-dailyrow { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:8px;
+  background:rgba(4,12,20,.4); border:1px solid rgba(120,190,220,.1); }
+.tt-dailyrow[data-wrong="true"] { border-color:rgba(255,93,108,.55); background:rgba(255,93,108,.07); }
+.tt-dailybits { width:42px; font-family:var(--dsh-font-family-mono, monospace); font-size:11px; color:var(--tt-dim); letter-spacing:2px; }
+.tt-dailytoggle { width:34px; height:28px; border-radius:7px; border:1px solid rgba(86,225,255,.3); background:rgba(86,225,255,.06);
+  color:var(--tt-dim); font-family:var(--dsh-font-family-mono, monospace); font-size:13px; cursor:pointer; }
+.tt-dailytoggle[data-on="true"] { color:#08221c; background:var(--tt-mint); border-color:var(--tt-mint); font-weight:700; }
+.tt-dailytoggle:disabled { cursor:default; opacity:.8; }
+.tt-dailygiven { width:34px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px;
+  font-family:var(--dsh-font-family-mono, monospace); font-size:13px; color:var(--tt-amber); border:1px dashed rgba(255,195,92,.45); }
+.tt-dailygiven[data-kind="clue"] { color:var(--tt-ink); border-color:rgba(86,225,255,.35); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -13805,6 +14218,7 @@ TT.UI.Panel = function Panel(props) {
         ['achv.stats.synth', (state.stats && state.stats.synth) || 0],
         ['achv.stats.guess', state.stats && state.stats.guessBest !== null && state.stats.guessBest !== undefined ? state.stats.guessBest : '—'],
         ['achv.stats.lock', (state.stats && state.stats.lockWins) || 0],
+        ['achv.stats.daily', Object.keys((state.stats && state.stats.daily) || {}).length],
       ].map(([key, value]) => TT.h('div', { key, className: 'tt-labstat' },
         TT.h('b', null, String(value)), TT.h('span', null, t(key))))),
       TT.h('div', { className: 'tt-achvgrid' }, TT.Achievements.evaluate(state).map((item) =>
@@ -13814,6 +14228,23 @@ TT.UI.Panel = function Panel(props) {
           TT.h('em', null, t(item.descKey)),
         ))),
       TT.h('div', { className: 'tt-welcomeactions' },
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => {
+          const url = TT.Achievements && TT.Achievements.cardDataUrl ? TT.Achievements.cardDataUrl(state, t) : null
+          if (!url || typeof document === 'undefined') {
+            api.dispatch({ type: 'toast/show', key: 'achv.shareFail', tone: 'warn' })
+            return
+          }
+          const link = document.createElement('a')
+          link.href = url
+          link.download = `tapeout-achievements-${new Date().toISOString().slice(0, 10)}.png`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          api.dispatch({ type: 'toast/show', key: 'achv.shareDone', tone: 'good' })
+        } }, t('achv.share')),
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost', onClick: () => {
+          if (TT.Achievements) copyToClipboard(api, TT.Achievements.shareText(state, t), 'achv.copyDone')
+        } }, t('achv.copy')),
         TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost', onClick: () => api.dispatch({ type: 'achv/close' }) }, t('achv.close')),
       ),
     ),
