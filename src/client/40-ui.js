@@ -43,6 +43,20 @@ TT.dict = {
 
     'challenge.normalMode': '正常模式',
     'tapeout.quizTitle': '流片前检查：这颗半加器有几颗与非门？',
+    'hint.mintOrder': '挑战顺序：{order}；下一颗是第 {next} 颗。',
+    'mint.wrongOrder': '顺序不对：下一颗应该是第 {next} 颗（挑战模式计失误）。',
+    'tapeout.quizBurn.title': '流片要燃烧多少颗晶体管 Token？',
+    'tapeout.quizPins.title': '这颗半加器的引脚配置是？',
+    'tapeout.quizPins.22': '2 输入 / 2 输出',
+    'tapeout.quizPins.31': '3 输入 / 1 输出',
+    'tapeout.quizPins.13': '1 输入 / 3 输出',
+    'tapeout.tokens': '颗 Token',
+    'tapeout.quizOk.gates': '正确：5 颗门。挑战继续：选择燃烧数量。',
+    'tapeout.quizOk.burn': '正确：燃烧 5 颗。最后选择引脚。',
+    'tapeout.quizFail.gates': '门数不对：半加器是 5 颗门（挑战计失误）。',
+    'tapeout.quizFail.burn': '燃烧数量不对：网表有几颗门就烧几颗。',
+    'tapeout.quizFail.pins': '引脚不对：半加器是 2 输入 / 2 输出。',
+
     'tapeout.gates': '颗门',
     'tapeout.quizFirst': '流片前先完成检查：选择正确的门数。',
     'tapeout.quizOk': '正确：5 颗门 = 半加器。可以流片了。',
@@ -943,6 +957,20 @@ TT.dict = {
 
     'challenge.normalMode': 'Normal mode',
     'tapeout.quizTitle': 'Pre tape-out check: how many NAND gates make a half adder?',
+    'hint.mintOrder': 'Challenge order: {order}; next is chip {next}.',
+    'mint.wrongOrder': 'Wrong order: chip {next} is next (counts as a challenge mistake).',
+    'tapeout.quizBurn.title': 'How many transistor tokens must be burned?',
+    'tapeout.quizPins.title': 'What pin configuration does this half adder have?',
+    'tapeout.quizPins.22': '2 in / 2 out',
+    'tapeout.quizPins.31': '3 in / 1 out',
+    'tapeout.quizPins.13': '1 in / 3 out',
+    'tapeout.tokens': 'tokens',
+    'tapeout.quizOk.gates': 'Correct: 5 gates. Next: choose the burn amount.',
+    'tapeout.quizOk.burn': 'Correct: burn 5 tokens. Last: choose the pins.',
+    'tapeout.quizFail.gates': 'Wrong: a half adder has 5 gates (challenge mistake).',
+    'tapeout.quizFail.burn': 'Wrong burn amount: burn one token per gate.',
+    'tapeout.quizFail.pins': 'Wrong pins: a half adder is 2 in / 2 out.',
+
     'tapeout.gates': 'gates',
     'tapeout.quizFirst': 'Finish the pre tape-out check first: pick the correct gate count.',
     'tapeout.quizOk': 'Correct: 5 gates make a half adder. Ready to tape out.',
@@ -2452,13 +2480,32 @@ function TapeoutQuiz(props) {
   if (state.chapter !== 3 || state.mode !== 'missions') return null
   const play = state.play || {}
   if (play.quizPassed || play.taped || play.phase === 'running' || play.phase === 'done') return null
+  const active = Boolean(state.challenge && state.challenge.active)
+  const step = active ? (play.quizStep || 'gates') : 'gates'
+  if (step === 'burn') {
+    return TT.h('div', { className: 'tt-quiz' },
+      TT.h('span', { className: 'tt-quiztitle' }, `🔥 ${t('tapeout.quizBurn.title')}`),
+      [5, 10, 20].map((count) => TT.h('button', {
+        key: count, type: 'button', className: 'tt-chip',
+        onClick: () => api.dispatch({ type: 'tapeout/quiz', step: 'burn', value: count }),
+      }, `${count} ${t('tapeout.tokens')}`)),
+    )
+  }
+  if (step === 'pins') {
+    return TT.h('div', { className: 'tt-quiz' },
+      TT.h('span', { className: 'tt-quiztitle' }, `📌 ${t('tapeout.quizPins.title')}`),
+      [['22', 'tapeout.quizPins.22'], ['31', 'tapeout.quizPins.31'], ['13', 'tapeout.quizPins.13']].map(([value, key]) =>
+        TT.h('button', {
+          key: value, type: 'button', className: 'tt-chip',
+          onClick: () => api.dispatch({ type: 'tapeout/quiz', step: 'pins', value }),
+        }, t(key))),
+    )
+  }
   return TT.h('div', { className: 'tt-quiz' },
     TT.h('span', { className: 'tt-quiztitle' }, `🧾 ${t('tapeout.quizTitle')}`),
     [4, 5, 9].map((count) => TT.h('button', {
-      key: count,
-      type: 'button',
-      className: 'tt-chip',
-      onClick: () => api.dispatch({ type: 'tapeout/quiz', value: count }),
+      key: count, type: 'button', className: 'tt-chip',
+      onClick: () => api.dispatch({ type: 'tapeout/quiz', step: 'gates', value: count }),
     }, `${count} ${t('tapeout.gates')}`)),
   )
 }

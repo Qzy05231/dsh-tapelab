@@ -5005,7 +5005,26 @@ TT.Missions = (function () {
     [8, 20], [18, 45], [32, 80], [8, 20], [14, 35], [32, 80],
     [12, 30], [22, 55], [24, 60], [18, 45], [14, 40],
   ]
-  const CHALLENGE_PAR = [8, 10, 20, 4, 4, 15, 2, 15, 16, 8, 7]
+  const CHALLENGE_PAR = [8, 10, 20, 7, 4, 15, 2, 15, 16, 8, 7]
+  function challengeShuffle(seed, length) {
+    let value = (seed >>> 0) || 1
+    const next = () => {
+      value ^= value << 13
+      value ^= value >>> 17
+      value ^= value << 5
+      value >>>= 0
+      return value / 4294967296
+    }
+    const ids = Array.from({ length }, (_, index) => index)
+    for (let i = ids.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(next() * (i + 1))
+      const tmp = ids[i]
+      ids[i] = ids[j]
+      ids[j] = tmp
+    }
+    return ids
+  }
+
   function challengeConfig(index) {
     const entry = CHALLENGE_TIMES[index] || [40, 90]
     const par = CHALLENGE_PAR[index] || 20
@@ -5459,6 +5478,7 @@ TT.Missions = (function () {
         demo: false,
         quizPassed: false,
         quizWrong: 0,
+        quizStep: 'gates',
       }
     }
     if (index === 4) {
@@ -6831,7 +6851,10 @@ TT.Missions = (function () {
         const chapter = state.chapter
         const completed = { ...state.completed, [chapter]: false }
         const flags = chapter === 0 ? { ...state.flags, mintedChips: [] } : state.flags
-        const play = setupChapterPlay({ ...state, flags, play: playFor({ ...state, flags }, chapter) }, chapter)
+        let play = setupChapterPlay({ ...state, flags, play: playFor({ ...state, flags }, chapter) }, chapter)
+        if (chapter === 0) {
+          play = { ...play, mintOrder: challengeShuffle(((state.blocks || 1) * 2654435761) ^ ((state.epoch || 1) * 97), 8), mintCursor: 0 }
+        }
         return {
           ...state,
           play,
@@ -6893,13 +6916,24 @@ TT.Missions = (function () {
         if (state.chapter !== 0) return state
         if (state.play.minted.includes(action.chip)) return state
         {
+          if (state.challenge && state.challenge.active && Array.isArray(state.play.mintOrder)) {
+            const expected = state.play.mintOrder[state.play.mintCursor || 0]
+            if (action.chip !== `chip:${expected}`) {
+              return pushToast(
+                { ...state, challenge: { ...state.challenge, mistakes: (state.challenge.mistakes || 0) + 1 } },
+                'mint.wrongOrder',
+                { next: expected + 1 },
+                'warn',
+              )
+            }
+          }
           const minted = [...state.play.minted, action.chip]
           let next = {
             ...state,
             nand: state.nand + 1,
             mintedTotal: state.mintedTotal + 1,
             flags: { ...state.flags, mintedChips: minted },
-            play: { ...state.play, minted },
+            play: { ...state.play, minted, mintCursor: (state.play.mintCursor || 0) + 1 },
           }
           next = pushLog(next, 'log.mintOne', { n: next.nand }, 'good')
           if (minted.length === 8) {
@@ -7014,15 +7048,22 @@ TT.Missions = (function () {
       // ---------------------------------------------------------- chapter 3
       case 'tapeout/quiz': {
         if (state.chapter !== 3) return state
-        const value = Number(action.value)
-        const correct = value === 5
-        const play = { ...state.play, quizPassed: correct, quizWrong: correct ? state.play.quizWrong : (state.play.quizWrong || 0) + 1 }
-        if (correct) return pushToast({ ...state, play }, 'tapeout.quizOk', {}, 'good')
-        let next = { ...state, play }
-        if (state.challenge && state.challenge.active) {
-          next = { ...next, challenge: { ...state.challenge, mistakes: (state.challenge.mistakes || 0) + 1 } }
+        const play0 = state.play
+        const active = state.challenge && state.challenge.active
+        const step = play0.quizStep || 'gates'
+        const expects = { gates: 5, burn: 5, pins: '22' }
+        if (!expects[step]) return state
+        const value = action.step === 'pins' ? String(action.value) : Number(action.value)
+        const correct = value === expects[step]
+        if (!correct) {
+          let next = { ...state, play: { ...play0, quizWrong: (play0.quizWrong || 0) + 1 } }
+          if (active) next = { ...next, challenge: { ...state.challenge, mistakes: (state.challenge.mistakes || 0) + 1 } }
+          return pushToast(next, `tapeout.quizFail.${step}`, {}, 'warn')
         }
-        return pushToast(next, 'tapeout.quizFail', {}, 'warn')
+        const order = ['gates', 'burn', 'pins']
+        const nextStep = active ? order[order.indexOf(step) + 1] || 'done' : 'done'
+        const play = { ...play0, quizStep: nextStep, quizPassed: nextStep === 'done' }
+        return pushToast({ ...state, play }, nextStep === 'done' ? 'tapeout.quizOk' : `tapeout.quizOk.${step}`, {}, 'good')
       }
       case 'tapeout/start': {
         if (state.chapter !== 3) return state
@@ -7489,7 +7530,13 @@ TT.Missions = (function () {
     const index = state.chapter
     const play = state.play
     if (state.completed && state.completed[index]) return { key: 'hint.chapterDone', params: {} }
-    if (index === 0) return { key: 'hint.mint', params: { n: 8 - play.minted.length } }
+    if (index === 0) {
+      if (state.challenge && state.challenge.active && Array.isArray(play.mintOrder)) {
+        const order = play.mintOrder.map((chip) => chip + 1).join(' → ')
+        return { key: 'hint.mintOrder', params: { order, next: (play.mintOrder[play.mintCursor || 0] || 0) + 1 } }
+      }
+      return { key: 'hint.mint', params: { n: 8 - play.minted.length } }
+    }
     if (index === 1) {
       if (!play.placed) return { key: 'hint.nandPlace', params: {} }
       if (!play.wiring['g:0:a'] || !play.wiring['g:0:b']) {
@@ -11972,6 +12019,20 @@ TT.dict = {
 
     'challenge.normalMode': '正常模式',
     'tapeout.quizTitle': '流片前检查：这颗半加器有几颗与非门？',
+    'hint.mintOrder': '挑战顺序：{order}；下一颗是第 {next} 颗。',
+    'mint.wrongOrder': '顺序不对：下一颗应该是第 {next} 颗（挑战模式计失误）。',
+    'tapeout.quizBurn.title': '流片要燃烧多少颗晶体管 Token？',
+    'tapeout.quizPins.title': '这颗半加器的引脚配置是？',
+    'tapeout.quizPins.22': '2 输入 / 2 输出',
+    'tapeout.quizPins.31': '3 输入 / 1 输出',
+    'tapeout.quizPins.13': '1 输入 / 3 输出',
+    'tapeout.tokens': '颗 Token',
+    'tapeout.quizOk.gates': '正确：5 颗门。挑战继续：选择燃烧数量。',
+    'tapeout.quizOk.burn': '正确：燃烧 5 颗。最后选择引脚。',
+    'tapeout.quizFail.gates': '门数不对：半加器是 5 颗门（挑战计失误）。',
+    'tapeout.quizFail.burn': '燃烧数量不对：网表有几颗门就烧几颗。',
+    'tapeout.quizFail.pins': '引脚不对：半加器是 2 输入 / 2 输出。',
+
     'tapeout.gates': '颗门',
     'tapeout.quizFirst': '流片前先完成检查：选择正确的门数。',
     'tapeout.quizOk': '正确：5 颗门 = 半加器。可以流片了。',
@@ -12872,6 +12933,20 @@ TT.dict = {
 
     'challenge.normalMode': 'Normal mode',
     'tapeout.quizTitle': 'Pre tape-out check: how many NAND gates make a half adder?',
+    'hint.mintOrder': 'Challenge order: {order}; next is chip {next}.',
+    'mint.wrongOrder': 'Wrong order: chip {next} is next (counts as a challenge mistake).',
+    'tapeout.quizBurn.title': 'How many transistor tokens must be burned?',
+    'tapeout.quizPins.title': 'What pin configuration does this half adder have?',
+    'tapeout.quizPins.22': '2 in / 2 out',
+    'tapeout.quizPins.31': '3 in / 1 out',
+    'tapeout.quizPins.13': '1 in / 3 out',
+    'tapeout.tokens': 'tokens',
+    'tapeout.quizOk.gates': 'Correct: 5 gates. Next: choose the burn amount.',
+    'tapeout.quizOk.burn': 'Correct: burn 5 tokens. Last: choose the pins.',
+    'tapeout.quizFail.gates': 'Wrong: a half adder has 5 gates (challenge mistake).',
+    'tapeout.quizFail.burn': 'Wrong burn amount: burn one token per gate.',
+    'tapeout.quizFail.pins': 'Wrong pins: a half adder is 2 in / 2 out.',
+
     'tapeout.gates': 'gates',
     'tapeout.quizFirst': 'Finish the pre tape-out check first: pick the correct gate count.',
     'tapeout.quizOk': 'Correct: 5 gates make a half adder. Ready to tape out.',
@@ -14381,13 +14456,32 @@ function TapeoutQuiz(props) {
   if (state.chapter !== 3 || state.mode !== 'missions') return null
   const play = state.play || {}
   if (play.quizPassed || play.taped || play.phase === 'running' || play.phase === 'done') return null
+  const active = Boolean(state.challenge && state.challenge.active)
+  const step = active ? (play.quizStep || 'gates') : 'gates'
+  if (step === 'burn') {
+    return TT.h('div', { className: 'tt-quiz' },
+      TT.h('span', { className: 'tt-quiztitle' }, `🔥 ${t('tapeout.quizBurn.title')}`),
+      [5, 10, 20].map((count) => TT.h('button', {
+        key: count, type: 'button', className: 'tt-chip',
+        onClick: () => api.dispatch({ type: 'tapeout/quiz', step: 'burn', value: count }),
+      }, `${count} ${t('tapeout.tokens')}`)),
+    )
+  }
+  if (step === 'pins') {
+    return TT.h('div', { className: 'tt-quiz' },
+      TT.h('span', { className: 'tt-quiztitle' }, `📌 ${t('tapeout.quizPins.title')}`),
+      [['22', 'tapeout.quizPins.22'], ['31', 'tapeout.quizPins.31'], ['13', 'tapeout.quizPins.13']].map(([value, key]) =>
+        TT.h('button', {
+          key: value, type: 'button', className: 'tt-chip',
+          onClick: () => api.dispatch({ type: 'tapeout/quiz', step: 'pins', value }),
+        }, t(key))),
+    )
+  }
   return TT.h('div', { className: 'tt-quiz' },
     TT.h('span', { className: 'tt-quiztitle' }, `🧾 ${t('tapeout.quizTitle')}`),
     [4, 5, 9].map((count) => TT.h('button', {
-      key: count,
-      type: 'button',
-      className: 'tt-chip',
-      onClick: () => api.dispatch({ type: 'tapeout/quiz', value: count }),
+      key: count, type: 'button', className: 'tt-chip',
+      onClick: () => api.dispatch({ type: 'tapeout/quiz', step: 'gates', value: count }),
     }, `${count} ${t('tapeout.gates')}`)),
   )
 }

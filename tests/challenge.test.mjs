@@ -26,7 +26,7 @@ test('challenge can be switched on at any time and blocks shortcuts', () => {
 test('a clean fast run earns 3 stars and records actions', () => {
   let state = M.initial()
   state = M.reduce(state, { type: 'challenge/start' })
-  for (let chip = 0; chip < 8; chip += 1) state = M.reduce(state, { type: 'mint', chip: `chip:${chip}` })
+  for (const chip of state.play.mintOrder) state = M.reduce(state, { type: 'mint', chip: `chip:${chip}` })
   assert.equal(state.challenge.active, false)
   assert.equal(state.completed[0], true)
   const result = state.challenge.lastResult
@@ -62,4 +62,33 @@ test('the mode behaves normally after switching back', () => {
   assert.equal(state.challenge.active, true)
   state = M.reduce(state, { type: 'challenge/abandon' })
   assert.equal(state.completed[0], true)
+})
+
+
+test('chapter 1 challenge enforces the minting order and counts mistakes', () => {
+  let state = M.initial()
+  state = M.reduce(state, { type: 'challenge/start' })
+  const order = state.play.mintOrder
+  state = M.reduce(state, { type: 'mint', chip: `chip:${order[1]}` })
+  assert.equal(state.play.minted.length, 0)
+  assert.equal(state.challenge.mistakes, 1)
+  for (const chip of order) state = M.reduce(state, { type: 'mint', chip: `chip:${chip}` })
+  assert.equal(state.completed[0], true)
+  assert.equal(state.challenge.active, false)
+})
+
+test('chapter 4 challenge quizzes gates, burn amount and pins', () => {
+  let state = M.initial()
+  state = M.reduce(state, { type: 'chapter/select', index: 3 })
+  state = M.reduce(state, { type: 'challenge/start' })
+  state = M.reduce(state, { type: 'tapeout/quiz', step: 'gates', value: 9 })
+  assert.equal(state.challenge.mistakes, 1)
+  state = M.reduce(state, { type: 'tapeout/quiz', step: 'gates', value: 5 })
+  assert.equal(state.play.quizStep, 'burn')
+  state = M.reduce(state, { type: 'tapeout/quiz', step: 'burn', value: 10 })
+  assert.equal(state.challenge.mistakes, 2)
+  state = M.reduce(state, { type: 'tapeout/quiz', step: 'burn', value: 5 })
+  assert.equal(state.play.quizStep, 'pins')
+  state = M.reduce(state, { type: 'tapeout/quiz', step: 'pins', value: '22' })
+  assert.equal(state.play.quizPassed, true)
 })
