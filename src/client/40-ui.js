@@ -41,6 +41,14 @@ TT.dict = {
     'arcade.guess.score': '得分',
     'arcade.lock.failed': '尝试次数用尽，锁已锁定；点「重试」再来',
 
+    'challenge.normalMode': '正常模式',
+    'challenge.toChallenge': '切到挑战模式',
+    'challenge.toNormal': '切回正常模式',
+    'challenge.resetBtn': '重置',
+    'challenge.par': '操作预算',
+    'challenge.mistakes': '失误',
+    'challenge.resetDone': '已重置本章：计时、操作数与失误清零。',
+    'challenge.challengeLockedNote': '',
     'challenge.startBtn': '挑战模式',
     'challenge.start': '挑战开始！禁用助手与一键操作，尽快完成本章。',
     'challenge.active': '挑战中',
@@ -926,6 +934,14 @@ TT.dict = {
     'arcade.guess.score': 'Score',
     'arcade.lock.failed': 'Out of attempts — the lock is locked. Press restart.',
 
+    'challenge.normalMode': 'Normal mode',
+    'challenge.toChallenge': 'Switch to challenge',
+    'challenge.toNormal': 'Back to normal',
+    'challenge.resetBtn': 'Reset',
+    'challenge.par': 'Action par',
+    'challenge.mistakes': 'Mistakes',
+    'challenge.resetDone': 'Chapter reset: timer, actions and mistakes cleared.',
+    'challenge.challengeLockedNote': '',
     'challenge.startBtn': 'Challenge',
     'challenge.start': 'Challenge started! Assists and shortcuts are disabled — finish the chapter fast.',
     'challenge.active': 'Challenge running',
@@ -2387,25 +2403,28 @@ function ChallengeBar(props) {
     const timer = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(timer)
   }, [active])
-  const config = TT.Missions.challengeConfig ? TT.Missions.challengeConfig(chapter) : { gold: 40, silver: 90 }
+  const config = TT.Missions.challengeConfig ? TT.Missions.challengeConfig(chapter) : { gold: 40, silver: 90, par: 20 }
   const best = state.stats && state.stats.challenge ? state.stats.challenge[chapter] : null
+  const last = state.challenge && state.challenge.lastResult
   if (active) {
     const ms = Math.max(0, now - (state.challenge.startedAt || now))
+    const actions = state.challenge.actions || 0
+    const mistakes = state.challenge.mistakes || 0
     return TT.h('div', { className: 'tt-challengebar', 'data-active': 'true' },
       TT.h('span', { className: 'tt-challenge-timer' }, `⚡ ${(ms / 1000).toFixed(1)}s`),
-      TT.h('span', { className: 'tt-lablabel' }, `3★ ≤ ${config.gold}s · 2★ ≤ ${config.silver}s`),
-      TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'challenge/abandon' }) }, t('challenge.abandon')),
+      TT.h('span', { className: 'tt-lablabel' }, `${t('challenge.par')} ${actions}/${config.par} · ${t('challenge.mistakes')} ${mistakes}`),
+      TT.h('span', { className: 'tt-lablabel' }, `3★ ≤ ${config.gold}s`),
+      TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'challenge/reset' }) }, t('challenge.resetBtn')),
+      TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'challenge/abandon' }) }, t('challenge.toNormal')),
     )
   }
-  if (!state.completed[chapter]) {
-    return TT.h('div', { className: 'tt-challengebar', 'data-locked': 'true' }, TT.h('span', null, t('challenge.lockedBar')))
-  }
-  const last = state.challenge && state.challenge.lastResult
   return TT.h('div', { className: 'tt-challengebar' },
-    TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => api.dispatch({ type: 'challenge/start' }) }, `⚡ ${t('challenge.startBtn')}`),
+    TT.h('span', { className: 'tt-lablabel' }, `● ${t('challenge.normalMode')}`),
+    TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => api.dispatch({ type: 'challenge/start' }) }, `⚡ ${t('challenge.toChallenge')}`),
+    TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'challenge/reset' }) }, t('challenge.resetBtn')),
     TT.h('span', { className: 'tt-lablabel' }, best
       ? `${t('challenge.best')} ${'★'.repeat(best.stars)} · ${(best.bestMs / 1000).toFixed(1)}s`
-      : t('challenge.desc')),
+      : `${t('challenge.par')} ${config.par}`),
     last ? TT.h('span', { className: 'tt-challenge-timer' }, `${t('challenge.recent')} ${'★'.repeat(last.stars)} · ${(last.ms / 1000).toFixed(1)}s`) : null,
   )
 }

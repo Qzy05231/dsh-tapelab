@@ -1,5 +1,5 @@
 /**
- * tests/challenge.test.mjs — optional chapter challenge mode with stars.
+ * tests/challenge.test.mjs — switchable chapter challenge: timer, action par, mistakes.
  */
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -13,39 +13,51 @@ const TT = new Function(read('00-core.js') + '\nreturn TT')()
 for (const name of ['20-circuit.js', '30-missions.js', '47-achievements.js']) new Function('TT', read(name))(TT)
 const M = TT.Missions
 
-test('challenge requires completing the chapter first', () => {
+test('challenge can be switched on at any time and blocks shortcuts', () => {
   let state = M.initial()
   state = M.reduce(state, { type: 'challenge/start' })
-  assert.equal(state.challenge.active, false)
-  assert.equal(state.toast.key, 'challenge.locked')
+  assert.equal(state.challenge.active, true)
+  assert.equal(state.play.minted.length, 0)
+  state = M.reduce(state, { type: 'mint/all' })
+  assert.equal(state.toast.key, 'challenge.noShortcut')
+  assert.equal(state.play.minted.length, 0)
 })
 
-test('challenge resets the chapter, blocks shortcuts and awards stars', () => {
+test('a clean fast run earns 3 stars and records actions', () => {
   let state = M.initial()
+  state = M.reduce(state, { type: 'challenge/start' })
+  for (let chip = 0; chip < 8; chip += 1) state = M.reduce(state, { type: 'mint', chip: `chip:${chip}` })
+  assert.equal(state.challenge.active, false)
+  assert.equal(state.completed[0], true)
+  const result = state.challenge.lastResult
+  assert.equal(result.stars, 3)
+  assert.ok(result.actions <= TT.Missions.challengeConfig(0).par)
+  assert.ok(TT.Achievements.evaluate(state).find((item) => item.id === 'challengeGold').done)
+})
+
+test('reset clears the run counters; switching back restores normal mode', () => {
+  let state = M.initial()
+  state = M.reduce(state, { type: 'challenge/start' })
+  state = M.reduce(state, { type: 'mint', chip: 'chip:0' })
+  assert.ok(state.challenge.actions >= 1)
+  state = M.reduce(state, { type: 'challenge/reset' })
+  assert.equal(state.challenge.actions, 0)
+  assert.equal(state.challenge.mistakes, 0)
+  assert.equal(state.play.minted.length, 0)
+  state = M.reduce(state, { type: 'challenge/abandon' })
+  assert.equal(state.challenge.active, false)
+})
+
+test('the mode behaves normally after switching back', () => {
+  let state = M.initial()
+  state = M.reduce(state, { type: 'challenge/start' })
+  state = M.reduce(state, { type: 'challenge/abandon' })
+  assert.equal(state.challenge.active, false)
+  // normal mode shortcuts work again
   state = M.reduce(state, { type: 'mint/all' })
   assert.equal(state.completed[0], true)
   state = M.reduce(state, { type: 'challenge/start' })
   assert.equal(state.challenge.active, true)
-  assert.equal(state.completed[0], false)
-  assert.equal(state.play.minted.length, 0)
-  // one-click shortcut is refused
-  state = M.reduce(state, { type: 'mint/all' })
-  assert.equal(state.toast.key, 'challenge.noShortcut')
-  assert.equal(state.play.minted.length, 0)
-  for (let chip = 0; chip < 8; chip += 1) state = M.reduce(state, { type: 'mint', chip: `chip:${chip}` })
-  assert.equal(state.challenge.active, false)
-  assert.equal(state.completed[0], true)
-  assert.ok(state.stats.challenge[0].stars >= 1 && state.stats.challenge[0].stars <= 3)
-  assert.ok(state.challenge.lastResult && state.challenge.lastResult.stars >= 1)
-  assert.ok(TT.Achievements.evaluate(state).find((item) => item.id === 'challenge1').done)
-})
-
-test('abandoning restores the completed state', () => {
-  let state = M.initial()
-  state = M.reduce(state, { type: 'mint/all' })
-  state = M.reduce(state, { type: 'challenge/start' })
-  assert.equal(state.completed[0], false)
   state = M.reduce(state, { type: 'challenge/abandon' })
-  assert.equal(state.challenge.active, false)
   assert.equal(state.completed[0], true)
 })

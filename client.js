@@ -5002,12 +5002,14 @@ TT.Safety = (function () {
 TT.Missions = (function () {
   // Per-chapter challenge targets in seconds: [3 stars, 2 stars], completion is 1 star.
   const CHALLENGE_TIMES = [
-    [18, 40], [30, 70], [50, 110], [15, 35], [25, 55], [50, 110],
-    [25, 55], [35, 75], [40, 85], [30, 65], [25, 60],
+    [8, 20], [18, 45], [32, 80], [8, 20], [14, 35], [32, 80],
+    [12, 30], [22, 55], [24, 60], [18, 45], [14, 40],
   ]
+  const CHALLENGE_PAR = [8, 10, 20, 4, 4, 15, 2, 15, 16, 8, 7]
   function challengeConfig(index) {
     const entry = CHALLENGE_TIMES[index] || [40, 90]
-    return { gold: entry[0], silver: entry[1] }
+    const par = CHALLENGE_PAR[index] || 20
+    return { gold: entry[0], silver: entry[1], par }
   }
 
   const CHAPTERS = TT.protocol.CHAPTERS
@@ -5541,7 +5543,7 @@ TT.Missions = (function () {
       achvOpen: false,
       unlocked: [],
       stats: { snakeBest: 0, snakeBySpeed: {}, snakeScores: [], debugSolved: 0, guessBest: null, guessScoreBest: 0, lockWins: 0, lockBestAttempts: null, synth: 0, imports: 0, receipts: 0, daily: {}, challenge: {} },
-      challenge: { active: false, chapter: 0, startedAt: 0, hadCompleted: false, lastResult: null },
+      challenge: { active: false, chapter: 0, startedAt: 0, hadCompleted: false, actions: 0, mistakes: 0, lastResult: null },
       daily: null,
       codex: false,
       paused: false,
@@ -5732,7 +5734,8 @@ TT.Missions = (function () {
     if (next.challenge && next.challenge.active && next.challenge.chapter === index) {
       const elapsed = Math.max(0, Date.now() - (next.challenge.startedAt || Date.now()))
       const config = challengeConfig(index)
-      const stars = elapsed <= config.gold * 1000 ? 3 : elapsed <= config.silver * 1000 ? 2 : 1
+      const efficient = (next.challenge.actions || 0) <= config.par && (next.challenge.mistakes || 0) === 0
+      const stars = elapsed <= config.gold * 1000 && efficient ? 3 : elapsed <= config.silver * 1000 ? 2 : 1
       const previous = next.stats.challenge[index]
       next = {
         ...next,
@@ -5746,7 +5749,11 @@ TT.Missions = (function () {
             },
           },
         },
-        challenge: { active: false, chapter: index, startedAt: 0, hadCompleted: true, lastResult: { stars, ms: elapsed } },
+        challenge: {
+          active: false, chapter: index, startedAt: 0, hadCompleted: true,
+          actions: next.challenge.actions || 0, mistakes: next.challenge.mistakes || 0,
+          lastResult: { stars, ms: elapsed, actions: next.challenge.actions || 0, mistakes: next.challenge.mistakes || 0 },
+        },
         unlocked: next.unlocked || [],
       }
       next.challengeToast = { stars: '★'.repeat(stars), seconds: (elapsed / 1000).toFixed(1) }
@@ -6192,7 +6199,7 @@ TT.Missions = (function () {
 
   // ------------------------------------------------------------------ reducer
 
-  function reduce(state, action) {
+  function reduceInner(state, action) {
     if (!action || !action.type) return state
     switch (action.type) {
       case 'achv/open':
@@ -6819,7 +6826,6 @@ TT.Missions = (function () {
         return selectChapter(state, Math.min(CHAPTERS.length - 1, state.chapter + 1))
       case 'challenge/start': {
         if (state.challenge && state.challenge.active) return state
-        if (!state.completed[state.chapter]) return pushToast(state, 'challenge.locked', {}, 'warn')
         const chapter = state.chapter
         const completed = { ...state.completed, [chapter]: false }
         const flags = chapter === 0 ? { ...state.flags, mintedChips: [] } : state.flags
@@ -6830,18 +6836,43 @@ TT.Missions = (function () {
           completed,
           intro: false,
           epoch: (state.epoch || 1) + 1,
-          challenge: { active: true, chapter, startedAt: Date.now(), hadCompleted: true },
+          challenge: { active: true, chapter, startedAt: Date.now(), hadCompleted: Boolean(state.completed[chapter]), actions: 0, mistakes: 0 },
           toast: { key: 'challenge.start', params: { seconds: challengeConfig(chapter).gold }, tone: 'info', at: Date.now() },
+        }
+      }
+      case 'challenge/reset': {
+        if (!state.challenge || !state.challenge.active) {
+          const chapter = state.chapter
+          const flags = chapter === 0 ? { ...state.flags, mintedChips: [] } : state.flags
+          return {
+            ...state,
+            flags,
+            play: setupChapterPlay({ ...state, flags, play: playFor({ ...state, flags }, chapter) }, chapter),
+            hint: 0,
+            epoch: (state.epoch || 1) + 1,
+          }
+        }
+        const chapter = state.challenge.chapter
+        const flags = chapter === 0 ? { ...state.flags, mintedChips: [] } : state.flags
+        return {
+          ...state,
+          flags,
+          play: setupChapterPlay({ ...state, flags, play: playFor({ ...state, flags }, chapter) }, chapter),
+          challenge: { ...state.challenge, startedAt: Date.now(), actions: 0, mistakes: 0 },
+          toast: { key: 'challenge.resetDone', params: {}, tone: 'info', at: Date.now() },
         }
       }
       case 'challenge/abandon': {
         if (!state.challenge || !state.challenge.active) return state
         const chapter = state.challenge.chapter
         const completed = state.challenge.hadCompleted ? { ...state.completed, [chapter]: true } : state.completed
+        const flags = chapter === 0 ? { ...state.flags, mintedChips: [] } : state.flags
         return {
           ...state,
           completed,
-          challenge: { active: false, chapter, startedAt: 0, hadCompleted: false },
+          flags,
+          play: setupChapterPlay({ ...state, flags, play: playFor({ ...state, flags }, chapter) }, chapter),
+          challenge: { active: false, chapter, startedAt: 0, hadCompleted: false, actions: 0, mistakes: 0 },
           toast: { key: 'challenge.abandoned', params: {}, tone: 'info', at: Date.now() },
         }
       }
@@ -7633,6 +7664,27 @@ TT.Missions = (function () {
       add('next', 'dock.nextChapter', { type: 'chapter/next' }, 'primary')
     }
     return items
+  }
+
+  const CHALLENGE_IGNORE = /^(challenge\/|toast|hint|sound|pause|speed|codex|intro|welcome|cinema|chapter\/select|chapter\/next|lab\/|arcade\/|achv\/|daily\/|snake\/|music\/|pixel\/|lock\/|guess\/|vote\/|debug\/)/
+
+  // Wraps the pure reducer to count challenge actions and failed verifications.
+  function reduce(state, action) {
+    const previous = state
+    const next = reduceInner(state, action)
+    if (!next || typeof next !== 'object') return next
+    const active = next.challenge && next.challenge.active
+    if (!active || !action || !action.type || CHALLENGE_IGNORE.test(action.type)) return next
+    let mistakes = next.challenge.mistakes || 0
+    if (previous.play && next.play && previous.play.verify && next.play.verify) {
+      const before = previous.play.verify.status
+      const after = next.play.verify.status
+      if (before !== 'fail' && after === 'fail') mistakes += 1
+    }
+    return {
+      ...next,
+      challenge: { ...next.challenge, actions: (next.challenge.actions || 0) + 1, mistakes },
+    }
   }
 
   return {
@@ -11902,6 +11954,14 @@ TT.dict = {
     'arcade.guess.score': '得分',
     'arcade.lock.failed': '尝试次数用尽，锁已锁定；点「重试」再来',
 
+    'challenge.normalMode': '正常模式',
+    'challenge.toChallenge': '切到挑战模式',
+    'challenge.toNormal': '切回正常模式',
+    'challenge.resetBtn': '重置',
+    'challenge.par': '操作预算',
+    'challenge.mistakes': '失误',
+    'challenge.resetDone': '已重置本章：计时、操作数与失误清零。',
+    'challenge.challengeLockedNote': '',
     'challenge.startBtn': '挑战模式',
     'challenge.start': '挑战开始！禁用助手与一键操作，尽快完成本章。',
     'challenge.active': '挑战中',
@@ -12787,6 +12847,14 @@ TT.dict = {
     'arcade.guess.score': 'Score',
     'arcade.lock.failed': 'Out of attempts — the lock is locked. Press restart.',
 
+    'challenge.normalMode': 'Normal mode',
+    'challenge.toChallenge': 'Switch to challenge',
+    'challenge.toNormal': 'Back to normal',
+    'challenge.resetBtn': 'Reset',
+    'challenge.par': 'Action par',
+    'challenge.mistakes': 'Mistakes',
+    'challenge.resetDone': 'Chapter reset: timer, actions and mistakes cleared.',
+    'challenge.challengeLockedNote': '',
     'challenge.startBtn': 'Challenge',
     'challenge.start': 'Challenge started! Assists and shortcuts are disabled — finish the chapter fast.',
     'challenge.active': 'Challenge running',
@@ -14248,25 +14316,28 @@ function ChallengeBar(props) {
     const timer = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(timer)
   }, [active])
-  const config = TT.Missions.challengeConfig ? TT.Missions.challengeConfig(chapter) : { gold: 40, silver: 90 }
+  const config = TT.Missions.challengeConfig ? TT.Missions.challengeConfig(chapter) : { gold: 40, silver: 90, par: 20 }
   const best = state.stats && state.stats.challenge ? state.stats.challenge[chapter] : null
+  const last = state.challenge && state.challenge.lastResult
   if (active) {
     const ms = Math.max(0, now - (state.challenge.startedAt || now))
+    const actions = state.challenge.actions || 0
+    const mistakes = state.challenge.mistakes || 0
     return TT.h('div', { className: 'tt-challengebar', 'data-active': 'true' },
       TT.h('span', { className: 'tt-challenge-timer' }, `⚡ ${(ms / 1000).toFixed(1)}s`),
-      TT.h('span', { className: 'tt-lablabel' }, `3★ ≤ ${config.gold}s · 2★ ≤ ${config.silver}s`),
-      TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'challenge/abandon' }) }, t('challenge.abandon')),
+      TT.h('span', { className: 'tt-lablabel' }, `${t('challenge.par')} ${actions}/${config.par} · ${t('challenge.mistakes')} ${mistakes}`),
+      TT.h('span', { className: 'tt-lablabel' }, `3★ ≤ ${config.gold}s`),
+      TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'challenge/reset' }) }, t('challenge.resetBtn')),
+      TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'challenge/abandon' }) }, t('challenge.toNormal')),
     )
   }
-  if (!state.completed[chapter]) {
-    return TT.h('div', { className: 'tt-challengebar', 'data-locked': 'true' }, TT.h('span', null, t('challenge.lockedBar')))
-  }
-  const last = state.challenge && state.challenge.lastResult
   return TT.h('div', { className: 'tt-challengebar' },
-    TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => api.dispatch({ type: 'challenge/start' }) }, `⚡ ${t('challenge.startBtn')}`),
+    TT.h('span', { className: 'tt-lablabel' }, `● ${t('challenge.normalMode')}`),
+    TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => api.dispatch({ type: 'challenge/start' }) }, `⚡ ${t('challenge.toChallenge')}`),
+    TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'challenge/reset' }) }, t('challenge.resetBtn')),
     TT.h('span', { className: 'tt-lablabel' }, best
       ? `${t('challenge.best')} ${'★'.repeat(best.stars)} · ${(best.bestMs / 1000).toFixed(1)}s`
-      : t('challenge.desc')),
+      : `${t('challenge.par')} ${config.par}`),
     last ? TT.h('span', { className: 'tt-challenge-timer' }, `${t('challenge.recent')} ${'★'.repeat(last.stars)} · ${(last.ms / 1000).toFixed(1)}s`) : null,
   )
 }
