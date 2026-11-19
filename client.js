@@ -5528,6 +5528,9 @@ TT.Missions = (function () {
       chapter: 0,
       intro: false,
       welcome: true,
+      achvOpen: false,
+      unlocked: [],
+      stats: { snakeBest: 0, debugSolved: 0, guessBest: null, lockWins: 0, synth: 0, imports: 0, receipts: 0 },
       codex: false,
       paused: false,
       speed: 1,
@@ -6146,6 +6149,18 @@ TT.Missions = (function () {
   function reduce(state, action) {
     if (!action || !action.type) return state
     switch (action.type) {
+      case 'achv/open':
+        return { ...state, achvOpen: true }
+      case 'achv/close':
+        return { ...state, achvOpen: false }
+      case 'achv/unlock': {
+        const ids = Array.isArray(action.ids) ? action.ids : [action.id]
+        const fresh = ids.filter((id) => id && (state.unlocked || []).indexOf(id) < 0)
+        if (!fresh.length) return state
+        let next = { ...state, unlocked: [...(state.unlocked || []), ...fresh] }
+        for (const id of fresh) next = pushToast(next, 'achv.got', { name: action.title || id }, 'good')
+        return next
+      }
       case 'welcome/open':
         return { ...state, welcome: true }
       case 'welcome/close':
@@ -6498,7 +6513,8 @@ TT.Missions = (function () {
         const snake = state.arcade.snake
         if (!snake || !snake.running || !TT.Arcade) return state
         const next = TT.Arcade.snakeStep(snake)
-        return { ...state, arcade: { ...state.arcade, snake: next } }
+        const stats = { ...state.stats, snakeBest: Math.max(state.stats.snakeBest || 0, next.score || 0) }
+        return { ...state, stats, arcade: { ...state.arcade, snake: next } }
       }
       case 'snake/reset':
         return { ...state, arcade: { ...state.arcade, snake: TT.Arcade ? TT.Arcade.snakeInitial() : null } }
@@ -6558,6 +6574,7 @@ TT.Missions = (function () {
         const solved = lock.guess === lock.code
         return {
           ...state,
+          stats: solved ? { ...state.stats, lockWins: (state.stats.lockWins || 0) + 1 } : state.stats,
           arcade: {
             ...state.arcade,
             lock: { ...lock, attempts: lock.attempts + 1, last: lock.guess, solved },
@@ -6575,13 +6592,16 @@ TT.Missions = (function () {
         const game = state.arcade.guess
         if (game.solved || game.tries >= 8) return state
         const cmp = game.guess === game.secret ? 0 : game.guess > game.secret ? 1 : -1
+        const tries = game.tries + 1
+        const best = cmp === 0 ? (state.stats.guessBest === null || state.stats.guessBest === undefined ? tries : Math.min(state.stats.guessBest, tries)) : state.stats.guessBest
         return {
           ...state,
+          stats: { ...state.stats, guessBest: best },
           arcade: {
             ...state.arcade,
             guess: {
               ...game,
-              tries: game.tries + 1,
+              tries,
               solved: cmp === 0,
               history: [...(game.history || []), { value: game.guess, cmp }],
             },
@@ -6630,6 +6650,7 @@ TT.Missions = (function () {
               solved: debug.solved + (status === 'pass' ? 1 : 0),
             },
           },
+          stats: status === 'pass' ? { ...state.stats, debugSolved: Math.max(state.stats.debugSolved || 0, debug.solved + 1) } : state.stats,
         }
       }
       case 'debug/reset':
@@ -7166,10 +7187,31 @@ TT.Missions = (function () {
           const verify = labVerify(result, nIn, bits)
           return {
             ...state,
+            stats: { ...state.stats, synth: (state.stats.synth || 0) + 1 },
             lab: { ...state.lab, result, verify },
           }
         } catch (error) {
           return pushToast(state, 'toast.synthFail', { error: String(error && error.message ? error.message : error) }, 'warn')
+        }
+      }
+      case 'lab/importVerilog': {
+        if (!TT.VerilogImport || !TT.Circuit) return state
+        try {
+          const parsed = TT.VerilogImport.parse(action.text)
+          return {
+            ...state,
+            mode: 'lab',
+            stats: { ...state.stats, imports: (state.stats.imports || 0) + 1 },
+            lab: {
+              ...state.lab,
+              tab: 'sandbox',
+              sandbox: { name: parsed.name || 'verilog', netlist: parsed.netlist },
+              sandboxInputs: 0,
+              museumId: null,
+            },
+          }
+        } catch (error) {
+          return pushToast(state, 'lab.verilog.fail', { error: String(error && error.message ? error.message : error) }, 'warn')
         }
       }
       case 'lab/sandbox': {
@@ -7819,6 +7861,7 @@ TT.LabUI = (function () {
   function SandboxPage(props) {
     const { lab, t, api } = props
     const sandbox = lab.sandbox
+    const [vcode, setVcode] = React.useState('')
     if (!sandbox) {
       return h('div', { className: 'tt-labcard' },
         h('div', { className: 'tt-labcardhead' }, h('strong', null, t('lab.sandbox.title'))),
@@ -7828,6 +7871,20 @@ TT.LabUI = (function () {
             disabled: !lab.result, onClick: () => api.dispatch({ type: 'lab/sandbox', source: 'result' }) }, t('lab.sandbox.fromSynth')),
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
             onClick: () => api.dispatch({ type: 'lab/tab', tab: 'museum' }) }, t('lab.sandbox.fromMuseum')),
+        ),
+        h('div', { className: 'tt-lablabel', style: { marginTop: 6 } }, t('lab.verilog.title')),
+        h('p', { className: 'tt-labempty', style: { margin: '2px 0' } }, t('lab.verilog.hint')),
+        h('textarea', {
+          className: 'tt-archivebox',
+          style: { minHeight: 96 },
+          placeholder: t('lab.verilog.placeholder'),
+          value: vcode,
+          onChange: (event) => setVcode(event.target.value),
+        }),
+        h('div', { className: 'tt-labrow' },
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
+            disabled: !vcode.trim(), onClick: () => api.dispatch({ type: 'lab/importVerilog', text: vcode }) }, t('lab.verilog.import')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => setVcode('module half(input a, b, output sum, cout);\n  assign sum = a ^ b;\n  assign cout = a & b;\nendmodule') }, t('lab.verilog.sample')),
         ),
       )
     }
@@ -10995,6 +11052,352 @@ TT.DefiUI = (function () {
   return { Page }
 })()
 
+// ---- 47-achievements.js ----
+/**
+ * 47-achievements — local progress badges and playground records.
+ * Everything is derived from mission state plus a small persisted stats slice.
+ */
+
+TT.Achievements = (function () {
+  const LIST = [
+    { id: 'mint8', tier: 'bronze', titleKey: 'achv.mint8.title', descKey: 'achv.mint8.desc', check: (s) => Boolean(s.completed && s.completed[0]) },
+    { id: 'halfadder', tier: 'bronze', titleKey: 'achv.halfadder.title', descKey: 'achv.halfadder.desc', check: (s) => Boolean(s.completed && s.completed[2]) },
+    { id: 'tapeout', tier: 'bronze', titleKey: 'achv.tapeout.title', descKey: 'achv.tapeout.desc', check: (s) => Boolean(s.completed && s.completed[3]) },
+    { id: 'sevenseg', tier: 'silver', titleKey: 'achv.sevenseg.title', descKey: 'achv.sevenseg.desc', check: (s) => Boolean(s.completed && s.completed[7]) },
+    { id: 'cpu', tier: 'silver', titleKey: 'achv.cpu.title', descKey: 'achv.cpu.desc', check: (s) => Boolean(s.completed && s.completed[9]) },
+    { id: 'safety', tier: 'gold', titleKey: 'achv.safety.title', descKey: 'achv.safety.desc', check: (s) => Boolean(s.completed && s.completed[10]) },
+    { id: 'finale', tier: 'gold', titleKey: 'achv.finale.title', descKey: 'achv.finale.desc', check: (s) => allDone(s) },
+    { id: 'snake10', tier: 'silver', titleKey: 'achv.snake10.title', descKey: 'achv.snake10.desc', check: (s) => stats(s).snakeBest >= 10 },
+    { id: 'debug5', tier: 'silver', titleKey: 'achv.debug5.title', descKey: 'achv.debug5.desc', check: (s) => stats(s).debugSolved >= 5 },
+    { id: 'synth1', tier: 'bronze', titleKey: 'achv.synth1.title', descKey: 'achv.synth1.desc', check: (s) => stats(s).synth >= 1 },
+    { id: 'synth10', tier: 'gold', titleKey: 'achv.synth10.title', descKey: 'achv.synth10.desc', check: (s) => stats(s).synth >= 10 },
+    { id: 'guess3', tier: 'silver', titleKey: 'achv.guess3.title', descKey: 'achv.guess3.desc', check: (s) => stats(s).guessBest !== null && stats(s).guessBest <= 3 },
+    { id: 'lock1', tier: 'bronze', titleKey: 'achv.lock1.title', descKey: 'achv.lock1.desc', check: (s) => stats(s).lockWins >= 1 },
+    { id: 'verilog', tier: 'silver', titleKey: 'achv.verilog.title', descKey: 'achv.verilog.desc', check: (s) => stats(s).imports >= 1 },
+  ]
+
+  function stats(state) {
+    return (state && state.stats) || {}
+  }
+
+  function allDone(state) {
+    if (!state || !state.completed) return false
+    for (let index = 0; index < 11; index += 1) if (!state.completed[index]) return false
+    return true
+  }
+
+  function evaluate(state) {
+    return LIST.map((item) => ({
+      id: item.id,
+      tier: item.tier,
+      titleKey: item.titleKey,
+      descKey: item.descKey,
+      done: Boolean(item.check(state)),
+    }))
+  }
+
+  function doneIds(state) {
+    const unlocked = new Set(state && state.unlocked ? state.unlocked : [])
+    return LIST.filter((item) => item.check(state) && !unlocked.has(item.id)).map((item) => item.id)
+  }
+
+  function unlockedList(state) {
+    const ids = new Set((state && state.unlocked) || [])
+    return LIST.filter((item) => ids.has(item.id) || item.check(state))
+  }
+
+  return { LIST, evaluate, doneIds, unlockedList, stats, allDone }
+})()
+
+// ---- 48-verilog.js ----
+/**
+ * 48-verilog — a tiny gate-level Verilog importer.
+ *
+ * Supported subset:
+ *   module m(input a, b, input [1:0] c, output y, output [1:0] z);
+ *   wire t;
+ *   assign t = a & b;
+ *   assign y = ~t;
+ *   assign z[0] = a ^ b;
+ * Expressions: identifiers, bit selects name[0], constants 1'b0 / 1'b1,
+ *   ~ & | ^ and parentheses. Everything is lowered to NAND gates.
+ * Not supported: always/if/reg, arithmetic, multiple modules, parameters.
+ */
+
+TT.VerilogImport = (function () {
+  function strip(text) {
+    return String(text || '')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/\/\/[^\n]*/g, ' ')
+  }
+
+  function words(text) {
+    return text.replace(/\s+/g, ' ').trim()
+  }
+
+  function parse(text) {
+    const source = strip(text)
+    const moduleMatch = source.match(/module\s+([A-Za-z_]\w*)\s*\(([\s\S]*?)\)\s*;/)
+    if (!moduleMatch) throw new Error('没有找到 module 声明（只支持 gate-level Verilog）')
+    const header = words(moduleMatch[2])
+    const body = source.slice(moduleMatch.index + moduleMatch[0].length)
+    const inputs = []
+    const outputs = []
+    const env = Object.create(null)
+    let nextNode = 2
+
+    function declareName(direction, width, rawName) {
+      const clean = String(rawName).trim().replace(/\[[^\]]*\]/g, '')
+      if (!/^[A-Za-z_]\w*$/.test(clean)) throw new Error(`端口名不合法：${rawName}`)
+      if (direction === 'input') {
+        const bits = []
+        for (let bit = 0; bit < width; bit += 1) {
+          bits.push(nextNode)
+          nextNode += 1
+          inputs.push({ name: width > 1 ? `${clean}[${bit}]` : clean, node: nextNode - 1 })
+        }
+        env[clean] = bits
+        return
+      }
+      if (direction === 'output') {
+        const bits = new Array(width).fill(null)
+        env[clean] = bits
+        outputs.push({ name: clean, width, bits })
+        return
+      }
+      env[clean] = new Array(width).fill(null)
+    }
+
+    // Parse a declaration list, where a direction keyword applies until the next one:
+    //   input a, b, input [1:0] c, output y
+    function declareList(raw) {
+      let direction = 'wire'
+      let width = 1
+      for (const part of splitTopLevel(raw)) {
+        let text = part.trim()
+        if (!text) continue
+        const dirMatch = text.match(/^(input|output|wire)\b/)
+        if (dirMatch) {
+          direction = dirMatch[1]
+          width = 1
+          text = text.slice(dirMatch[0].length).trim()
+          const range = text.match(/^\[\s*(\d+)\s*:\s*(\d+)\s*\]/)
+          if (range) {
+            width = Math.abs(Number(range[1]) - Number(range[2])) + 1
+            text = text.slice(range[0].length).trim()
+          }
+        }
+        if (!text) continue
+        declareName(direction, width, text)
+      }
+    }
+
+    declareList(header)
+
+    const gates = []
+    function emit(a, b) {
+      gates.push({ a, b })
+      return 2 + inputs.length + gates.length - 1
+    }
+    function notGate(node) {
+      return emit(node, node)
+    }
+    function andGate(a, b) {
+      return notGate(emit(a, b))
+    }
+    function orGate(a, b) {
+      return emit(notGate(a), notGate(b))
+    }
+    function xorGate(a, b) {
+      const n1 = emit(a, b)
+      const n2 = emit(a, n1)
+      const n3 = emit(b, n1)
+      return emit(n2, n3)
+    }
+    function constNode(bit) {
+      return Number(bit) ? 1 : 0
+    }
+
+    function lookup(token) {
+      const select = token.match(/^([A-Za-z_]\w*)\s*\[\s*(\d+)\s*\]$/)
+      if (select) {
+        const bits = env[select[1]]
+        if (!bits) throw new Error(`未声明的信号：${select[1]}`)
+        const bit = Number(select[2])
+        if (bit >= bits.length) throw new Error(`${select[1]} 的位下标越界：${bit}`)
+        return bits[bit]
+      }
+      if (/^1'b[01]$/.test(token)) return constNode(token.slice(-1))
+      if (/^0$/.test(token)) return 0
+      if (/^1$/.test(token)) return 1
+      const bits = env[token]
+      if (!bits) throw new Error(`未声明的信号：${token}`)
+      return bits.length === 1 ? bits[0] : bits
+    }
+
+    function resolveValue(node) {
+      if (Array.isArray(node)) throw new Error('总线必须带位下标（例如 a[0]）')
+      if (node === null || node === undefined) throw new Error('信号尚未赋值')
+      return node
+    }
+
+    function parseExpr(expr) {
+      let index = 0
+      const text = String(expr).replace(/\s+/g, '')
+      function peek() {
+        return text[index]
+      }
+      function parseOr() {
+        let left = parseXor()
+        while (peek() === '|') {
+          index += 1
+          left = orGate(left, parseXor())
+        }
+        return left
+      }
+      function parseXor() {
+        let left = parseAnd()
+        while (peek() === '^') {
+          index += 1
+          left = xorGate(left, parseAnd())
+        }
+        return left
+      }
+      function parseAnd() {
+        let left = parseUnary()
+        while (peek() === '&') {
+          index += 1
+          left = andGate(left, parseUnary())
+        }
+        return left
+      }
+      function parseUnary() {
+        if (peek() === '~') {
+          index += 1
+          return notGate(parseUnary())
+        }
+        return parsePrimary()
+      }
+      function parsePrimary() {
+        if (peek() === '(') {
+          index += 1
+          const node = parseOr()
+          if (peek() !== ')') throw new Error('括号不匹配')
+          index += 1
+          return node
+        }
+        const rest = text.slice(index)
+        const select = rest.match(/^[A-Za-z_]\w*\[\d+\]/)
+        if (select) {
+          index += select[0].length
+          return lookup(select[0])
+        }
+        const constant = rest.match(/^1'b[01]/)
+        if (constant) {
+          index += constant[0].length
+          return constNode(constant[0].slice(-1))
+        }
+        const name = rest.match(/^[A-Za-z_]\w*/)
+        if (name) {
+          index += name[0].length
+          return lookup(name[0])
+        }
+        throw new Error(`无法解析表达式：${expr}`)
+      }
+      const node = parseOr()
+      if (index !== text.length) throw new Error(`表达式尾部无法解析：${text.slice(index)}`)
+      return node
+    }
+
+    // statement scanner for the body: allow assign x = expr; and wire declarations
+    const statements = body.split(';')
+    for (const raw of statements) {
+      const statement = words(raw)
+      if (!statement) continue
+      if (/^(input|output|wire)\b/.test(statement)) {
+        declareList(statement)
+        continue
+      }
+      const assign = statement.match(/^assign\s+([^=]+)=([\s\S]+)$/)
+      if (!assign) {
+        if (/^(always|initial|reg)\b/.test(statement)) throw new Error('只支持 assign 语句，不支持 always/initial/reg')
+        if (/^module\b|^endmodule$/.test(statement)) continue
+        throw new Error(`不支持的语句：${statement.slice(0, 40)}`)
+      }
+      const target = assign[1].trim()
+      const expr = assign[2].trim()
+      const value = parseExpr(expr)
+      const node = resolveValue(value)
+      const targetMatch = target.match(/^([A-Za-z_]\w*)\s*(?:\[\s*(\d+)\s*\])?$/)
+      if (!targetMatch) throw new Error(`不支持的赋值目标：${target}`)
+      const name = targetMatch[1]
+      const bit = targetMatch[2] === undefined ? null : Number(targetMatch[2])
+      const bus = env[name]
+      if (!bus) throw new Error(`给未声明的信号赋值：${name}`)
+      if (bit === null) {
+        bus[0] = node
+      } else {
+        if (bit >= bus.length) throw new Error(`${name} 的位下标越界：${bit}`)
+        bus[bit] = node
+      }
+    }
+
+    const outputsFlat = []
+    for (const out of outputs) {
+      for (let bit = 0; bit < out.width; bit += 1) {
+        const envBits = env[out.name]
+        const node = envBits && envBits[bit] !== null && envBits[bit] !== undefined ? envBits[bit] : null
+        if (node === null) throw new Error(`输出 ${out.name}${out.width > 1 ? '[' + bit + ']' : ''} 没有赋值`)
+        outputsFlat.push(node)
+      }
+    }
+    if (!inputs.length) throw new Error('至少需要一个 input')
+    if (!outputsFlat.length) throw new Error('至少需要一个 output')
+    const netlist = TT.Circuit.makeNetlist({
+      nIn: inputs.length,
+      nState: 0,
+      gates,
+      outputs: outputsFlat,
+    })
+    const check = TT.Circuit.validateNetlist(netlist)
+    if (!check.ok) throw new Error(check.error)
+    return {
+      ok: true,
+      name: moduleMatch[1],
+      netlist,
+      nIn: inputs.length,
+      nOut: outputsFlat.length,
+      inputs: inputs.map((item) => item.name),
+      outputs: outputs.flatMap((out) => {
+        const list = []
+        for (let bit = 0; bit < out.width; bit += 1) list.push(out.width > 1 ? `${out.name}[${bit}]` : out.name)
+        return list
+      }),
+      gates: gates.length,
+    }
+  }
+
+  function splitTopLevel(text) {
+    const parts = []
+    let depth = 0
+    let current = ''
+    for (const char of text) {
+      if (char === '(' || char === '[') depth += 1
+      if (char === ')' || char === ']') depth -= 1
+      if (char === ',' && depth === 0) {
+        if (current.trim()) parts.push(current.trim())
+        current = ''
+      } else {
+        current += char
+      }
+    }
+    if (current.trim()) parts.push(current.trim())
+    return parts
+  }
+
+  return { parse }
+})()
+
 // ---- 40-ui.js ----
 /**
  * 40-ui — locale dictionaries, panel chrome, HUD, codex.
@@ -11039,6 +11442,44 @@ TT.dict = {
     'welcome.goBeginner': '已进入第 1 章：先铸出 8 颗与非门。',
     'welcome.goPlayer': '已进入游乐场：试试链上贪吃蛇。',
     'welcome.goTech': '已进入实验室：从真值表综合器开始。',
+    'achv.title': '成就墙',
+    'achv.sub': '主线、街机与实验记录都会点亮徽章；进度只保存在本机。',
+    'achv.close': '关闭',
+    'achv.got': '成就解锁：{name}',
+    'achv.stats.snake': '贪吃蛇最高分',
+    'achv.stats.debug': '排障通过',
+    'achv.stats.synth': '综合次数',
+    'achv.stats.guess': '猜数最少次数',
+    'achv.stats.lock': '密码锁次数',
+    'achv.mint8.title': '第一颗晶体管',
+    'achv.mint8.desc': '完成第 1 章，铸出 8 颗与非门',
+    'achv.halfadder.title': '会算加法',
+    'achv.halfadder.desc': '完成第 3 章，验证半加器',
+    'achv.tapeout.title': '第一次流片',
+    'achv.tapeout.desc': '完成第 4 章，把电路铸成 NFT',
+    'achv.sevenseg.title': '数字亮起来',
+    'achv.sevenseg.desc': '完成第 8 章，点亮 0–9',
+    'achv.cpu.title': '让它跑程序',
+    'achv.cpu.desc': '完成第 10 章，跑通 3 + 5',
+    'achv.safety.title': '真实安全电路',
+    'achv.safety.desc': '完成第 11 章，审计 65536 组输入',
+    'achv.finale.title': '十一章通关',
+    'achv.finale.desc': '完成全部 11 章主线',
+    'achv.snake10.title': '蛇王',
+    'achv.snake10.desc': '链上贪吃蛇得分达到 10',
+    'achv.debug5.title': '电路医生',
+    'achv.debug5.desc': '通过 5 个故障排查关卡',
+    'achv.synth1.title': '第一次综合',
+    'achv.synth1.desc': '在实验室综合出第一个电路',
+    'achv.synth10.title': '综合十次',
+    'achv.synth10.desc': '累计综合 10 个电路',
+    'achv.guess3.title': '猜数高手',
+    'achv.guess3.desc': '3 次以内猜中数字',
+    'achv.lock1.title': '开锁匠',
+    'achv.lock1.desc': '猜中一次 4 位密码锁',
+    'achv.verilog.title': '带自己的电路',
+    'achv.verilog.desc': '成功导入一个 Verilog 电路',
+
 
     'panel.introCodex': '先看协议档案',
     'panel.verifying': '穷举验证中…',
@@ -11654,6 +12095,13 @@ TT.dict = {
     'lab.library.title': '我的电路库',
     'lab.library.empty': '还没有保存的电路。去综合器里造一个吧。',
     'lab.sandbox.title': '3D 电路沙盒',
+    'lab.verilog.title': 'Verilog 导入',
+    'lab.verilog.hint': '支持 gate-level 子集：input/output/wire + assign，表达式 ~ & | ^ 与括号；会自动降级成 NAND 网表。',
+    'lab.verilog.placeholder': '粘贴 module … endmodule',
+    'lab.verilog.import': '导入到沙盒',
+    'lab.verilog.sample': '填入示例',
+    'lab.verilog.fail': '导入失败：{error}',
+
     'lab.sandbox.empty': '还没有装入电路：可以从综合器或元件展厅送一个过来。',
     'lab.sandbox.fromSynth': '从综合结果打开',
     'lab.sandbox.fromMuseum': '去元件展厅',
@@ -11811,6 +12259,44 @@ TT.dict = {
     'welcome.goBeginner': 'Chapter 1 opened — mint 8 NAND gates first.',
     'welcome.goPlayer': 'Playground opened — try chain snake.',
     'welcome.goTech': 'Lab opened — start with the truth-table synthesizer.',
+    'achv.title': 'Achievements',
+    'achv.sub': 'Missions, playground records and lab work light up badges; progress stays on this machine.',
+    'achv.close': 'Close',
+    'achv.got': 'Achievement unlocked: {name}',
+    'achv.stats.snake': 'Snake best',
+    'achv.stats.debug': 'Debug levels cleared',
+    'achv.stats.synth': 'Syntheses',
+    'achv.stats.guess': 'Best guess tries',
+    'achv.stats.lock': 'Locks opened',
+    'achv.mint8.title': 'First transistor',
+    'achv.mint8.desc': 'Complete chapter 1 and mint 8 NAND gates',
+    'achv.halfadder.title': 'It can add',
+    'achv.halfadder.desc': 'Complete chapter 3 and verify the half adder',
+    'achv.tapeout.title': 'First tape-out',
+    'achv.tapeout.desc': 'Complete chapter 4 and turn a circuit into an NFT',
+    'achv.sevenseg.title': 'Light the digits',
+    'achv.sevenseg.desc': 'Complete chapter 8 and light 0–9',
+    'achv.cpu.title': 'Make it run',
+    'achv.cpu.desc': 'Complete chapter 10 and run 3 + 5',
+    'achv.safety.title': 'Real safety circuit',
+    'achv.safety.desc': 'Complete chapter 11 and audit 65,536 inputs',
+    'achv.finale.title': 'Eleven chapters',
+    'achv.finale.desc': 'Finish all 11 missions',
+    'achv.snake10.title': 'Snake charmer',
+    'achv.snake10.desc': 'Reach score 10 in chain snake',
+    'achv.debug5.title': 'Circuit doctor',
+    'achv.debug5.desc': 'Clear 5 debug puzzles',
+    'achv.synth1.title': 'First synthesis',
+    'achv.synth1.desc': 'Synthesize your first circuit in the lab',
+    'achv.synth10.title': 'Ten syntheses',
+    'achv.synth10.desc': 'Synthesize 10 circuits in total',
+    'achv.guess3.title': 'Number whisperer',
+    'achv.guess3.desc': 'Guess the number in 3 tries or fewer',
+    'achv.lock1.title': 'Locksmith',
+    'achv.lock1.desc': 'Crack the 4-bit code lock once',
+    'achv.verilog.title': 'Bring your own',
+    'achv.verilog.desc': 'Import a Verilog circuit successfully',
+
 
     'panel.introCodex': 'Read the codex',
     'panel.verifying': 'Exhaustively verifying…',
@@ -12426,6 +12912,13 @@ TT.dict = {
     'lab.library.title': 'My circuit library',
     'lab.library.empty': 'Nothing saved yet. Build something in the synthesizer.',
     'lab.sandbox.title': '3D circuit sandbox',
+    'lab.verilog.title': 'Import Verilog',
+    'lab.verilog.hint': 'Gate-level subset: input/output/wire + assign, expressions ~ & | ^ and parentheses; lowered to NAND automatically.',
+    'lab.verilog.placeholder': 'Paste module … endmodule',
+    'lab.verilog.import': 'Import to sandbox',
+    'lab.verilog.sample': 'Insert example',
+    'lab.verilog.fail': 'Import failed: {error}',
+
     'lab.sandbox.empty': 'No circuit loaded. Send one from the synthesizer or the museum.',
     'lab.sandbox.fromSynth': 'Open synthesis result',
     'lab.sandbox.fromMuseum': 'Go to museum',
@@ -13041,6 +13534,23 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-welcomepath em { font-style:normal; font-size:10px; color:var(--tt-dim); line-height:1.45; }
 .tt-welcomeactions { display:flex; justify-content:flex-end; margin-top:4px; }
 
+.tt-achvcard { width:min(720px,94%); }
+.tt-achvhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.tt-achvclose { border:0; background:transparent; color:var(--tt-dim); font-size:18px; cursor:pointer; padding:2px 6px; }
+.tt-achvclose:hover { color:var(--tt-mint); }
+.tt-achvstats { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+.tt-achvstats .tt-labstat { min-width:96px; flex:1; }
+.tt-achvgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; max-height:48vh; overflow:auto; padding-right:4px; }
+.tt-achv { display:flex; flex-direction:column; gap:3px; padding:9px 10px; border-radius:11px;
+  border:1px dashed rgba(120,190,220,.2); background:rgba(4,12,20,.45); color:var(--tt-dim); }
+.tt-achv[data-done="true"] { border-style:solid; border-color:rgba(43,230,194,.45); background:rgba(43,230,194,.07); color:var(--tt-ink); }
+.tt-achv[data-done="true"][data-tier="silver"] { border-color:rgba(86,225,255,.5); background:rgba(86,225,255,.07); }
+.tt-achv[data-done="true"][data-tier="gold"] { border-color:rgba(255,195,92,.55); background:rgba(255,195,92,.09); }
+.tt-achv .tt-achvicon { font-size:18px; line-height:1; }
+.tt-achv b { font-size:11.5px; }
+.tt-achv em { font-style:normal; font-size:10px; color:var(--tt-dim); line-height:1.4; }
+.tt-achv[data-done="true"] em { color:var(--tt-dim); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -13282,6 +13792,33 @@ TT.UI.Panel = function Panel(props) {
     ),
   ) : null
 
+  const achievements = state.achvOpen && TT.Achievements ? TT.h('div', { className: 'tt-welcome' },
+    TT.h('div', { className: 'tt-welcomecard tt-achvcard' },
+      TT.h('div', { className: 'tt-achvhead' },
+        TT.h('h2', { className: 'tt-introtitle' }, t('achv.title')),
+        TT.h('button', { type: 'button', className: 'tt-achvclose', onClick: () => api.dispatch({ type: 'achv/close' }) }, '✕'),
+      ),
+      TT.h('p', { className: 'tt-introbody' }, t('achv.sub')),
+      TT.h('div', { className: 'tt-achvstats' }, [
+        ['achv.stats.snake', (state.stats && state.stats.snakeBest) || 0],
+        ['achv.stats.debug', (state.stats && state.stats.debugSolved) || 0],
+        ['achv.stats.synth', (state.stats && state.stats.synth) || 0],
+        ['achv.stats.guess', state.stats && state.stats.guessBest !== null && state.stats.guessBest !== undefined ? state.stats.guessBest : '—'],
+        ['achv.stats.lock', (state.stats && state.stats.lockWins) || 0],
+      ].map(([key, value]) => TT.h('div', { key, className: 'tt-labstat' },
+        TT.h('b', null, String(value)), TT.h('span', null, t(key))))),
+      TT.h('div', { className: 'tt-achvgrid' }, TT.Achievements.evaluate(state).map((item) =>
+        TT.h('div', { key: item.id, className: 'tt-achv', 'data-done': item.done ? 'true' : 'false', 'data-tier': item.tier },
+          TT.h('span', { className: 'tt-achvicon' }, item.done ? '🏅' : '🔒'),
+          TT.h('b', null, t(item.titleKey)),
+          TT.h('em', null, t(item.descKey)),
+        ))),
+      TT.h('div', { className: 'tt-welcomeactions' },
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost', onClick: () => api.dispatch({ type: 'achv/close' }) }, t('achv.close')),
+      ),
+    ),
+  ) : null
+
   return TT.h('div', {
     className: 'tt-lab',
     ref: rootRef,
@@ -13305,6 +13842,13 @@ TT.UI.Panel = function Panel(props) {
         title: allDone ? t('finale.title') : t('panel.progress', { done: doneChapters, total: totalChapters }),
         onClick: allDone ? () => api.dispatch({ type: 'finale/open' }) : undefined,
       }, allDone ? `🏆 ${t('panel.progressAll')}` : TT.h('b', null, `${doneChapters}/${totalChapters}`)),
+      TT.h('button', {
+        type: 'button',
+        className: 'tt-tool',
+        title: t('achv.title'),
+        'data-active': state.achvOpen ? 'true' : 'false',
+        onClick: () => api.dispatch({ type: state.achvOpen ? 'achv/close' : 'achv/open' }),
+      }, '🏆'),
       TT.h('nav', { className: 'tt-rail', 'aria-label': t('panel.chapterRail') },
         TT.protocol.CHAPTERS.map((id, index) => {
           const isDone = Boolean(state.completed[index])
@@ -13494,6 +14038,7 @@ TT.UI.Panel = function Panel(props) {
       inArcade && TT.ArcadeUI ? TT.ArcadeUI.Page({ state, t, resolve, api }) : null,
       intro,
       welcome,
+      achievements,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),
@@ -13922,6 +14467,12 @@ TT.App = (function () {
       if (typeof localStorage !== 'undefined' && localStorage.getItem('dsh-tapeout-lab:welcomed:v1') === '1') {
         boot.welcome = false
       }
+      const savedProgress = typeof localStorage !== 'undefined' ? localStorage.getItem('dsh-tapeout-lab:progress:v1') : null
+      if (savedProgress) {
+        const parsed = JSON.parse(savedProgress)
+        if (parsed && parsed.stats) boot.stats = { ...boot.stats, ...parsed.stats }
+        if (parsed && Array.isArray(parsed.unlocked)) boot.unlocked = parsed.unlocked
+      }
     } catch (error) {
       /* private mode: show the guide once per session */
     }
@@ -13952,11 +14503,29 @@ TT.App = (function () {
 
     const get = () => store.get()
 
-    // Remember that the first-run guide was dismissed, so it only appears once.
+    // Remember the first-run guide, records and newly unlocked achievements.
+    let syncing = false
     try {
       store.subscribe((state) => {
-        if (!state.welcome && typeof localStorage !== 'undefined') {
-          localStorage.setItem('dsh-tapeout-lab:welcomed:v1', '1')
+        if (typeof localStorage !== 'undefined') {
+          try {
+            if (!state.welcome) localStorage.setItem('dsh-tapeout-lab:welcomed:v1', '1')
+            localStorage.setItem('dsh-tapeout-lab:progress:v1', JSON.stringify({ stats: state.stats || {}, unlocked: state.unlocked || [] }))
+          } catch (error) {
+            /* quota / private mode */
+          }
+        }
+        if (syncing || !TT.Achievements) return
+        const fresh = TT.Achievements.doneIds(state)
+        if (!fresh.length) return
+        syncing = true
+        try {
+          for (const id of fresh) {
+            const item = TT.Achievements.LIST.find((entry) => entry.id === id)
+            dispatch({ type: 'achv/unlock', ids: [id], title: item ? t(item.titleKey) : id })
+          }
+        } finally {
+          syncing = false
         }
       })
     } catch (error) {

@@ -536,6 +536,9 @@ TT.Missions = (function () {
       chapter: 0,
       intro: false,
       welcome: true,
+      achvOpen: false,
+      unlocked: [],
+      stats: { snakeBest: 0, debugSolved: 0, guessBest: null, lockWins: 0, synth: 0, imports: 0, receipts: 0 },
       codex: false,
       paused: false,
       speed: 1,
@@ -1154,6 +1157,18 @@ TT.Missions = (function () {
   function reduce(state, action) {
     if (!action || !action.type) return state
     switch (action.type) {
+      case 'achv/open':
+        return { ...state, achvOpen: true }
+      case 'achv/close':
+        return { ...state, achvOpen: false }
+      case 'achv/unlock': {
+        const ids = Array.isArray(action.ids) ? action.ids : [action.id]
+        const fresh = ids.filter((id) => id && (state.unlocked || []).indexOf(id) < 0)
+        if (!fresh.length) return state
+        let next = { ...state, unlocked: [...(state.unlocked || []), ...fresh] }
+        for (const id of fresh) next = pushToast(next, 'achv.got', { name: action.title || id }, 'good')
+        return next
+      }
       case 'welcome/open':
         return { ...state, welcome: true }
       case 'welcome/close':
@@ -1506,7 +1521,8 @@ TT.Missions = (function () {
         const snake = state.arcade.snake
         if (!snake || !snake.running || !TT.Arcade) return state
         const next = TT.Arcade.snakeStep(snake)
-        return { ...state, arcade: { ...state.arcade, snake: next } }
+        const stats = { ...state.stats, snakeBest: Math.max(state.stats.snakeBest || 0, next.score || 0) }
+        return { ...state, stats, arcade: { ...state.arcade, snake: next } }
       }
       case 'snake/reset':
         return { ...state, arcade: { ...state.arcade, snake: TT.Arcade ? TT.Arcade.snakeInitial() : null } }
@@ -1566,6 +1582,7 @@ TT.Missions = (function () {
         const solved = lock.guess === lock.code
         return {
           ...state,
+          stats: solved ? { ...state.stats, lockWins: (state.stats.lockWins || 0) + 1 } : state.stats,
           arcade: {
             ...state.arcade,
             lock: { ...lock, attempts: lock.attempts + 1, last: lock.guess, solved },
@@ -1583,13 +1600,16 @@ TT.Missions = (function () {
         const game = state.arcade.guess
         if (game.solved || game.tries >= 8) return state
         const cmp = game.guess === game.secret ? 0 : game.guess > game.secret ? 1 : -1
+        const tries = game.tries + 1
+        const best = cmp === 0 ? (state.stats.guessBest === null || state.stats.guessBest === undefined ? tries : Math.min(state.stats.guessBest, tries)) : state.stats.guessBest
         return {
           ...state,
+          stats: { ...state.stats, guessBest: best },
           arcade: {
             ...state.arcade,
             guess: {
               ...game,
-              tries: game.tries + 1,
+              tries,
               solved: cmp === 0,
               history: [...(game.history || []), { value: game.guess, cmp }],
             },
@@ -1638,6 +1658,7 @@ TT.Missions = (function () {
               solved: debug.solved + (status === 'pass' ? 1 : 0),
             },
           },
+          stats: status === 'pass' ? { ...state.stats, debugSolved: Math.max(state.stats.debugSolved || 0, debug.solved + 1) } : state.stats,
         }
       }
       case 'debug/reset':
@@ -2174,10 +2195,31 @@ TT.Missions = (function () {
           const verify = labVerify(result, nIn, bits)
           return {
             ...state,
+            stats: { ...state.stats, synth: (state.stats.synth || 0) + 1 },
             lab: { ...state.lab, result, verify },
           }
         } catch (error) {
           return pushToast(state, 'toast.synthFail', { error: String(error && error.message ? error.message : error) }, 'warn')
+        }
+      }
+      case 'lab/importVerilog': {
+        if (!TT.VerilogImport || !TT.Circuit) return state
+        try {
+          const parsed = TT.VerilogImport.parse(action.text)
+          return {
+            ...state,
+            mode: 'lab',
+            stats: { ...state.stats, imports: (state.stats.imports || 0) + 1 },
+            lab: {
+              ...state.lab,
+              tab: 'sandbox',
+              sandbox: { name: parsed.name || 'verilog', netlist: parsed.netlist },
+              sandboxInputs: 0,
+              museumId: null,
+            },
+          }
+        } catch (error) {
+          return pushToast(state, 'lab.verilog.fail', { error: String(error && error.message ? error.message : error) }, 'warn')
         }
       }
       case 'lab/sandbox': {

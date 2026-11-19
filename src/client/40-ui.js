@@ -41,6 +41,44 @@ TT.dict = {
     'welcome.goBeginner': '已进入第 1 章：先铸出 8 颗与非门。',
     'welcome.goPlayer': '已进入游乐场：试试链上贪吃蛇。',
     'welcome.goTech': '已进入实验室：从真值表综合器开始。',
+    'achv.title': '成就墙',
+    'achv.sub': '主线、街机与实验记录都会点亮徽章；进度只保存在本机。',
+    'achv.close': '关闭',
+    'achv.got': '成就解锁：{name}',
+    'achv.stats.snake': '贪吃蛇最高分',
+    'achv.stats.debug': '排障通过',
+    'achv.stats.synth': '综合次数',
+    'achv.stats.guess': '猜数最少次数',
+    'achv.stats.lock': '密码锁次数',
+    'achv.mint8.title': '第一颗晶体管',
+    'achv.mint8.desc': '完成第 1 章，铸出 8 颗与非门',
+    'achv.halfadder.title': '会算加法',
+    'achv.halfadder.desc': '完成第 3 章，验证半加器',
+    'achv.tapeout.title': '第一次流片',
+    'achv.tapeout.desc': '完成第 4 章，把电路铸成 NFT',
+    'achv.sevenseg.title': '数字亮起来',
+    'achv.sevenseg.desc': '完成第 8 章，点亮 0–9',
+    'achv.cpu.title': '让它跑程序',
+    'achv.cpu.desc': '完成第 10 章，跑通 3 + 5',
+    'achv.safety.title': '真实安全电路',
+    'achv.safety.desc': '完成第 11 章，审计 65536 组输入',
+    'achv.finale.title': '十一章通关',
+    'achv.finale.desc': '完成全部 11 章主线',
+    'achv.snake10.title': '蛇王',
+    'achv.snake10.desc': '链上贪吃蛇得分达到 10',
+    'achv.debug5.title': '电路医生',
+    'achv.debug5.desc': '通过 5 个故障排查关卡',
+    'achv.synth1.title': '第一次综合',
+    'achv.synth1.desc': '在实验室综合出第一个电路',
+    'achv.synth10.title': '综合十次',
+    'achv.synth10.desc': '累计综合 10 个电路',
+    'achv.guess3.title': '猜数高手',
+    'achv.guess3.desc': '3 次以内猜中数字',
+    'achv.lock1.title': '开锁匠',
+    'achv.lock1.desc': '猜中一次 4 位密码锁',
+    'achv.verilog.title': '带自己的电路',
+    'achv.verilog.desc': '成功导入一个 Verilog 电路',
+
 
     'panel.introCodex': '先看协议档案',
     'panel.verifying': '穷举验证中…',
@@ -656,6 +694,13 @@ TT.dict = {
     'lab.library.title': '我的电路库',
     'lab.library.empty': '还没有保存的电路。去综合器里造一个吧。',
     'lab.sandbox.title': '3D 电路沙盒',
+    'lab.verilog.title': 'Verilog 导入',
+    'lab.verilog.hint': '支持 gate-level 子集：input/output/wire + assign，表达式 ~ & | ^ 与括号；会自动降级成 NAND 网表。',
+    'lab.verilog.placeholder': '粘贴 module … endmodule',
+    'lab.verilog.import': '导入到沙盒',
+    'lab.verilog.sample': '填入示例',
+    'lab.verilog.fail': '导入失败：{error}',
+
     'lab.sandbox.empty': '还没有装入电路：可以从综合器或元件展厅送一个过来。',
     'lab.sandbox.fromSynth': '从综合结果打开',
     'lab.sandbox.fromMuseum': '去元件展厅',
@@ -813,6 +858,44 @@ TT.dict = {
     'welcome.goBeginner': 'Chapter 1 opened — mint 8 NAND gates first.',
     'welcome.goPlayer': 'Playground opened — try chain snake.',
     'welcome.goTech': 'Lab opened — start with the truth-table synthesizer.',
+    'achv.title': 'Achievements',
+    'achv.sub': 'Missions, playground records and lab work light up badges; progress stays on this machine.',
+    'achv.close': 'Close',
+    'achv.got': 'Achievement unlocked: {name}',
+    'achv.stats.snake': 'Snake best',
+    'achv.stats.debug': 'Debug levels cleared',
+    'achv.stats.synth': 'Syntheses',
+    'achv.stats.guess': 'Best guess tries',
+    'achv.stats.lock': 'Locks opened',
+    'achv.mint8.title': 'First transistor',
+    'achv.mint8.desc': 'Complete chapter 1 and mint 8 NAND gates',
+    'achv.halfadder.title': 'It can add',
+    'achv.halfadder.desc': 'Complete chapter 3 and verify the half adder',
+    'achv.tapeout.title': 'First tape-out',
+    'achv.tapeout.desc': 'Complete chapter 4 and turn a circuit into an NFT',
+    'achv.sevenseg.title': 'Light the digits',
+    'achv.sevenseg.desc': 'Complete chapter 8 and light 0–9',
+    'achv.cpu.title': 'Make it run',
+    'achv.cpu.desc': 'Complete chapter 10 and run 3 + 5',
+    'achv.safety.title': 'Real safety circuit',
+    'achv.safety.desc': 'Complete chapter 11 and audit 65,536 inputs',
+    'achv.finale.title': 'Eleven chapters',
+    'achv.finale.desc': 'Finish all 11 missions',
+    'achv.snake10.title': 'Snake charmer',
+    'achv.snake10.desc': 'Reach score 10 in chain snake',
+    'achv.debug5.title': 'Circuit doctor',
+    'achv.debug5.desc': 'Clear 5 debug puzzles',
+    'achv.synth1.title': 'First synthesis',
+    'achv.synth1.desc': 'Synthesize your first circuit in the lab',
+    'achv.synth10.title': 'Ten syntheses',
+    'achv.synth10.desc': 'Synthesize 10 circuits in total',
+    'achv.guess3.title': 'Number whisperer',
+    'achv.guess3.desc': 'Guess the number in 3 tries or fewer',
+    'achv.lock1.title': 'Locksmith',
+    'achv.lock1.desc': 'Crack the 4-bit code lock once',
+    'achv.verilog.title': 'Bring your own',
+    'achv.verilog.desc': 'Import a Verilog circuit successfully',
+
 
     'panel.introCodex': 'Read the codex',
     'panel.verifying': 'Exhaustively verifying…',
@@ -1428,6 +1511,13 @@ TT.dict = {
     'lab.library.title': 'My circuit library',
     'lab.library.empty': 'Nothing saved yet. Build something in the synthesizer.',
     'lab.sandbox.title': '3D circuit sandbox',
+    'lab.verilog.title': 'Import Verilog',
+    'lab.verilog.hint': 'Gate-level subset: input/output/wire + assign, expressions ~ & | ^ and parentheses; lowered to NAND automatically.',
+    'lab.verilog.placeholder': 'Paste module … endmodule',
+    'lab.verilog.import': 'Import to sandbox',
+    'lab.verilog.sample': 'Insert example',
+    'lab.verilog.fail': 'Import failed: {error}',
+
     'lab.sandbox.empty': 'No circuit loaded. Send one from the synthesizer or the museum.',
     'lab.sandbox.fromSynth': 'Open synthesis result',
     'lab.sandbox.fromMuseum': 'Go to museum',
@@ -2043,6 +2133,23 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-welcomepath em { font-style:normal; font-size:10px; color:var(--tt-dim); line-height:1.45; }
 .tt-welcomeactions { display:flex; justify-content:flex-end; margin-top:4px; }
 
+.tt-achvcard { width:min(720px,94%); }
+.tt-achvhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.tt-achvclose { border:0; background:transparent; color:var(--tt-dim); font-size:18px; cursor:pointer; padding:2px 6px; }
+.tt-achvclose:hover { color:var(--tt-mint); }
+.tt-achvstats { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+.tt-achvstats .tt-labstat { min-width:96px; flex:1; }
+.tt-achvgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; max-height:48vh; overflow:auto; padding-right:4px; }
+.tt-achv { display:flex; flex-direction:column; gap:3px; padding:9px 10px; border-radius:11px;
+  border:1px dashed rgba(120,190,220,.2); background:rgba(4,12,20,.45); color:var(--tt-dim); }
+.tt-achv[data-done="true"] { border-style:solid; border-color:rgba(43,230,194,.45); background:rgba(43,230,194,.07); color:var(--tt-ink); }
+.tt-achv[data-done="true"][data-tier="silver"] { border-color:rgba(86,225,255,.5); background:rgba(86,225,255,.07); }
+.tt-achv[data-done="true"][data-tier="gold"] { border-color:rgba(255,195,92,.55); background:rgba(255,195,92,.09); }
+.tt-achv .tt-achvicon { font-size:18px; line-height:1; }
+.tt-achv b { font-size:11.5px; }
+.tt-achv em { font-style:normal; font-size:10px; color:var(--tt-dim); line-height:1.4; }
+.tt-achv[data-done="true"] em { color:var(--tt-dim); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -2284,6 +2391,33 @@ TT.UI.Panel = function Panel(props) {
     ),
   ) : null
 
+  const achievements = state.achvOpen && TT.Achievements ? TT.h('div', { className: 'tt-welcome' },
+    TT.h('div', { className: 'tt-welcomecard tt-achvcard' },
+      TT.h('div', { className: 'tt-achvhead' },
+        TT.h('h2', { className: 'tt-introtitle' }, t('achv.title')),
+        TT.h('button', { type: 'button', className: 'tt-achvclose', onClick: () => api.dispatch({ type: 'achv/close' }) }, '✕'),
+      ),
+      TT.h('p', { className: 'tt-introbody' }, t('achv.sub')),
+      TT.h('div', { className: 'tt-achvstats' }, [
+        ['achv.stats.snake', (state.stats && state.stats.snakeBest) || 0],
+        ['achv.stats.debug', (state.stats && state.stats.debugSolved) || 0],
+        ['achv.stats.synth', (state.stats && state.stats.synth) || 0],
+        ['achv.stats.guess', state.stats && state.stats.guessBest !== null && state.stats.guessBest !== undefined ? state.stats.guessBest : '—'],
+        ['achv.stats.lock', (state.stats && state.stats.lockWins) || 0],
+      ].map(([key, value]) => TT.h('div', { key, className: 'tt-labstat' },
+        TT.h('b', null, String(value)), TT.h('span', null, t(key))))),
+      TT.h('div', { className: 'tt-achvgrid' }, TT.Achievements.evaluate(state).map((item) =>
+        TT.h('div', { key: item.id, className: 'tt-achv', 'data-done': item.done ? 'true' : 'false', 'data-tier': item.tier },
+          TT.h('span', { className: 'tt-achvicon' }, item.done ? '🏅' : '🔒'),
+          TT.h('b', null, t(item.titleKey)),
+          TT.h('em', null, t(item.descKey)),
+        ))),
+      TT.h('div', { className: 'tt-welcomeactions' },
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost', onClick: () => api.dispatch({ type: 'achv/close' }) }, t('achv.close')),
+      ),
+    ),
+  ) : null
+
   return TT.h('div', {
     className: 'tt-lab',
     ref: rootRef,
@@ -2307,6 +2441,13 @@ TT.UI.Panel = function Panel(props) {
         title: allDone ? t('finale.title') : t('panel.progress', { done: doneChapters, total: totalChapters }),
         onClick: allDone ? () => api.dispatch({ type: 'finale/open' }) : undefined,
       }, allDone ? `🏆 ${t('panel.progressAll')}` : TT.h('b', null, `${doneChapters}/${totalChapters}`)),
+      TT.h('button', {
+        type: 'button',
+        className: 'tt-tool',
+        title: t('achv.title'),
+        'data-active': state.achvOpen ? 'true' : 'false',
+        onClick: () => api.dispatch({ type: state.achvOpen ? 'achv/close' : 'achv/open' }),
+      }, '🏆'),
       TT.h('nav', { className: 'tt-rail', 'aria-label': t('panel.chapterRail') },
         TT.protocol.CHAPTERS.map((id, index) => {
           const isDone = Boolean(state.completed[index])
@@ -2496,6 +2637,7 @@ TT.UI.Panel = function Panel(props) {
       inArcade && TT.ArcadeUI ? TT.ArcadeUI.Page({ state, t, resolve, api }) : null,
       intro,
       welcome,
+      achievements,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),

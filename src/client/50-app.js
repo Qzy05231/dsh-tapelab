@@ -14,6 +14,12 @@ TT.App = (function () {
       if (typeof localStorage !== 'undefined' && localStorage.getItem('dsh-tapeout-lab:welcomed:v1') === '1') {
         boot.welcome = false
       }
+      const savedProgress = typeof localStorage !== 'undefined' ? localStorage.getItem('dsh-tapeout-lab:progress:v1') : null
+      if (savedProgress) {
+        const parsed = JSON.parse(savedProgress)
+        if (parsed && parsed.stats) boot.stats = { ...boot.stats, ...parsed.stats }
+        if (parsed && Array.isArray(parsed.unlocked)) boot.unlocked = parsed.unlocked
+      }
     } catch (error) {
       /* private mode: show the guide once per session */
     }
@@ -44,11 +50,29 @@ TT.App = (function () {
 
     const get = () => store.get()
 
-    // Remember that the first-run guide was dismissed, so it only appears once.
+    // Remember the first-run guide, records and newly unlocked achievements.
+    let syncing = false
     try {
       store.subscribe((state) => {
-        if (!state.welcome && typeof localStorage !== 'undefined') {
-          localStorage.setItem('dsh-tapeout-lab:welcomed:v1', '1')
+        if (typeof localStorage !== 'undefined') {
+          try {
+            if (!state.welcome) localStorage.setItem('dsh-tapeout-lab:welcomed:v1', '1')
+            localStorage.setItem('dsh-tapeout-lab:progress:v1', JSON.stringify({ stats: state.stats || {}, unlocked: state.unlocked || [] }))
+          } catch (error) {
+            /* quota / private mode */
+          }
+        }
+        if (syncing || !TT.Achievements) return
+        const fresh = TT.Achievements.doneIds(state)
+        if (!fresh.length) return
+        syncing = true
+        try {
+          for (const id of fresh) {
+            const item = TT.Achievements.LIST.find((entry) => entry.id === id)
+            dispatch({ type: 'achv/unlock', ids: [id], title: item ? t(item.titleKey) : id })
+          }
+        } finally {
+          syncing = false
         }
       })
     } catch (error) {

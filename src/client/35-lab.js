@@ -357,6 +357,7 @@ TT.LabUI = (function () {
   function SandboxPage(props) {
     const { lab, t, api } = props
     const sandbox = lab.sandbox
+    const [vcode, setVcode] = React.useState('')
     if (!sandbox) {
       return h('div', { className: 'tt-labcard' },
         h('div', { className: 'tt-labcardhead' }, h('strong', null, t('lab.sandbox.title'))),
@@ -366,6 +367,20 @@ TT.LabUI = (function () {
             disabled: !lab.result, onClick: () => api.dispatch({ type: 'lab/sandbox', source: 'result' }) }, t('lab.sandbox.fromSynth')),
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
             onClick: () => api.dispatch({ type: 'lab/tab', tab: 'museum' }) }, t('lab.sandbox.fromMuseum')),
+        ),
+        h('div', { className: 'tt-lablabel', style: { marginTop: 6 } }, t('lab.verilog.title')),
+        h('p', { className: 'tt-labempty', style: { margin: '2px 0' } }, t('lab.verilog.hint')),
+        h('textarea', {
+          className: 'tt-archivebox',
+          style: { minHeight: 96 },
+          placeholder: t('lab.verilog.placeholder'),
+          value: vcode,
+          onChange: (event) => setVcode(event.target.value),
+        }),
+        h('div', { className: 'tt-labrow' },
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
+            disabled: !vcode.trim(), onClick: () => api.dispatch({ type: 'lab/importVerilog', text: vcode }) }, t('lab.verilog.import')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => setVcode('module half(input a, b, output sum, cout);\n  assign sum = a ^ b;\n  assign cout = a & b;\nendmodule') }, t('lab.verilog.sample')),
         ),
       )
     }

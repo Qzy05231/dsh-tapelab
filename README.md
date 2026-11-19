@@ -84,6 +84,10 @@ Harness 的 **Plugins → Add plugin** 支持 Git 地址，粘贴上面的仓库
 - **3D 电路沙盒**：任何网表都能在 3D 里展开成门阵列 + 导线 + 输入板 + 输出 LED；
   点击输入板实时驱动求值，可旋转缩放。
 - **电路库**：最多保存 24 个电路（localStorage 持久化），随时载入沙盒或删除。
+- **成就墙与街机记录**：14 个徽章（主线 / 贪吃蛇 / 排障 / 综合 / 猜数 / 密码锁），
+  顶部 🏆 打开，记录自动保存在本机；达成时弹提示。
+- **Verilog 导入**：沙盒页粘贴 gate-level Verilog（input/output/wire + assign，支持
+  `~ & | ^`、位选、常量），自动降级成 NAND 网表并验证；附带 `nand-cli` 命令行。
 - **导出与分享**：综合结果/沙盒电路支持复制 **hex / Verilog / JSON / 真值表 CSV**；
   电路库可导出**存档码**（一段文本），换电脑粘贴即可恢复全部电路。
 - **DeFi 交易守卫（模拟 AMM）**：滑点/额度/预言机/白名单/暂停 4 位条件编译成 NAND 守卫，
@@ -165,6 +169,20 @@ Harness 的 **Plugins → Add plugin** 支持 Git 地址，粘贴上面的仓库
   巨兽 → 七段 → 计数器 → 小计算机 → 安全电路」跑完全部 11 章，顶部显示当前章节与 ⏹ 停止；
   结束后自动打开「十一章全部完成」完成页。
 - 手动切换章节或点「再玩一次」会自动退出电影模式；面板卸载时清理所有定时器。
+
+## 命令行工具（nand-cli）
+
+```bash
+node tools/nand-cli.mjs synth 0110                 # 综合真值表（2、4、8、16 项）
+node tools/nand-cli.mjs import circuit.v           # 导入 gate-level Verilog
+node tools/nand-cli.mjs import circuit.v --json > n.json
+node tools/nand-cli.mjs eval --file n.json --in 11 # 只读求值
+node tools/nand-cli.mjs verify --file n.json       # 穷举验证
+node tools/nand-cli.mjs disasm --file n.json       # 列出每个门
+```
+
+支持且仅支持组合逻辑子集：`input/output/wire`、`assign`、`~ & | ^`、括号、`a[0]`、
+`1'b0/1'b1`；不支持 `always/reg/算术`。网表 JSON 与实验室「复制 JSON」格式一致。
 
 ## 许可证
 
