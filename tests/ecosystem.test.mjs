@@ -13,8 +13,14 @@ const TT = new Function(read('00-core.js') + '\nreturn TT')()
 for (const name of ['20-circuit.js', '30-missions.js', '51-ecosystem.js']) new Function('TT', read(name))(TT)
 const E = TT.Ecosystem
 
+test('only the six official entries are listed', () => {
+  const names = E.PROJECTS.map((project) => project.name)
+  assert.deepEqual(names, ['TapeOut', 'Blonskr · X', 'TapeHub.ai', 'TapeKit', 'TapeCode.ai', 'TapeRelay'])
+  assert.equal(E.PROJECTS.every((project) => E.CATEGORIES[project.category]), true)
+})
+
 test('every project has a category, description and https links', () => {
-  assert.ok(E.PROJECTS.length >= 12)
+  assert.equal(E.PROJECTS.length, 6)
   for (const project of E.PROJECTS) {
     assert.ok(E.CATEGORIES[project.category], project.id)
     assert.ok(project.desc.length > 10, project.id)

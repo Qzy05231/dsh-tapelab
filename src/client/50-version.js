@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.0'
-  const BUILT_AT = '2026-11-20'
+  const VERSION = '1.6.1'
+  const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.1',
+      date: '2026-11-21',
+      items: [
+        '「生态版图」更名为「官方生态」，仅收录 tapeout.link Official 分类的 6 个官方入口',
+        '气泡改为葡萄般的玻璃质感：高光、折射、葡萄光晕与半透明体积',
+      ],
+    },
     {
       version: '1.6.0',
       date: '2026-11-20',

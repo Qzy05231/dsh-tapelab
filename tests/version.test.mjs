@@ -15,13 +15,13 @@ new Function('TT', read('20-circuit.js'))(TT)
 new Function('TT', read('30-missions.js'))(TT)
 
 test('version metadata is coherent', () => {
-  assert.equal(TT.Version.VERSION, '1.6.0')
+  assert.equal(TT.Version.VERSION, '1.6.1')
   assert.ok(TT.Version.CHANGELOG.length >= 2)
-  assert.equal(TT.Version.CHANGELOG[0].version, '1.6.0')
+  assert.equal(TT.Version.CHANGELOG[0].version, '1.6.1')
   assert.ok(TT.Version.REPO.startsWith('https://github.com/'))
   assert.ok(TT.Version.COMMAND.includes('build.mjs'))
-  assert.equal(TT.Version.isNewer('2026-11-21T00:00:00Z'), true)
-  assert.equal(TT.Version.isNewer('2026-11-19T00:00:00Z'), false)
+  assert.equal(TT.Version.isNewer('2026-11-22T00:00:00Z'), true)
+  assert.equal(TT.Version.isNewer('2026-11-20T00:00:00Z'), false)
   assert.equal(TT.Version.isNewer(''), false)
 })
 
