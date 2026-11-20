@@ -145,7 +145,9 @@ TT.Audio = (function () {
     play,
     note: function (freq, dur, type, peak) {
       if (muted) return
-      if (!ensure()) return
+      const audio = ensure()
+      if (!audio) return
+      if (audio.state === 'suspended') audio.resume().catch(function () {})
       try {
         tone(freq, Math.max(0.04, dur || 0.18), type || 'triangle', peak || 0.16)
       } catch (error) {

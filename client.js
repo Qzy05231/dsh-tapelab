@@ -6790,7 +6790,7 @@ TT.Missions = (function () {
       }
       case 'music/octave': {
         const base = state.arcade.music.octave === undefined ? 4 : state.arcade.music.octave
-        const octave = Math.max(0, Math.min(7, base + (Number(action.delta) || 0)))
+        const octave = Math.max(1, Math.min(6, base + (Number(action.delta) || 0)))
         return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, octave } } }
       }
       case 'music/tempo':
@@ -8743,7 +8743,9 @@ TT.Audio = (function () {
     play,
     note: function (freq, dur, type, peak) {
       if (muted) return
-      if (!ensure()) return
+      const audio = ensure()
+      if (!audio) return
+      if (audio.state === 'suspended') audio.resume().catch(function () {})
       try {
         tone(freq, Math.max(0.04, dur || 0.18), type || 'triangle', peak || 0.16)
       } catch (error) {
@@ -9246,6 +9248,9 @@ TT.ArcadeUI = (function () {
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: -1 }) }, '−'),
           h('span', { className: 'tt-lablabel', style: { fontVariantNumeric: 'tabular-nums' } }, `OCT ${music.octave === undefined ? 4 : music.octave}`),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: 1 }) }, '+'),
+          music.lastMidi !== null && music.lastMidi !== undefined
+            ? h('span', { className: 'tt-badge', 'data-tone': 'good' }, `${t('arcade.music.lastNote')} ${TT.Arcade.midiName(music.lastMidi)}`)
+            : null,
           h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('arcade.music.pianoHint')),
         ),
         h('div', { className: 'tt-piano-scroll' },
@@ -14060,6 +14065,7 @@ TT.dict = {
     'arcade.music.now': '当前音',
     'arcade.music.next': '下一音',
     'arcade.music.piano': '键盘钢琴',
+    'arcade.music.lastNote': '最近弹奏',
     'arcade.music.pianoHint': '完整 A0–C8：点击琴键，或键盘 Z/S/X… 与 Q/2/W… 两排弹奏；←/→ 换八度',
     'arcade.music.preview': '点击试听这个音',
     'arcade.music.how': '它在门级上是什么',
@@ -15282,6 +15288,8 @@ TT.dict = {
     'arcade.music.now': 'Now',
     'arcade.music.next': 'Next note',
     'arcade.music.piano': 'Keyboard piano',
+    'arcade.music.lastNote': '最近弹奏',
+    'arcade.music.lastNote': 'Last note',
     'arcade.music.pianoHint': 'Full A0–C8: click keys or use the Z/S/X… and Q/2/W… rows; ←/→ changes octave',
     'arcade.music.preview': 'Click to audition this note',
     'arcade.music.how': 'What it is at gate level',
@@ -17032,7 +17040,14 @@ TT.UI.Panel = function Panel(props) {
       if (current.mode === 'arcade' && current.arcade.game === 'music' && TT.Arcade) {
         const pianoKey = (event.key || '').toLowerCase()
         const base = current.arcade.music.octave === undefined ? 4 : current.arcade.music.octave
-        const midi = TT.Arcade.keyToMidi(pianoKey, base)
+        let midi = TT.Arcade.keyToMidi(pianoKey, base)
+        if (midi === null && event.code) {
+          const code = event.code
+          const fallback = code.indexOf('Key') === 0 ? code.slice(3).toLowerCase()
+            : code.indexOf('Digit') === 0 ? code.slice(5)
+              : code === 'Comma' ? ',' : code
+          midi = TT.Arcade.keyToMidi(fallback, base)
+        }
         if (midi !== null) {
           event.preventDefault()
           event.stopPropagation()
@@ -18240,7 +18255,10 @@ dispatch({ type: 'cinema/set', active: false })
       if (after !== before) playSounds(before, after, action)
       if (action.type === 'music/key' && TT.Audio && TT.Arcade) {
         const midi = Number(action.midi !== undefined ? action.midi : action.key) || 60
-        TT.Audio.note(TT.Arcade.midiFreq(midi), 0.42, 'triangle', 0.24)
+        const freq = TT.Arcade.midiFreq(midi)
+        TT.Audio.note(freq, 0.55, 'triangle', 0.5)
+        // laptop speakers barely reproduce A0–B2; add a quiet octave-up partial
+        if (midi < 48) TT.Audio.note(freq * 2, 0.5, 'sine', 0.18)
       }
       manageArcadeTimers(after)
       return after

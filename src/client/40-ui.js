@@ -372,6 +372,7 @@ TT.dict = {
     'arcade.music.now': '当前音',
     'arcade.music.next': '下一音',
     'arcade.music.piano': '键盘钢琴',
+    'arcade.music.lastNote': '最近弹奏',
     'arcade.music.pianoHint': '完整 A0–C8：点击琴键，或键盘 Z/S/X… 与 Q/2/W… 两排弹奏；←/→ 换八度',
     'arcade.music.preview': '点击试听这个音',
     'arcade.music.how': '它在门级上是什么',
@@ -1594,6 +1595,8 @@ TT.dict = {
     'arcade.music.now': 'Now',
     'arcade.music.next': 'Next note',
     'arcade.music.piano': 'Keyboard piano',
+    'arcade.music.lastNote': '最近弹奏',
+    'arcade.music.lastNote': 'Last note',
     'arcade.music.pianoHint': 'Full A0–C8: click keys or use the Z/S/X… and Q/2/W… rows; ←/→ changes octave',
     'arcade.music.preview': 'Click to audition this note',
     'arcade.music.how': 'What it is at gate level',
@@ -3344,7 +3347,14 @@ TT.UI.Panel = function Panel(props) {
       if (current.mode === 'arcade' && current.arcade.game === 'music' && TT.Arcade) {
         const pianoKey = (event.key || '').toLowerCase()
         const base = current.arcade.music.octave === undefined ? 4 : current.arcade.music.octave
-        const midi = TT.Arcade.keyToMidi(pianoKey, base)
+        let midi = TT.Arcade.keyToMidi(pianoKey, base)
+        if (midi === null && event.code) {
+          const code = event.code
+          const fallback = code.indexOf('Key') === 0 ? code.slice(3).toLowerCase()
+            : code.indexOf('Digit') === 0 ? code.slice(5)
+              : code === 'Comma' ? ',' : code
+          midi = TT.Arcade.keyToMidi(fallback, base)
+        }
         if (midi !== null) {
           event.preventDefault()
           event.stopPropagation()

@@ -378,7 +378,10 @@ dispatch({ type: 'cinema/set', active: false })
       if (after !== before) playSounds(before, after, action)
       if (action.type === 'music/key' && TT.Audio && TT.Arcade) {
         const midi = Number(action.midi !== undefined ? action.midi : action.key) || 60
-        TT.Audio.note(TT.Arcade.midiFreq(midi), 0.42, 'triangle', 0.24)
+        const freq = TT.Arcade.midiFreq(midi)
+        TT.Audio.note(freq, 0.55, 'triangle', 0.5)
+        // laptop speakers barely reproduce A0–B2; add a quiet octave-up partial
+        if (midi < 48) TT.Audio.note(freq * 2, 0.5, 'sine', 0.18)
       }
       manageArcadeTimers(after)
       return after

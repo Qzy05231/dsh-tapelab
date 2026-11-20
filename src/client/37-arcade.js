@@ -487,6 +487,9 @@ TT.ArcadeUI = (function () {
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: -1 }) }, '−'),
           h('span', { className: 'tt-lablabel', style: { fontVariantNumeric: 'tabular-nums' } }, `OCT ${music.octave === undefined ? 4 : music.octave}`),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: 1 }) }, '+'),
+          music.lastMidi !== null && music.lastMidi !== undefined
+            ? h('span', { className: 'tt-badge', 'data-tone': 'good' }, `${t('arcade.music.lastNote')} ${TT.Arcade.midiName(music.lastMidi)}`)
+            : null,
           h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('arcade.music.pianoHint')),
         ),
         h('div', { className: 'tt-piano-scroll' },

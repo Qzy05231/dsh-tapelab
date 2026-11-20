@@ -1795,7 +1795,7 @@ TT.Missions = (function () {
       }
       case 'music/octave': {
         const base = state.arcade.music.octave === undefined ? 4 : state.arcade.music.octave
-        const octave = Math.max(0, Math.min(7, base + (Number(action.delta) || 0)))
+        const octave = Math.max(1, Math.min(6, base + (Number(action.delta) || 0)))
         return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, octave } } }
       }
       case 'music/tempo':

@@ -54,6 +54,10 @@ test('full piano maps keys, MIDI notes and octaves', () => {
   assert.equal(state.arcade.music.octave, 5)
   state = TT.Missions.reduce(state, { type: 'music/octave', delta: -2 })
   assert.equal(state.arcade.music.octave, 3)
+  state = TT.Missions.reduce(state, { type: 'music/octave', delta: 99 })
+  assert.equal(state.arcade.music.octave, 6)
+  state = TT.Missions.reduce(state, { type: 'music/octave', delta: -99 })
+  assert.equal(state.arcade.music.octave, 1)
 })
 
 
