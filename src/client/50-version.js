@@ -5,12 +5,21 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.5.0'
+  const VERSION = '1.6.0'
   const BUILT_AT = '2026-11-20'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.0',
+      date: '2026-11-20',
+      items: [
+        '应用三章随机场景：篡改节点/分块/镜像层每局随机，错误选择计入失误',
+        '支持在 3D 场景直接点击 relay 节点、分块和容器层进行检查',
+        '挑战模式中错误选择会真实影响星级',
+      ],
+    },
     {
       version: '1.5.0',
       date: '2026-11-20',

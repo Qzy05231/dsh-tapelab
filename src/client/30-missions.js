@@ -554,13 +554,13 @@ TT.Missions = (function () {
       }
     }
     if (index === 11) {
-      return { ...shared, step: 0, content: '', hash: '', strategy: '', published: false, tamperChecked: false, verified: false, done: false, log: [] }
+      return { ...shared, step: 0, content: '', hash: '', strategy: '', published: false, tamperNode: Math.floor(Math.random() * 3), tamperChecked: false, verified: false, done: false, mistakes: 0, log: [] }
     }
     if (index === 12) {
-      return { ...shared, step: 0, chunks: [], replicaCount: 0, replicated: false, recovered: false, tamperChecked: false, sent: false, done: false, log: [] }
+      return { ...shared, step: 0, chunks: [], replicaCount: 0, replicated: false, recovered: false, offlineNode: Math.floor(Math.random() * 3), tamperChunk: Math.floor(Math.random() * 4), tamperChecked: false, sent: false, done: false, mistakes: 0, log: [] }
     }
     if (index === 13) {
-      return { ...shared, step: 0, base: '', image: '', auth: false, limits: false, verified: false, running: false, done: false, log: [] }
+      return { ...shared, step: 0, base: '', image: '', auth: false, limits: false, tamperLayer: Math.floor(Math.random() * 3), verified: false, running: false, done: false, mistakes: 0, log: [] }
     }
     return {
       ...shared,
@@ -749,6 +749,14 @@ TT.Missions = (function () {
     }
   }
 
+  function bumpMistake(state) {
+    let next = { ...state, play: { ...state.play, mistakes: (state.play.mistakes || 0) + 1 } }
+    if (state.challenge && state.challenge.active) {
+      next = { ...next, challenge: { ...state.challenge, mistakes: (state.challenge.mistakes || 0) + 1 } }
+    }
+    return next
+  }
+
   function pushToast(state, key, params, tone) {
     const seq = (state.toastSeq || 0) + 1
     return { ...state, toastSeq: seq, toast: { id: seq, key, params: params || {}, tone: tone || 'info' } }
@@ -905,9 +913,11 @@ TT.Missions = (function () {
       play.hash = ''
       play.strategy = ''
       play.published = false
+      play.tamperNode = Math.floor(Math.random() * 3)
       play.tamperChecked = false
       play.verified = false
       play.done = false
+      play.mistakes = 0
       play.log = []
     }
     if (index === 12) {
@@ -916,9 +926,12 @@ TT.Missions = (function () {
       play.replicaCount = 0
       play.replicated = false
       play.recovered = false
+      play.offlineNode = Math.floor(Math.random() * 3)
+      play.tamperChunk = Math.floor(Math.random() * 4)
       play.tamperChecked = false
       play.sent = false
       play.done = false
+      play.mistakes = 0
       play.log = []
     }
     if (index === 13) {
@@ -927,9 +940,11 @@ TT.Missions = (function () {
       play.image = ''
       play.auth = false
       play.limits = false
+      play.tamperLayer = Math.floor(Math.random() * 3)
       play.verified = false
       play.running = false
       play.done = false
+      play.mistakes = 0
       play.log = []
     }
     return play
@@ -2016,14 +2031,19 @@ TT.Missions = (function () {
         return pushToast({ ...state, play: { ...state.play, strategy: 'pointer', step: 2 } }, 'deweb.strategyOk', {}, 'good')
       case 'deweb/strategyBad':
         if (state.chapter !== 11 || !state.play.hash) return state
-        return pushToast(state, 'deweb.strategyBad', {}, 'warn')
+        return pushToast(bumpMistake(state), 'deweb.strategyBad', {}, 'warn')
       case 'deweb/publish': {
         if (state.chapter !== 11 || state.play.strategy !== 'pointer') return state
         return { ...state, play: { ...state.play, published: true, step: 3 } }
       }
-      case 'deweb/tamper':
-        if (state.chapter !== 11 || !state.play.published) return state
-        return pushToast({ ...state, play: { ...state.play, tamperChecked: true, step: 4 } }, 'deweb.tamperOk', {}, 'good')
+      case 'deweb/inspect': {
+        if (state.chapter !== 11 || !state.play.published || state.play.tamperChecked) return state
+        const node = Math.max(0, Math.min(2, Number(action.node) || 0))
+        if (node === state.play.tamperNode) {
+          return pushToast({ ...state, play: { ...state.play, tamperChecked: true, step: 4 } }, 'deweb.tamperOk', {}, 'good')
+        }
+        return pushToast(bumpMistake(state), 'deweb.inspectBad', { n: node + 1 }, 'warn')
+      }
       case 'deweb/verify': {
         if (state.chapter !== 11 || !state.play.tamperChecked) return state
         const next = { ...state, play: { ...state.play, verified: true, done: true, step: 5 } }
@@ -2039,17 +2059,22 @@ TT.Missions = (function () {
         return pushToast({ ...state, play: { ...state.play, replicaCount: 3, step: 2 } }, 'relay.replicaOk', {}, 'good')
       case 'relay/replica1':
         if (state.chapter !== 12 || !(state.play.chunks || []).length) return state
-        return pushToast(state, 'relay.replicaBad', {}, 'warn')
+        return pushToast(bumpMistake(state), 'relay.replicaBad', {}, 'warn')
       case 'relay/replicate':
         if (state.chapter !== 12 || (state.play.replicaCount || 0) < 3) return state
         return { ...state, play: { ...state.play, replicated: true, step: 3 } }
       case 'relay/offline':
         if (state.chapter !== 12 || !state.play.replicated) return state
-        if ((state.play.replicaCount || 0) < 2) return pushToast(state, 'relay.recoverFail', {}, 'warn')
-        return pushToast({ ...state, play: { ...state.play, recovered: true, step: 4 } }, 'relay.recovered', {}, 'good')
-      case 'relay/tamper':
-        if (state.chapter !== 12 || !state.play.recovered) return state
-        return pushToast({ ...state, play: { ...state.play, tamperChecked: true, step: 5 } }, 'relay.tamperOk', {}, 'good')
+        if ((state.play.replicaCount || 0) < 2) return pushToast(bumpMistake(state), 'relay.recoverFail', {}, 'warn')
+        return pushToast({ ...state, play: { ...state.play, recovered: true, step: 4 } }, 'relay.recovered', { node: ['A', 'B', 'C'][state.play.offlineNode || 0] }, 'good')
+      case 'relay/inspect': {
+        if (state.chapter !== 12 || !state.play.recovered || state.play.tamperChecked) return state
+        const chunk = Math.max(0, Math.min(3, Number(action.chunk) || 0))
+        if (chunk === state.play.tamperChunk) {
+          return pushToast({ ...state, play: { ...state.play, tamperChecked: true, step: 5 } }, 'relay.tamperOk', {}, 'good')
+        }
+        return pushToast(bumpMistake(state), 'relay.inspectBad', { n: chunk + 1 }, 'warn')
+      }
       case 'relay/send': {
         if (state.chapter !== 12 || !state.play.tamperChecked) return state
         const next = { ...state, play: { ...state.play, sent: true, done: true, step: 6 } }
@@ -2060,7 +2085,7 @@ TT.Missions = (function () {
         return pushToast({ ...state, play: { ...state.play, base: 'tapeos-min', step: 1 } }, 'container.baseOk', {}, 'good')
       case 'container/baseBig':
         if (state.chapter !== 13) return state
-        return pushToast(state, 'container.baseBad', {}, 'warn')
+        return pushToast(bumpMistake(state), 'container.baseBad', {}, 'warn')
       case 'container/pack': {
         if (state.chapter !== 13 || !state.play.base || !TT.AppSims) return state
         const image = TT.AppSims.imageHash({ base: 'tapeos-min', circuit: 'half-adder', app: 'deweb-site' })
@@ -2071,13 +2096,18 @@ TT.Missions = (function () {
         return pushToast({ ...state, play: { ...state.play, auth: true, step: 3 } }, 'container.authOk', {}, 'good')
       case 'container/authAccount':
         if (state.chapter !== 13 || !state.play.image) return state
-        return pushToast(state, 'container.authBad', {}, 'warn')
+        return pushToast(bumpMistake(state), 'container.authBad', {}, 'warn')
       case 'container/limit':
         if (state.chapter !== 13 || !state.play.auth) return state
         return pushToast({ ...state, play: { ...state.play, limits: true, step: 4 } }, 'container.limitOk', {}, 'good')
-      case 'container/verify':
-        if (state.chapter !== 13 || !state.play.limits) return state
-        return pushToast({ ...state, play: { ...state.play, verified: true, step: 5 } }, 'container.verifyOk', {}, 'good')
+      case 'container/inspect': {
+        if (state.chapter !== 13 || !state.play.limits || state.play.verified) return state
+        const layer = Math.max(0, Math.min(2, Number(action.layer) || 0))
+        if (layer === state.play.tamperLayer) {
+          return pushToast({ ...state, play: { ...state.play, verified: true, step: 5 } }, 'container.verifyOk', {}, 'good')
+        }
+        return pushToast(bumpMistake(state), 'container.inspectBad', { n: layer + 1 }, 'warn')
+      }
       case 'container/run': {
         if (state.chapter !== 13 || !state.play.verified) return state
         const next = { ...state, play: { ...state.play, running: true, done: true, step: 6 } }
@@ -2779,7 +2809,7 @@ TT.Missions = (function () {
       if (!play.hash) return { key: 'hint.dewebHash', params: {} }
       if (!play.strategy) return { key: 'hint.dewebStrategy', params: {} }
       if (!play.published) return { key: 'hint.dewebPublish', params: {} }
-      if (!play.tamperChecked) return { key: 'hint.dewebTamper', params: {} }
+      if (!play.tamperChecked) return { key: 'hint.dewebInspect', params: {} }
       if (!play.verified) return { key: 'hint.dewebVerify', params: {} }
       return { key: 'hint.dewebDone', params: {} }
     }
@@ -2788,7 +2818,7 @@ TT.Missions = (function () {
       if (!(play.replicaCount || 0)) return { key: 'hint.relayReplica', params: {} }
       if (!play.replicated) return { key: 'hint.relayReplicate', params: {} }
       if (!play.recovered) return { key: 'hint.relayOffline', params: {} }
-      if (!play.tamperChecked) return { key: 'hint.relayTamper', params: {} }
+      if (!play.tamperChecked) return { key: 'hint.relayInspect', params: {} }
       if (!play.sent) return { key: 'hint.relaySend', params: {} }
       return { key: 'hint.relayDone', params: {} }
     }
@@ -2797,7 +2827,7 @@ TT.Missions = (function () {
       if (!play.image) return { key: 'hint.containerPack', params: {} }
       if (!play.auth) return { key: 'hint.containerAuth', params: {} }
       if (!play.limits) return { key: 'hint.containerLimit', params: {} }
-      if (!play.verified) return { key: 'hint.containerVerify', params: {} }
+      if (!play.verified) return { key: 'hint.containerInspect', params: {} }
       if (!play.running) return { key: 'hint.containerRun', params: {} }
       return { key: 'hint.containerDone', params: {} }
     }
@@ -2936,7 +2966,9 @@ TT.Missions = (function () {
       add('strategyOk', 'dock.dewebStrategyOk', { type: 'deweb/strategyOk' }, 'primary', { disabled: !play.hash || Boolean(play.strategy) })
       add('strategyBad', 'dock.dewebStrategyBad', { type: 'deweb/strategyBad' }, 'ghost', { disabled: !play.hash || Boolean(play.strategy) })
       add('publish', 'dock.dewebPublish', { type: 'deweb/publish' }, 'primary', { disabled: !play.strategy || Boolean(play.published) })
-      add('tamper', 'dock.dewebTamper', { type: 'deweb/tamper' }, 'secondary', { disabled: !play.published || Boolean(play.tamperChecked) })
+      if (play.published && !play.tamperChecked) {
+        ;[0, 1, 2].forEach((node) => add(`inspect-${node}`, 'dock.dewebInspect', { type: 'deweb/inspect', node }, 'secondary', { params: { n: node + 1 } }))
+      }
       add('verify', 'dock.dewebVerify', { type: 'deweb/verify' }, 'primary', { disabled: !play.tamperChecked || Boolean(play.verified) })
     }
     if (index === 12) {
@@ -2945,7 +2977,9 @@ TT.Missions = (function () {
       add('replica1', 'dock.relayReplica1', { type: 'relay/replica1' }, 'ghost', { disabled: (play.chunks || []).length === 0 || (play.replicaCount || 0) > 0 })
       add('replicate', 'dock.relayReplicate', { type: 'relay/replicate' }, 'primary', { disabled: (play.replicaCount || 0) < 3 || Boolean(play.replicated) })
       add('offline', 'dock.relayOffline', { type: 'relay/offline' }, 'secondary', { disabled: !play.replicated || Boolean(play.recovered) })
-      add('tamper', 'dock.relayTamper', { type: 'relay/tamper' }, 'secondary', { disabled: !play.recovered || Boolean(play.tamperChecked) })
+      if (play.recovered && !play.tamperChecked) {
+        ;[0, 1, 2, 3].forEach((chunk) => add(`inspect-${chunk}`, 'dock.relayInspect', { type: 'relay/inspect', chunk }, 'secondary', { params: { n: chunk + 1 } }))
+      }
       add('send', 'dock.relaySend', { type: 'relay/send' }, 'primary', { disabled: !play.tamperChecked || Boolean(play.sent) })
     }
     if (index === 13) {
@@ -2955,7 +2989,9 @@ TT.Missions = (function () {
       add('authNft', 'dock.containerAuthNft', { type: 'container/authNft' }, 'primary', { disabled: !play.image || Boolean(play.auth) })
       add('authAccount', 'dock.containerAuthAccount', { type: 'container/authAccount' }, 'ghost', { disabled: !play.image || Boolean(play.auth) })
       add('limit', 'dock.containerLimit', { type: 'container/limit' }, 'secondary', { disabled: !play.auth || Boolean(play.limits) })
-      add('verify', 'dock.containerVerify', { type: 'container/verify' }, 'secondary', { disabled: !play.limits || Boolean(play.verified) })
+      if (play.limits && !play.verified) {
+        ;[0, 1, 2].forEach((layer) => add(`inspect-${layer}`, 'dock.containerInspect', { type: 'container/inspect', layer }, 'secondary', { params: { n: layer + 1 } }))
+      }
       add('run', 'dock.containerRun', { type: 'container/run' }, 'primary', { disabled: !play.verified || Boolean(play.running) })
     }
     if (done && index < CHAPTERS.length - 1) {

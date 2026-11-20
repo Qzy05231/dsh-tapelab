@@ -1820,6 +1820,18 @@ TT.WorldView = (function () {
         api.dispatch({ type: 'seg/input', index: Number(id.split(':')[1]) })
         return
       }
+      if (id.indexOf('web:relay:') === 0 && state.chapter === 11) {
+        api.dispatch({ type: 'deweb/inspect', node: Number(id.split(':')[2]) })
+        return
+      }
+      if (id.indexOf('relay:chunk:') === 0 && state.chapter === 12) {
+        api.dispatch({ type: 'relay/inspect', chunk: Number(id.split(':')[2]) })
+        return
+      }
+      if (id.indexOf('box:layer:') === 0 && state.chapter === 13) {
+        api.dispatch({ type: 'container/inspect', layer: Number(id.split(':')[2]) })
+        return
+      }
       if (id.indexOf('safepad:') === 0 && state.chapter === 10) {
         api.dispatch({ type: 'safety/toggle', index: Number(id.split(':')[1]) })
         return
@@ -1854,6 +1866,9 @@ TT.WorldView = (function () {
 
     function hoverLabel(state, id) {
       if (!id) return null
+      if (id.indexOf('web:relay:') === 0) return t('hover.webRelay', { n: Number(id.split(':')[2]) + 1 })
+      if (id.indexOf('relay:chunk:') === 0) return t('hover.relayChunk', { n: Number(id.split(':')[2]) + 1 })
+      if (id.indexOf('box:layer:') === 0) return t('hover.containerLayer', { n: Number(id.split(':')[2]) + 1 })
       if (id.indexOf('segpad:') === 0) return t('hover.segpad', { n: Number(id.split(':')[1]) })
       if (id.indexOf('safepad:') === 0) return t('hover.safepad', { n: Number(id.split(':')[1]) })
       if (id.indexOf('chip:') === 0) return t('hover.chip')

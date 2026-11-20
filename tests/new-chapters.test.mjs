@@ -18,7 +18,10 @@ function complete(index, goalCount, actions) {
   state = M.reduce(state, { type: 'chapter/select', index })
   assert.equal(state.chapter, index)
   assert.equal(M.chapterGoals(state).length, goalCount)
-  for (const action of actions) state = M.reduce(state, action)
+  for (const step of actions) {
+    const action = typeof step === 'function' ? step(state) : step
+    state = M.reduce(state, action)
+  }
   return state
 }
 
@@ -28,7 +31,8 @@ test('DeWeb chapter publishes, checks tampering and verifies a site', () => {
     { type: 'deweb/strategyBad' },
     { type: 'deweb/strategyOk' },
     { type: 'deweb/publish' },
-    { type: 'deweb/tamper' },
+    (s) => ({ type: 'deweb/inspect', node: (s.play.tamperNode + 1) % 3 }),
+    (s) => ({ type: 'deweb/inspect', node: s.play.tamperNode }),
     { type: 'deweb/verify' },
   ])
   assert.ok(state.play.hash.startsWith('deweb://'))
@@ -46,7 +50,8 @@ test('TapeRelay chapter rejects one replica, recovers and sends', () => {
     { type: 'relay/replica3' },
     { type: 'relay/replicate' },
     { type: 'relay/offline' },
-    { type: 'relay/tamper' },
+    (s) => ({ type: 'relay/inspect', chunk: (s.play.tamperChunk + 1) % 4 }),
+    (s) => ({ type: 'relay/inspect', chunk: s.play.tamperChunk }),
     { type: 'relay/send' },
   ])
   assert.equal(state.play.replicaCount, 3)
@@ -64,7 +69,8 @@ test('container chapter chooses a minimal base, limits and verifies', () => {
     { type: 'container/authAccount' },
     { type: 'container/authNft' },
     { type: 'container/limit' },
-    { type: 'container/verify' },
+    (s) => ({ type: 'container/inspect', layer: (s.play.tamperLayer + 1) % 3 }),
+    (s) => ({ type: 'container/inspect', layer: s.play.tamperLayer }),
     { type: 'container/run' },
   ])
   assert.equal(state.play.base, 'tapeos-min')

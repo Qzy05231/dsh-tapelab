@@ -5549,13 +5549,13 @@ TT.Missions = (function () {
       }
     }
     if (index === 11) {
-      return { ...shared, step: 0, content: '', hash: '', strategy: '', published: false, tamperChecked: false, verified: false, done: false, log: [] }
+      return { ...shared, step: 0, content: '', hash: '', strategy: '', published: false, tamperNode: Math.floor(Math.random() * 3), tamperChecked: false, verified: false, done: false, mistakes: 0, log: [] }
     }
     if (index === 12) {
-      return { ...shared, step: 0, chunks: [], replicaCount: 0, replicated: false, recovered: false, tamperChecked: false, sent: false, done: false, log: [] }
+      return { ...shared, step: 0, chunks: [], replicaCount: 0, replicated: false, recovered: false, offlineNode: Math.floor(Math.random() * 3), tamperChunk: Math.floor(Math.random() * 4), tamperChecked: false, sent: false, done: false, mistakes: 0, log: [] }
     }
     if (index === 13) {
-      return { ...shared, step: 0, base: '', image: '', auth: false, limits: false, verified: false, running: false, done: false, log: [] }
+      return { ...shared, step: 0, base: '', image: '', auth: false, limits: false, tamperLayer: Math.floor(Math.random() * 3), verified: false, running: false, done: false, mistakes: 0, log: [] }
     }
     return {
       ...shared,
@@ -5744,6 +5744,14 @@ TT.Missions = (function () {
     }
   }
 
+  function bumpMistake(state) {
+    let next = { ...state, play: { ...state.play, mistakes: (state.play.mistakes || 0) + 1 } }
+    if (state.challenge && state.challenge.active) {
+      next = { ...next, challenge: { ...state.challenge, mistakes: (state.challenge.mistakes || 0) + 1 } }
+    }
+    return next
+  }
+
   function pushToast(state, key, params, tone) {
     const seq = (state.toastSeq || 0) + 1
     return { ...state, toastSeq: seq, toast: { id: seq, key, params: params || {}, tone: tone || 'info' } }
@@ -5900,9 +5908,11 @@ TT.Missions = (function () {
       play.hash = ''
       play.strategy = ''
       play.published = false
+      play.tamperNode = Math.floor(Math.random() * 3)
       play.tamperChecked = false
       play.verified = false
       play.done = false
+      play.mistakes = 0
       play.log = []
     }
     if (index === 12) {
@@ -5911,9 +5921,12 @@ TT.Missions = (function () {
       play.replicaCount = 0
       play.replicated = false
       play.recovered = false
+      play.offlineNode = Math.floor(Math.random() * 3)
+      play.tamperChunk = Math.floor(Math.random() * 4)
       play.tamperChecked = false
       play.sent = false
       play.done = false
+      play.mistakes = 0
       play.log = []
     }
     if (index === 13) {
@@ -5922,9 +5935,11 @@ TT.Missions = (function () {
       play.image = ''
       play.auth = false
       play.limits = false
+      play.tamperLayer = Math.floor(Math.random() * 3)
       play.verified = false
       play.running = false
       play.done = false
+      play.mistakes = 0
       play.log = []
     }
     return play
@@ -7011,14 +7026,19 @@ TT.Missions = (function () {
         return pushToast({ ...state, play: { ...state.play, strategy: 'pointer', step: 2 } }, 'deweb.strategyOk', {}, 'good')
       case 'deweb/strategyBad':
         if (state.chapter !== 11 || !state.play.hash) return state
-        return pushToast(state, 'deweb.strategyBad', {}, 'warn')
+        return pushToast(bumpMistake(state), 'deweb.strategyBad', {}, 'warn')
       case 'deweb/publish': {
         if (state.chapter !== 11 || state.play.strategy !== 'pointer') return state
         return { ...state, play: { ...state.play, published: true, step: 3 } }
       }
-      case 'deweb/tamper':
-        if (state.chapter !== 11 || !state.play.published) return state
-        return pushToast({ ...state, play: { ...state.play, tamperChecked: true, step: 4 } }, 'deweb.tamperOk', {}, 'good')
+      case 'deweb/inspect': {
+        if (state.chapter !== 11 || !state.play.published || state.play.tamperChecked) return state
+        const node = Math.max(0, Math.min(2, Number(action.node) || 0))
+        if (node === state.play.tamperNode) {
+          return pushToast({ ...state, play: { ...state.play, tamperChecked: true, step: 4 } }, 'deweb.tamperOk', {}, 'good')
+        }
+        return pushToast(bumpMistake(state), 'deweb.inspectBad', { n: node + 1 }, 'warn')
+      }
       case 'deweb/verify': {
         if (state.chapter !== 11 || !state.play.tamperChecked) return state
         const next = { ...state, play: { ...state.play, verified: true, done: true, step: 5 } }
@@ -7034,17 +7054,22 @@ TT.Missions = (function () {
         return pushToast({ ...state, play: { ...state.play, replicaCount: 3, step: 2 } }, 'relay.replicaOk', {}, 'good')
       case 'relay/replica1':
         if (state.chapter !== 12 || !(state.play.chunks || []).length) return state
-        return pushToast(state, 'relay.replicaBad', {}, 'warn')
+        return pushToast(bumpMistake(state), 'relay.replicaBad', {}, 'warn')
       case 'relay/replicate':
         if (state.chapter !== 12 || (state.play.replicaCount || 0) < 3) return state
         return { ...state, play: { ...state.play, replicated: true, step: 3 } }
       case 'relay/offline':
         if (state.chapter !== 12 || !state.play.replicated) return state
-        if ((state.play.replicaCount || 0) < 2) return pushToast(state, 'relay.recoverFail', {}, 'warn')
-        return pushToast({ ...state, play: { ...state.play, recovered: true, step: 4 } }, 'relay.recovered', {}, 'good')
-      case 'relay/tamper':
-        if (state.chapter !== 12 || !state.play.recovered) return state
-        return pushToast({ ...state, play: { ...state.play, tamperChecked: true, step: 5 } }, 'relay.tamperOk', {}, 'good')
+        if ((state.play.replicaCount || 0) < 2) return pushToast(bumpMistake(state), 'relay.recoverFail', {}, 'warn')
+        return pushToast({ ...state, play: { ...state.play, recovered: true, step: 4 } }, 'relay.recovered', { node: ['A', 'B', 'C'][state.play.offlineNode || 0] }, 'good')
+      case 'relay/inspect': {
+        if (state.chapter !== 12 || !state.play.recovered || state.play.tamperChecked) return state
+        const chunk = Math.max(0, Math.min(3, Number(action.chunk) || 0))
+        if (chunk === state.play.tamperChunk) {
+          return pushToast({ ...state, play: { ...state.play, tamperChecked: true, step: 5 } }, 'relay.tamperOk', {}, 'good')
+        }
+        return pushToast(bumpMistake(state), 'relay.inspectBad', { n: chunk + 1 }, 'warn')
+      }
       case 'relay/send': {
         if (state.chapter !== 12 || !state.play.tamperChecked) return state
         const next = { ...state, play: { ...state.play, sent: true, done: true, step: 6 } }
@@ -7055,7 +7080,7 @@ TT.Missions = (function () {
         return pushToast({ ...state, play: { ...state.play, base: 'tapeos-min', step: 1 } }, 'container.baseOk', {}, 'good')
       case 'container/baseBig':
         if (state.chapter !== 13) return state
-        return pushToast(state, 'container.baseBad', {}, 'warn')
+        return pushToast(bumpMistake(state), 'container.baseBad', {}, 'warn')
       case 'container/pack': {
         if (state.chapter !== 13 || !state.play.base || !TT.AppSims) return state
         const image = TT.AppSims.imageHash({ base: 'tapeos-min', circuit: 'half-adder', app: 'deweb-site' })
@@ -7066,13 +7091,18 @@ TT.Missions = (function () {
         return pushToast({ ...state, play: { ...state.play, auth: true, step: 3 } }, 'container.authOk', {}, 'good')
       case 'container/authAccount':
         if (state.chapter !== 13 || !state.play.image) return state
-        return pushToast(state, 'container.authBad', {}, 'warn')
+        return pushToast(bumpMistake(state), 'container.authBad', {}, 'warn')
       case 'container/limit':
         if (state.chapter !== 13 || !state.play.auth) return state
         return pushToast({ ...state, play: { ...state.play, limits: true, step: 4 } }, 'container.limitOk', {}, 'good')
-      case 'container/verify':
-        if (state.chapter !== 13 || !state.play.limits) return state
-        return pushToast({ ...state, play: { ...state.play, verified: true, step: 5 } }, 'container.verifyOk', {}, 'good')
+      case 'container/inspect': {
+        if (state.chapter !== 13 || !state.play.limits || state.play.verified) return state
+        const layer = Math.max(0, Math.min(2, Number(action.layer) || 0))
+        if (layer === state.play.tamperLayer) {
+          return pushToast({ ...state, play: { ...state.play, verified: true, step: 5 } }, 'container.verifyOk', {}, 'good')
+        }
+        return pushToast(bumpMistake(state), 'container.inspectBad', { n: layer + 1 }, 'warn')
+      }
       case 'container/run': {
         if (state.chapter !== 13 || !state.play.verified) return state
         const next = { ...state, play: { ...state.play, running: true, done: true, step: 6 } }
@@ -7774,7 +7804,7 @@ TT.Missions = (function () {
       if (!play.hash) return { key: 'hint.dewebHash', params: {} }
       if (!play.strategy) return { key: 'hint.dewebStrategy', params: {} }
       if (!play.published) return { key: 'hint.dewebPublish', params: {} }
-      if (!play.tamperChecked) return { key: 'hint.dewebTamper', params: {} }
+      if (!play.tamperChecked) return { key: 'hint.dewebInspect', params: {} }
       if (!play.verified) return { key: 'hint.dewebVerify', params: {} }
       return { key: 'hint.dewebDone', params: {} }
     }
@@ -7783,7 +7813,7 @@ TT.Missions = (function () {
       if (!(play.replicaCount || 0)) return { key: 'hint.relayReplica', params: {} }
       if (!play.replicated) return { key: 'hint.relayReplicate', params: {} }
       if (!play.recovered) return { key: 'hint.relayOffline', params: {} }
-      if (!play.tamperChecked) return { key: 'hint.relayTamper', params: {} }
+      if (!play.tamperChecked) return { key: 'hint.relayInspect', params: {} }
       if (!play.sent) return { key: 'hint.relaySend', params: {} }
       return { key: 'hint.relayDone', params: {} }
     }
@@ -7792,7 +7822,7 @@ TT.Missions = (function () {
       if (!play.image) return { key: 'hint.containerPack', params: {} }
       if (!play.auth) return { key: 'hint.containerAuth', params: {} }
       if (!play.limits) return { key: 'hint.containerLimit', params: {} }
-      if (!play.verified) return { key: 'hint.containerVerify', params: {} }
+      if (!play.verified) return { key: 'hint.containerInspect', params: {} }
       if (!play.running) return { key: 'hint.containerRun', params: {} }
       return { key: 'hint.containerDone', params: {} }
     }
@@ -7931,7 +7961,9 @@ TT.Missions = (function () {
       add('strategyOk', 'dock.dewebStrategyOk', { type: 'deweb/strategyOk' }, 'primary', { disabled: !play.hash || Boolean(play.strategy) })
       add('strategyBad', 'dock.dewebStrategyBad', { type: 'deweb/strategyBad' }, 'ghost', { disabled: !play.hash || Boolean(play.strategy) })
       add('publish', 'dock.dewebPublish', { type: 'deweb/publish' }, 'primary', { disabled: !play.strategy || Boolean(play.published) })
-      add('tamper', 'dock.dewebTamper', { type: 'deweb/tamper' }, 'secondary', { disabled: !play.published || Boolean(play.tamperChecked) })
+      if (play.published && !play.tamperChecked) {
+        ;[0, 1, 2].forEach((node) => add(`inspect-${node}`, 'dock.dewebInspect', { type: 'deweb/inspect', node }, 'secondary', { params: { n: node + 1 } }))
+      }
       add('verify', 'dock.dewebVerify', { type: 'deweb/verify' }, 'primary', { disabled: !play.tamperChecked || Boolean(play.verified) })
     }
     if (index === 12) {
@@ -7940,7 +7972,9 @@ TT.Missions = (function () {
       add('replica1', 'dock.relayReplica1', { type: 'relay/replica1' }, 'ghost', { disabled: (play.chunks || []).length === 0 || (play.replicaCount || 0) > 0 })
       add('replicate', 'dock.relayReplicate', { type: 'relay/replicate' }, 'primary', { disabled: (play.replicaCount || 0) < 3 || Boolean(play.replicated) })
       add('offline', 'dock.relayOffline', { type: 'relay/offline' }, 'secondary', { disabled: !play.replicated || Boolean(play.recovered) })
-      add('tamper', 'dock.relayTamper', { type: 'relay/tamper' }, 'secondary', { disabled: !play.recovered || Boolean(play.tamperChecked) })
+      if (play.recovered && !play.tamperChecked) {
+        ;[0, 1, 2, 3].forEach((chunk) => add(`inspect-${chunk}`, 'dock.relayInspect', { type: 'relay/inspect', chunk }, 'secondary', { params: { n: chunk + 1 } }))
+      }
       add('send', 'dock.relaySend', { type: 'relay/send' }, 'primary', { disabled: !play.tamperChecked || Boolean(play.sent) })
     }
     if (index === 13) {
@@ -7950,7 +7984,9 @@ TT.Missions = (function () {
       add('authNft', 'dock.containerAuthNft', { type: 'container/authNft' }, 'primary', { disabled: !play.image || Boolean(play.auth) })
       add('authAccount', 'dock.containerAuthAccount', { type: 'container/authAccount' }, 'ghost', { disabled: !play.image || Boolean(play.auth) })
       add('limit', 'dock.containerLimit', { type: 'container/limit' }, 'secondary', { disabled: !play.auth || Boolean(play.limits) })
-      add('verify', 'dock.containerVerify', { type: 'container/verify' }, 'secondary', { disabled: !play.limits || Boolean(play.verified) })
+      if (play.limits && !play.verified) {
+        ;[0, 1, 2].forEach((layer) => add(`inspect-${layer}`, 'dock.containerInspect', { type: 'container/inspect', layer }, 'secondary', { params: { n: layer + 1 } }))
+      }
       add('run', 'dock.containerRun', { type: 'container/run' }, 'primary', { disabled: !play.verified || Boolean(play.running) })
     }
     if (done && index < CHAPTERS.length - 1) {
@@ -13238,12 +13274,21 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.5.0'
+  const VERSION = '1.6.0'
   const BUILT_AT = '2026-11-20'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.0',
+      date: '2026-11-20',
+      items: [
+        '应用三章随机场景：篡改节点/分块/镜像层每局随机，错误选择计入失误',
+        '支持在 3D 场景直接点击 relay 节点、分块和容器层进行检查',
+        '挑战模式中错误选择会真实影响星级',
+      ],
+    },
     {
       version: '1.5.0',
       date: '2026-11-20',
@@ -13996,6 +14041,20 @@ TT.dict = {
     'goal.containerAuth': '绑定电路 NFT 权限',
     'goal.containerRun': '启动并完成检查',
     'dock.dewebHash': '计算哈希指针',
+    'dock.dewebInspect': '检查节点 {n}',
+    'dock.relayInspect': '检查分块 {n}',
+    'dock.containerInspect': '检查镜像层 {n}',
+    'hint.dewebInspect': '在 3D 里点击 relay 节点（或下方按钮）逐个检查，找出返回内容被篡改的那个。',
+    'hint.relayInspect': '点击 3D 里的分块（或按钮），找出哈希不匹配的那一块。',
+    'hint.containerInspect': '点击容器镜像层（或按钮），找出被篡改的一层。',
+    'deweb.inspectBad': '节点 {n} 数据正常；继续检查其他节点。',
+    'relay.inspectBad': '分块 {n} 校验通过；继续检查。',
+    'container.inspectBad': '镜像层 {n} 正常；继续检查。',
+    'relay.recovered': '节点 {node} 下线，从剩余副本恢复成功。',
+    'hover.webRelay': 'Relay 节点 {n} · 点击检查',
+    'hover.relayChunk': '分块 {n} · 点击检查',
+    'hover.containerLayer': '容器层 {n} · 点击检查',
+
     'dock.dewebStrategyOk': '只把哈希指针上链',
     'dock.dewebStrategyBad': '把整页内容上链',
     'dock.dewebTamper': '模拟节点篡改并校验',
@@ -14028,7 +14087,6 @@ TT.dict = {
     'deweb.tamperOk': '客户端发现篡改并拒收，校验通过。',
     'relay.replicaOk': '正确：3 份副本可容忍任意 1 个节点离线。',
     'relay.replicaBad': '不够：1 份副本无法在节点下线时恢复。',
-    'relay.recovered': '从剩余副本恢复成功。',
     'relay.recoverFail': '副本不足，恢复失败——需要至少 3 份副本。',
     'relay.tamperOk': '客户端发现分块哈希不匹配，拒收。',
     'container.baseOk': '最小镜像：攻击面更小。',
@@ -15196,6 +15254,20 @@ TT.dict = {
     'goal.containerAuth': 'Bind circuit NFT ownership',
     'goal.containerRun': 'Start and pass checks',
     'dock.dewebHash': 'Compute hash pointer',
+    'dock.dewebInspect': 'Inspect node {n}',
+    'dock.relayInspect': 'Inspect chunk {n}',
+    'dock.containerInspect': 'Inspect layer {n}',
+    'hint.dewebInspect': 'Click relay nodes in 3D (or the buttons) to find the one returning tampered data.',
+    'hint.relayInspect': 'Click chunks in 3D (or the buttons) to find the one with a hash mismatch.',
+    'hint.containerInspect': 'Click image layers (or the buttons) to find the tampered one.',
+    'deweb.inspectBad': 'Node {n} is healthy; keep checking the others.',
+    'relay.inspectBad': 'Chunk {n} verified; keep checking.',
+    'container.inspectBad': 'Layer {n} is fine; keep checking.',
+    'relay.recovered': 'Node {node} went offline; recovered from the remaining replicas.',
+    'hover.webRelay': 'Relay node {n} · click to inspect',
+    'hover.relayChunk': 'Chunk {n} · click to inspect',
+    'hover.containerLayer': 'Container layer {n} · click to inspect',
+
     'dock.dewebStrategyOk': 'Put only the hash pointer on chain',
     'dock.dewebStrategyBad': 'Put the whole page on chain',
     'dock.dewebTamper': 'Simulate tamper & verify',
@@ -15228,7 +15300,6 @@ TT.dict = {
     'deweb.tamperOk': 'The client caught the tampering and rejected it.',
     'relay.replicaOk': 'Correct: 3 replicas tolerate any single node failure.',
     'relay.replicaBad': 'Not enough: 1 replica cannot survive a node going offline.',
-    'relay.recovered': 'Recovered from the remaining replicas.',
     'relay.recoverFail': 'Recovery failed: you need at least 3 replicas.',
     'relay.tamperOk': 'Chunk hash mismatch: the client refused it.',
     'container.baseOk': 'Minimal image: smaller attack surface.',
@@ -19306,6 +19377,18 @@ TT.WorldView = (function () {
         api.dispatch({ type: 'seg/input', index: Number(id.split(':')[1]) })
         return
       }
+      if (id.indexOf('web:relay:') === 0 && state.chapter === 11) {
+        api.dispatch({ type: 'deweb/inspect', node: Number(id.split(':')[2]) })
+        return
+      }
+      if (id.indexOf('relay:chunk:') === 0 && state.chapter === 12) {
+        api.dispatch({ type: 'relay/inspect', chunk: Number(id.split(':')[2]) })
+        return
+      }
+      if (id.indexOf('box:layer:') === 0 && state.chapter === 13) {
+        api.dispatch({ type: 'container/inspect', layer: Number(id.split(':')[2]) })
+        return
+      }
       if (id.indexOf('safepad:') === 0 && state.chapter === 10) {
         api.dispatch({ type: 'safety/toggle', index: Number(id.split(':')[1]) })
         return
@@ -19340,6 +19423,9 @@ TT.WorldView = (function () {
 
     function hoverLabel(state, id) {
       if (!id) return null
+      if (id.indexOf('web:relay:') === 0) return t('hover.webRelay', { n: Number(id.split(':')[2]) + 1 })
+      if (id.indexOf('relay:chunk:') === 0) return t('hover.relayChunk', { n: Number(id.split(':')[2]) + 1 })
+      if (id.indexOf('box:layer:') === 0) return t('hover.containerLayer', { n: Number(id.split(':')[2]) + 1 })
       if (id.indexOf('segpad:') === 0) return t('hover.segpad', { n: Number(id.split(':')[1]) })
       if (id.indexOf('safepad:') === 0) return t('hover.safepad', { n: Number(id.split(':')[1]) })
       if (id.indexOf('chip:') === 0) return t('hover.chip')
