@@ -358,6 +358,7 @@ TT.LabUI = (function () {
     const { lab, t, api } = props
     const sandbox = lab.sandbox
     const [vcode, setVcode] = React.useState('')
+    const [gridView, setGridView] = React.useState(false)
     if (!sandbox) {
       return h('div', { className: 'tt-labcard' },
         h('div', { className: 'tt-labcardhead' }, h('strong', null, t('lab.sandbox.title'))),
@@ -392,12 +393,27 @@ TT.LabUI = (function () {
         h('span', null, `${sandbox.name} · ${TT.Circuit.gateCount(netlist)} ${t('lab.synth.gates')} · ${netlist.nIn} in / ${netlist.outputs.length} out`),
         h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
           onClick: () => api.dispatch({ type: 'lab/tab', tab: 'synth' }) }, '←'),
+        TT.NetlistGridUI ? h('button', {
+          type: 'button',
+          className: 'tt-chip',
+          'data-active': gridView ? 'true' : 'false',
+          onClick: () => setGridView((value) => !value),
+        }, gridView ? t('netgrid.view3d') : t('netgrid.viewgrid')) : null,
         TT.Export ? h('button', { type: 'button', className: 'tt-chip',
           onClick: () => copyText(api, TT.Export.verilog(netlist, sandbox.name)) }, t('lab.export.verilog')) : null,
         TT.Export ? h('button', { type: 'button', className: 'tt-chip',
           onClick: () => copyText(api, TT.Export.netlistJson(netlist)) }, t('lab.export.json')) : null,
       ),
-      h(SandboxCanvas, { netlist, inputs, api, t }),
+      gridView && TT.NetlistGridUI
+        ? h(TT.NetlistGridUI.Grid, {
+            netlist,
+            bits: inputs,
+            onToggle: (index) => api.dispatch({ type: 'lab/input', bits: inputs ^ (1 << index) }),
+            t,
+            inputLabels: Array.from({ length: netlist.nIn }, (_, index) => `I${index}`),
+            outputLabels: Array.from({ length: netlist.outputs.length }, (_, index) => `OUT${index}`),
+          })
+        : h(SandboxCanvas, { netlist, inputs, api, t }),
       h('div', { className: 'tt-labrow tt-sandboxinputs' },
         h('span', { className: 'tt-lablabel' }, t('lab.sandbox.inputs')),
         netlist.nIn > 16

@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.4'
+  const VERSION = '1.6.5'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.5',
+      date: '2026-11-21',
+      items: [
+        '通用门级网表网格：按逻辑深度分层、自动连线、拨输入、点门看 a/b/y 与信号值',
+        '第 11 章安全电路与实验室沙盒都支持 3D / 网表视图切换',
+      ],
+    },
     {
       version: '1.6.4',
       date: '2026-11-21',

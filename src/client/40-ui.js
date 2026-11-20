@@ -27,6 +27,14 @@ TT.dict = {
     'panel.introStart': '开始任务',
     'panel.intro': '章节说明',
     'panel.guide': '新手引导',
+    'netgrid.title': '安全电路网表',
+    'netgrid.open': '网表视图',
+    'netgrid.openHint': '16 输入 · 80 个 NAND · 4 输出，按 32 层逻辑深度排布',
+    'netgrid.hint': '点击任意门查看它的 a/b/y；点击输入拨动 0/1；高亮信号路径',
+    'netgrid.clear': '取消选择',
+    'netgrid.view3d': '3D 视图',
+    'netgrid.viewgrid': '网表视图',
+
     'panel.version': '版本与更新',
     'version.title': '版本与更新',
     'version.sub': '查看当前版本、更新日志，并检查 GitHub 上是否有新提交。',
@@ -1250,6 +1258,14 @@ TT.dict = {
     'panel.introStart': 'Start mission',
     'panel.intro': 'Chapter brief',
     'panel.guide': 'Getting started',
+    'netgrid.title': 'Safety netlist',
+    'netgrid.open': 'Netlist view',
+    'netgrid.openHint': '16 inputs · 80 NAND gates · 4 outputs, laid out over 32 logic levels',
+    'netgrid.hint': 'Click a gate for its a/b/y; toggle inputs; highlighted signal paths',
+    'netgrid.clear': 'Clear selection',
+    'netgrid.view3d': '3D view',
+    'netgrid.viewgrid': 'Netlist view',
+
     'panel.version': 'Version & updates',
     'version.title': 'Version & updates',
     'version.sub': 'See the current version, changelog and check GitHub for new commits.',
@@ -3122,6 +3138,44 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-piano-black-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
   box-shadow:0 0 16px rgba(255,195,92,.55); }
 
+.tt-netgridcard { width:min(1200px,96%); max-height:92vh; display:flex; flex-direction:column; }
+.tt-netgrid-wrap { min-height:0; display:flex; flex-direction:column; gap:6px; flex:1 1 auto; }
+.tt-netgrid { position:relative; overflow:auto; flex:1 1 auto; min-height:320px; max-height:64vh;
+  border-radius:12px; background:
+    radial-gradient(70% 50% at 20% 0%, rgba(86,225,255,.08), transparent 70%),
+    #050b12; border:1px solid rgba(86,225,255,.16); }
+.tt-netgrid-svg { position:absolute; inset:0; pointer-events:none; overflow:visible; }
+.tt-netgrid-wire { fill:none; stroke:rgba(86,225,255,.22); stroke-width:1.2; transition:stroke .15s ease; }
+.tt-netgrid-wire[data-on="true"] { stroke:rgba(255,195,92,.55); stroke-width:1.6; }
+.tt-netgrid-wire[data-highlight="true"] { stroke:#ffc35c; stroke-width:2.2; }
+.tt-netgrid-node { position:absolute; box-sizing:border-box; border-radius:8px; padding:3px 6px; font-size:9px;
+  display:flex; align-items:center; gap:4px; color:var(--tt-ink); background:rgba(7,18,28,.9);
+  border:1px solid rgba(86,225,255,.3); cursor:pointer; overflow:hidden; }
+.tt-netgrid-input { flex-direction:column; justify-content:center; align-items:flex-start; gap:1px; }
+.tt-netgrid-input b { font-size:8px; color:var(--tt-dim); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.tt-netgrid-input span { font-family:var(--dsh-font-family-mono, monospace); font-size:13px; color:var(--tt-faint); }
+.tt-netgrid-input[data-on="true"] { border-color:var(--tt-amber); box-shadow:0 0 10px rgba(255,195,92,.3); }
+.tt-netgrid-input[data-on="true"] span { color:var(--tt-amber); }
+.tt-netgrid-const { width:34px; height:26px; justify-content:center; color:var(--tt-faint); font-family:var(--dsh-font-family-mono, monospace); }
+.tt-netgrid-gate { flex-direction:column; gap:0; align-items:flex-start; justify-content:center;
+  background:rgba(8,22,34,.92); border-color:rgba(86,225,255,.28); }
+.tt-netgrid-gate[data-out="true"] { border-color:rgba(255,195,92,.65); background:rgba(255,195,92,.08); }
+.tt-netgrid-gate[data-selected="true"] { border-color:#fff; box-shadow:0 0 0 1px #fff, 0 0 14px rgba(255,255,255,.3); }
+.tt-netgrid-gatetag { font-family:var(--dsh-font-family-mono, monospace); font-size:8px; color:var(--tt-dim); white-space:nowrap; }
+.tt-netgrid-gateval { font-family:var(--dsh-font-family-mono, monospace); font-size:13px; color:var(--tt-mint); }
+.tt-netgrid-gate[data-out="true"] .tt-netgrid-gateval { color:var(--tt-amber); }
+.tt-netgrid-output { justify-content:space-between; border-color:rgba(43,230,194,.35); }
+.tt-netgrid-output i { width:8px; height:8px; border-radius:50%; background:#12303f; border:1px solid rgba(120,190,220,.4); flex:0 0 auto; }
+.tt-netgrid-output[data-on="true"] { border-color:var(--tt-amber); color:#ffe9ae; }
+.tt-netgrid-output[data-on="true"] i { background:var(--tt-amber); box-shadow:0 0 10px rgba(255,195,92,.7); }
+.tt-netgrid-output span { flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tt-netgrid-output b { font-family:var(--dsh-font-family-mono, monospace); color:var(--tt-amber); }
+.tt-netgrid-detail { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:6px 10px; border-radius:9px;
+  background:rgba(86,225,255,.06); border:1px solid rgba(86,225,255,.16); font-size:10.5px; color:var(--tt-dim); }
+.tt-netgrid-detail b { color:var(--tt-ink); }
+.tt-netgrid-detail span { font-family:var(--dsh-font-family-mono, monospace); }
+.tt-netgrid-hint { justify-content:space-between; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -3525,6 +3579,23 @@ TT.UI.Panel = function Panel(props) {
   ) : null
 
   const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
+  const netgrid = state.gridOpen && TT.NetlistGridUI ? TT.h('div', { className: 'tt-welcome' },
+    TT.h('div', { className: 'tt-welcomecard tt-netgridcard' },
+      TT.h('div', { className: 'tt-achvhead' },
+        TT.h('h2', { className: 'tt-introtitle' }, `🧮 ${t('netgrid.title')}`),
+        TT.h('button', { type: 'button', className: 'tt-achvclose', onClick: () => api.dispatch({ type: 'grid/close' }) }, '✕'),
+      ),
+      TT.h(TT.NetlistGridUI.Grid, {
+        netlist: TT.Safety.netlist(),
+        bits: (state.play && state.play.bits) || 0,
+        onToggle: (index) => api.dispatch({ type: 'safety/toggle', index }),
+        t,
+        inputLabels: TT.Safety.KEYS,
+        outputLabels: TT.Safety.OUTPUT_LABELS,
+        compact: true,
+      }),
+    ),
+  ) : null
 
   return TT.h('div', {
     className: 'tt-lab',
@@ -3715,6 +3786,10 @@ TT.UI.Panel = function Panel(props) {
             narrow ? null : TT.h('div', { className: 'tt-msub' }, resolve(chapter.subtitleKey)),
             TT.h(ChallengeBar, { state, t, api }),
             TT.h(TapeoutQuiz, { state, t, api }),
+            state.chapter === 10 ? TT.h('div', { className: 'tt-labrow' },
+              TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => api.dispatch({ type: 'grid/open' }) }, `🧮 ${t('netgrid.open')}`),
+              TT.h('span', { className: 'tt-lablabel' }, t('netgrid.openHint')),
+            ) : null,
             TT.h('ul', { className: 'tt-goals' }, goals.map((goal, index) =>
               TT.h('li', { key: index, className: 'tt-goal', 'data-done': goal.done ? 'true' : 'false' },
                 TT.h('span', { className: 'tt-check' }, '✓'),
@@ -3770,6 +3845,7 @@ TT.UI.Panel = function Panel(props) {
       welcome,
       achievements,
       versionModal,
+      netgrid,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),

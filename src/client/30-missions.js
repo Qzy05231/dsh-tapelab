@@ -581,6 +581,7 @@ TT.Missions = (function () {
       welcome: true,
       achvOpen: false,
       updateOpen: false,
+      gridOpen: false,
       sims: { deweb: false, relay: false, container: false },
       simOpen: null,
       unlocked: [],
@@ -1332,6 +1333,10 @@ TT.Missions = (function () {
         if (!id) return state
         return pushToast({ ...state, sims: { ...state.sims, [id]: true } }, 'sim.toast.done', {}, 'good')
       }
+      case 'grid/open':
+        return { ...state, gridOpen: true }
+      case 'grid/close':
+        return { ...state, gridOpen: false }
       case 'update/open':
         return { ...state, updateOpen: true }
       case 'update/close':

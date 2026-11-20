@@ -5576,6 +5576,7 @@ TT.Missions = (function () {
       welcome: true,
       achvOpen: false,
       updateOpen: false,
+      gridOpen: false,
       sims: { deweb: false, relay: false, container: false },
       simOpen: null,
       unlocked: [],
@@ -6327,6 +6328,10 @@ TT.Missions = (function () {
         if (!id) return state
         return pushToast({ ...state, sims: { ...state.sims, [id]: true } }, 'sim.toast.done', {}, 'good')
       }
+      case 'grid/open':
+        return { ...state, gridOpen: true }
+      case 'grid/close':
+        return { ...state, gridOpen: false }
       case 'update/open':
         return { ...state, updateOpen: true }
       case 'update/close':
@@ -8410,6 +8415,7 @@ TT.LabUI = (function () {
     const { lab, t, api } = props
     const sandbox = lab.sandbox
     const [vcode, setVcode] = React.useState('')
+    const [gridView, setGridView] = React.useState(false)
     if (!sandbox) {
       return h('div', { className: 'tt-labcard' },
         h('div', { className: 'tt-labcardhead' }, h('strong', null, t('lab.sandbox.title'))),
@@ -8444,12 +8450,27 @@ TT.LabUI = (function () {
         h('span', null, `${sandbox.name} · ${TT.Circuit.gateCount(netlist)} ${t('lab.synth.gates')} · ${netlist.nIn} in / ${netlist.outputs.length} out`),
         h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
           onClick: () => api.dispatch({ type: 'lab/tab', tab: 'synth' }) }, '←'),
+        TT.NetlistGridUI ? h('button', {
+          type: 'button',
+          className: 'tt-chip',
+          'data-active': gridView ? 'true' : 'false',
+          onClick: () => setGridView((value) => !value),
+        }, gridView ? t('netgrid.view3d') : t('netgrid.viewgrid')) : null,
         TT.Export ? h('button', { type: 'button', className: 'tt-chip',
           onClick: () => copyText(api, TT.Export.verilog(netlist, sandbox.name)) }, t('lab.export.verilog')) : null,
         TT.Export ? h('button', { type: 'button', className: 'tt-chip',
           onClick: () => copyText(api, TT.Export.netlistJson(netlist)) }, t('lab.export.json')) : null,
       ),
-      h(SandboxCanvas, { netlist, inputs, api, t }),
+      gridView && TT.NetlistGridUI
+        ? h(TT.NetlistGridUI.Grid, {
+            netlist,
+            bits: inputs,
+            onToggle: (index) => api.dispatch({ type: 'lab/input', bits: inputs ^ (1 << index) }),
+            t,
+            inputLabels: Array.from({ length: netlist.nIn }, (_, index) => `I${index}`),
+            outputLabels: Array.from({ length: netlist.outputs.length }, (_, index) => `OUT${index}`),
+          })
+        : h(SandboxCanvas, { netlist, inputs, api, t }),
       h('div', { className: 'tt-labrow tt-sandboxinputs' },
         h('span', { className: 'tt-lablabel' }, t('lab.sandbox.inputs')),
         netlist.nIn > 16
@@ -13491,12 +13512,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.4'
+  const VERSION = '1.6.5'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.5',
+      date: '2026-11-21',
+      items: [
+        '通用门级网表网格：按逻辑深度分层、自动连线、拨输入、点门看 a/b/y 与信号值',
+        '第 11 章安全电路与实验室沙盒都支持 3D / 网表视图切换',
+      ],
+    },
     {
       version: '1.6.4',
       date: '2026-11-21',
@@ -13699,6 +13728,199 @@ TT.VersionUI = (function () {
   return { Page }
 })()
 
+// ---- 52-netgrid.js ----
+/**
+ * 52-netgrid — reusable gate-level netlist grid.
+ *
+ * Lays a netlist out by logic depth (inputs on top, one row per level, outputs at
+ * the bottom), draws every wire as a bezier, and lets the user toggle inputs,
+ * inspect each NAND gate and see the computed 0/1 signal on every node.
+ */
+
+TT.NetlistGrid = (function () {
+  function nodeCount(netlist) {
+    return 2 + (netlist.nIn || 0) + (netlist.nState || 0) + netlist.gates.length
+  }
+
+  function layout(netlist) {
+    const nIn = netlist.nIn || 0
+    const nState = netlist.nState || 0
+    const n = nodeCount(netlist)
+    const depth = new Array(n).fill(0)
+    const driver = new Array(n).fill(-1)
+    depth[0] = 0
+    depth[1] = 0
+    for (let i = 0; i < nIn; i += 1) depth[2 + i] = 0
+    netlist.gates.forEach((gate, index) => {
+      const node = 2 + nIn + nState + index
+      depth[node] = 1 + Math.max(depth[gate.a] || 0, depth[gate.b] || 0)
+      driver[node] = index
+    })
+    const maxLevel = Math.max(1, ...netlist.gates.map((gate, index) => depth[2 + nIn + nState + index]))
+    const rows = Array.from({ length: maxLevel + 1 }, () => [])
+    netlist.gates.forEach((gate, index) => {
+      const node = 2 + nIn + nState + index
+      if (rows[depth[node]]) rows[depth[node]].push(index)
+      else rows[rows.length - 1].push(index)
+    })
+    const cellW = 104
+    const cellH = 46
+    const gapX = 12
+    const gapY = 26
+    const topY = 86
+    const widest = Math.max(nIn, ...rows.map((row) => row.length), 4)
+    const width = Math.max(720, widest * (cellW + gapX) + 120)
+    const nodes = Object.create(null)
+    const xFor = (count, index) => (width - count * cellW - (count - 1) * gapX) / 2 + index * (cellW + gapX)
+
+    nodes[0] = { x: 16, y: 18, w: 34, h: 26, kind: 'const', label: '0' }
+    nodes[1] = { x: 58, y: 18, w: 34, h: 26, kind: 'const', label: '1' }
+    for (let i = 0; i < nIn; i += 1) {
+      nodes[2 + i] = { x: xFor(nIn, i), y: 18, w: cellW, h: 44, kind: 'input', index: i }
+    }
+    const gateCards = []
+    for (let level = 1; level <= maxLevel; level += 1) {
+      const row = rows[level] || []
+      const y = topY + (level - 1) * (cellH + gapY)
+      row.forEach((gateIndex, column) => {
+        const gate = netlist.gates[gateIndex]
+        const node = 2 + nIn + nState + gateIndex
+        const card = { x: xFor(row.length, column), y, w: cellW, h: cellH, node, index: gateIndex, level, a: gate.a, b: gate.b }
+        gateCards.push(card)
+        nodes[node] = { x: card.x, y, w: cellW, h: cellH, kind: 'gate', card }
+      })
+    }
+    const outputY = topY + maxLevel * (cellH + gapY) + 14
+    const outputs = netlist.outputs.map((node, index) => {
+      const card = { x: xFor(netlist.outputs.length, index), y: outputY, w: cellW, h: 44, node, index }
+      return card
+    })
+    const height = outputY + 84
+    return { nodes, gateCards, outputs, width, height, maxLevel, rows, nIn }
+  }
+
+  function values(netlist, bits) {
+    return TT.Circuit.evaluate(netlist, Number(bits) || 0).signals
+  }
+
+  function inputLabel(labels, index) {
+    return labels && labels[index] !== undefined ? labels[index] : `I${index}`
+  }
+
+  return { nodeCount, layout, values, inputLabel }
+})()
+
+// --------------------------------------------------------------------------- UI
+
+TT.NetlistGridUI = (function () {
+  const h = TT.h
+
+  function pair(value) {
+    return { x: value.x + value.w / 2, y: value.y + value.h / 2 }
+  }
+
+  function Grid(props) {
+    const { netlist, bits, onToggle, t, inputLabels, outputLabels, compact } = props
+    const [selected, setSelected] = React.useState(null)
+    const plan = TT.NetlistGrid.layout(netlist)
+    const signals = TT.NetlistGrid.values(netlist, bits)
+    const node = (id) => plan.nodes[id]
+    const selectedCard = selected !== null ? plan.gateCards[selected] : null
+
+    // ancestors of the selected gate, for path highlighting
+    const highlighted = new Set()
+    if (selectedCard) {
+      const stack = [selectedCard.index]
+      while (stack.length) {
+        const index = stack.pop()
+        const gate = netlist.gates[index]
+        for (const source of [gate.a, gate.b]) {
+          highlighted.add(`n:${source}`)
+          const sourceDriver = plan.nodes[source] && plan.nodes[source].card
+          if (sourceDriver) stack.push(sourceDriver.index)
+        }
+      }
+    }
+
+    const edges = []
+    plan.gateCards.forEach((card) => {
+      const gate = netlist.gates[card.index]
+      for (const source of [gate.a, gate.b]) {
+        const sourceNode = node(source)
+        if (!sourceNode) continue
+        const from = pair(sourceNode)
+        const to = { x: card.x, y: card.y + card.h / 2 }
+        const active = signals[source] === 1
+        const isHighlight = selectedCard && (card.index === selectedCard.index || highlighted.has(`n:${source}`))
+        edges.push(h('path', {
+          key: `${card.index}-${source}`,
+          d: `M ${from.x} ${from.y} C ${(from.x + to.x) / 2} ${from.y}, ${(from.x + to.x) / 2} ${to.y}, ${to.x} ${to.y}`,
+          className: 'tt-netgrid-wire',
+          'data-on': active ? 'true' : 'false',
+          'data-highlight': isHighlight ? 'true' : 'false',
+          'data-level': card.level,
+        }))
+      }
+    })
+
+    return h('div', { className: 'tt-netgrid-wrap' },
+      h('div', { className: 'tt-netgrid', style: { width: plan.width, height: plan.height } },
+        h('svg', { className: 'tt-netgrid-svg', width: plan.width, height: plan.height, viewBox: `0 0 ${plan.width} ${plan.height}` }, edges),
+        // constants
+        [0, 1].map((id) => h('div', { key: id, className: 'tt-netgrid-node tt-netgrid-const', style: { left: node(id).x, top: node(id).y } }, `${id}`)),
+        // inputs
+        netlist.nIn <= 32 ? Array.from({ length: netlist.nIn }, (_, index) => {
+          const card = node(2 + index)
+          return h('button', {
+            key: `in-${index}`,
+            type: 'button',
+            className: 'tt-netgrid-node tt-netgrid-input',
+            'data-on': ((Number(bits) || 0) >> index) & 1 ? 'true' : 'false',
+            style: { left: card.x, top: card.y, width: card.w, height: card.h },
+            title: `${TT.NetlistGrid.inputLabel(inputLabels, index)} = ${((Number(bits) || 0) >> index) & 1}`,
+            onClick: () => onToggle && onToggle(index),
+          }, h('b', null, TT.NetlistGrid.inputLabel(inputLabels, index)), h('span', null, ((Number(bits) || 0) >> index) & 1 ? '1' : '0'))
+        }) : null,
+        // gates
+        plan.gateCards.map((card) => h('button', {
+          key: `g-${card.index}`,
+          type: 'button',
+          className: 'tt-netgrid-node tt-netgrid-gate',
+          'data-selected': selected === card.index ? 'true' : 'false',
+          'data-out': signals[card.node] === 1 ? 'true' : 'false',
+          style: { left: card.x, top: card.y, width: card.w, height: card.h },
+          title: `NAND #${card.index + 1} · a=${card.a} b=${card.b} y=${card.node}`,
+          onClick: () => setSelected(selected === card.index ? null : card.index),
+        },
+          h('span', { className: 'tt-netgrid-gatetag' }, `N${card.node} · L${card.level}`),
+          h('span', { className: 'tt-netgrid-gateval' }, String(signals[card.node] || 0)),
+        )),
+        // outputs
+        plan.outputs.map((card) => h('div', {
+          key: `out-${card.index}`,
+          className: 'tt-netgrid-node tt-netgrid-output',
+          'data-on': signals[card.node] === 1 ? 'true' : 'false',
+          style: { left: card.x, top: card.y, width: card.w, height: card.h },
+        }, h('i', null), h('span', null, outputLabels && outputLabels[card.index] ? outputLabels[card.index] : `OUT${card.index + 1}`), h('b', null, String(signals[card.node] || 0)))),
+      ),
+      selectedCard
+        ? h('div', { className: 'tt-netgrid-detail' },
+            h('b', null, `NAND #${selectedCard.index + 1} · L${selectedCard.level}`),
+            h('span', null, `a = node ${selectedCard.a} (${signals[selectedCard.a] || 0})`),
+            h('span', null, `b = node ${selectedCard.b} (${signals[selectedCard.b] || 0})`),
+            h('span', null, `y = node ${selectedCard.node} (${signals[selectedCard.node] || 0})`),
+            h('button', { type: 'button', className: 'tt-chip', onClick: () => setSelected(null) }, t('netgrid.clear')),
+          )
+        : h('div', { className: 'tt-netgrid-detail tt-netgrid-hint' },
+            h('span', null, t('netgrid.hint')),
+            h('span', null, `${netlist.gates.length} NAND · ${plan.maxLevel} L · ${netlist.nIn} in / ${netlist.outputs.length} out`),
+          ),
+    )
+  }
+
+  return { Grid }
+})()
+
 // ---- 40-ui.js ----
 /**
  * 40-ui — locale dictionaries, panel chrome, HUD, codex.
@@ -13729,6 +13951,14 @@ TT.dict = {
     'panel.introStart': '开始任务',
     'panel.intro': '章节说明',
     'panel.guide': '新手引导',
+    'netgrid.title': '安全电路网表',
+    'netgrid.open': '网表视图',
+    'netgrid.openHint': '16 输入 · 80 个 NAND · 4 输出，按 32 层逻辑深度排布',
+    'netgrid.hint': '点击任意门查看它的 a/b/y；点击输入拨动 0/1；高亮信号路径',
+    'netgrid.clear': '取消选择',
+    'netgrid.view3d': '3D 视图',
+    'netgrid.viewgrid': '网表视图',
+
     'panel.version': '版本与更新',
     'version.title': '版本与更新',
     'version.sub': '查看当前版本、更新日志，并检查 GitHub 上是否有新提交。',
@@ -14952,6 +15182,14 @@ TT.dict = {
     'panel.introStart': 'Start mission',
     'panel.intro': 'Chapter brief',
     'panel.guide': 'Getting started',
+    'netgrid.title': 'Safety netlist',
+    'netgrid.open': 'Netlist view',
+    'netgrid.openHint': '16 inputs · 80 NAND gates · 4 outputs, laid out over 32 logic levels',
+    'netgrid.hint': 'Click a gate for its a/b/y; toggle inputs; highlighted signal paths',
+    'netgrid.clear': 'Clear selection',
+    'netgrid.view3d': '3D view',
+    'netgrid.viewgrid': 'Netlist view',
+
     'panel.version': 'Version & updates',
     'version.title': 'Version & updates',
     'version.sub': 'See the current version, changelog and check GitHub for new commits.',
@@ -16824,6 +17062,44 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-piano-black-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
   box-shadow:0 0 16px rgba(255,195,92,.55); }
 
+.tt-netgridcard { width:min(1200px,96%); max-height:92vh; display:flex; flex-direction:column; }
+.tt-netgrid-wrap { min-height:0; display:flex; flex-direction:column; gap:6px; flex:1 1 auto; }
+.tt-netgrid { position:relative; overflow:auto; flex:1 1 auto; min-height:320px; max-height:64vh;
+  border-radius:12px; background:
+    radial-gradient(70% 50% at 20% 0%, rgba(86,225,255,.08), transparent 70%),
+    #050b12; border:1px solid rgba(86,225,255,.16); }
+.tt-netgrid-svg { position:absolute; inset:0; pointer-events:none; overflow:visible; }
+.tt-netgrid-wire { fill:none; stroke:rgba(86,225,255,.22); stroke-width:1.2; transition:stroke .15s ease; }
+.tt-netgrid-wire[data-on="true"] { stroke:rgba(255,195,92,.55); stroke-width:1.6; }
+.tt-netgrid-wire[data-highlight="true"] { stroke:#ffc35c; stroke-width:2.2; }
+.tt-netgrid-node { position:absolute; box-sizing:border-box; border-radius:8px; padding:3px 6px; font-size:9px;
+  display:flex; align-items:center; gap:4px; color:var(--tt-ink); background:rgba(7,18,28,.9);
+  border:1px solid rgba(86,225,255,.3); cursor:pointer; overflow:hidden; }
+.tt-netgrid-input { flex-direction:column; justify-content:center; align-items:flex-start; gap:1px; }
+.tt-netgrid-input b { font-size:8px; color:var(--tt-dim); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.tt-netgrid-input span { font-family:var(--dsh-font-family-mono, monospace); font-size:13px; color:var(--tt-faint); }
+.tt-netgrid-input[data-on="true"] { border-color:var(--tt-amber); box-shadow:0 0 10px rgba(255,195,92,.3); }
+.tt-netgrid-input[data-on="true"] span { color:var(--tt-amber); }
+.tt-netgrid-const { width:34px; height:26px; justify-content:center; color:var(--tt-faint); font-family:var(--dsh-font-family-mono, monospace); }
+.tt-netgrid-gate { flex-direction:column; gap:0; align-items:flex-start; justify-content:center;
+  background:rgba(8,22,34,.92); border-color:rgba(86,225,255,.28); }
+.tt-netgrid-gate[data-out="true"] { border-color:rgba(255,195,92,.65); background:rgba(255,195,92,.08); }
+.tt-netgrid-gate[data-selected="true"] { border-color:#fff; box-shadow:0 0 0 1px #fff, 0 0 14px rgba(255,255,255,.3); }
+.tt-netgrid-gatetag { font-family:var(--dsh-font-family-mono, monospace); font-size:8px; color:var(--tt-dim); white-space:nowrap; }
+.tt-netgrid-gateval { font-family:var(--dsh-font-family-mono, monospace); font-size:13px; color:var(--tt-mint); }
+.tt-netgrid-gate[data-out="true"] .tt-netgrid-gateval { color:var(--tt-amber); }
+.tt-netgrid-output { justify-content:space-between; border-color:rgba(43,230,194,.35); }
+.tt-netgrid-output i { width:8px; height:8px; border-radius:50%; background:#12303f; border:1px solid rgba(120,190,220,.4); flex:0 0 auto; }
+.tt-netgrid-output[data-on="true"] { border-color:var(--tt-amber); color:#ffe9ae; }
+.tt-netgrid-output[data-on="true"] i { background:var(--tt-amber); box-shadow:0 0 10px rgba(255,195,92,.7); }
+.tt-netgrid-output span { flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tt-netgrid-output b { font-family:var(--dsh-font-family-mono, monospace); color:var(--tt-amber); }
+.tt-netgrid-detail { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:6px 10px; border-radius:9px;
+  background:rgba(86,225,255,.06); border:1px solid rgba(86,225,255,.16); font-size:10.5px; color:var(--tt-dim); }
+.tt-netgrid-detail b { color:var(--tt-ink); }
+.tt-netgrid-detail span { font-family:var(--dsh-font-family-mono, monospace); }
+.tt-netgrid-hint { justify-content:space-between; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -17227,6 +17503,23 @@ TT.UI.Panel = function Panel(props) {
   ) : null
 
   const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
+  const netgrid = state.gridOpen && TT.NetlistGridUI ? TT.h('div', { className: 'tt-welcome' },
+    TT.h('div', { className: 'tt-welcomecard tt-netgridcard' },
+      TT.h('div', { className: 'tt-achvhead' },
+        TT.h('h2', { className: 'tt-introtitle' }, `🧮 ${t('netgrid.title')}`),
+        TT.h('button', { type: 'button', className: 'tt-achvclose', onClick: () => api.dispatch({ type: 'grid/close' }) }, '✕'),
+      ),
+      TT.h(TT.NetlistGridUI.Grid, {
+        netlist: TT.Safety.netlist(),
+        bits: (state.play && state.play.bits) || 0,
+        onToggle: (index) => api.dispatch({ type: 'safety/toggle', index }),
+        t,
+        inputLabels: TT.Safety.KEYS,
+        outputLabels: TT.Safety.OUTPUT_LABELS,
+        compact: true,
+      }),
+    ),
+  ) : null
 
   return TT.h('div', {
     className: 'tt-lab',
@@ -17417,6 +17710,10 @@ TT.UI.Panel = function Panel(props) {
             narrow ? null : TT.h('div', { className: 'tt-msub' }, resolve(chapter.subtitleKey)),
             TT.h(ChallengeBar, { state, t, api }),
             TT.h(TapeoutQuiz, { state, t, api }),
+            state.chapter === 10 ? TT.h('div', { className: 'tt-labrow' },
+              TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => api.dispatch({ type: 'grid/open' }) }, `🧮 ${t('netgrid.open')}`),
+              TT.h('span', { className: 'tt-lablabel' }, t('netgrid.openHint')),
+            ) : null,
             TT.h('ul', { className: 'tt-goals' }, goals.map((goal, index) =>
               TT.h('li', { key: index, className: 'tt-goal', 'data-done': goal.done ? 'true' : 'false' },
                 TT.h('span', { className: 'tt-check' }, '✓'),
@@ -17472,6 +17769,7 @@ TT.UI.Panel = function Panel(props) {
       welcome,
       achievements,
       versionModal,
+      netgrid,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),
