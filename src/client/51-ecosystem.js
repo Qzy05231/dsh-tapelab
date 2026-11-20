@@ -15,12 +15,12 @@ TT.Ecosystem = (function () {
 
   // Only the Official category of the TapeOut ecosystem hub (tapeout.link).
   const PROJECTS = [
-    { id: 'tapeout', name: 'TapeOut', category: 'protocol', radius: 86, desc: '官方链上流片协议：铸造 NAND / LATCH 元件，在画布上连线组成电路，再流片为电路 NFT。', links: [{ label: '官网', url: 'https://tapeout.net/' }] },
-    { id: 'blonskr', name: 'Blonskr · X', category: 'official', radius: 74, desc: 'TapeOut 发起人的官方账号：协议公告、产品发布与重大决策的首要发布渠道。', links: [{ label: 'X', url: 'https://x.com/blonskr' }] },
-    { id: 'tapehub', name: 'TapeHub.ai', category: 'launchpad', radius: 78, desc: '官方生态发射台：创建挖矿币项目（池币 BEM / BNB / USD1）并用它铸造晶体管；毕业后 99% 池币与 5000 万项目币配对并上 PancakeSwap，95% 代币用于挖矿。', links: [{ label: '官网', url: 'https://tapehub.ai/' }] },
-    { id: 'tapekit', name: 'TapeKit', category: 'infra', radius: 76, desc: 'tape:// 的官方公共网关：把链上电路容器里的网站用普通浏览器打开；按链上地址跳转子域名，内容哈希在浏览器端验证，无服务器、无 DNS。', links: [{ label: '官网', url: 'https://tapekit.org/' }] },
+    { id: 'tapeout', name: 'TapeOut', category: 'protocol', radius: 62, desc: '官方链上流片协议：铸造 NAND / LATCH 元件，在画布上连线组成电路，再流片为电路 NFT。', links: [{ label: '官网', url: 'https://tapeout.net/' }] },
+    { id: 'blonskr', name: 'Blonskr · X', category: 'official', radius: 54, desc: 'TapeOut 发起人的官方账号：协议公告、产品发布与重大决策的首要发布渠道。', links: [{ label: 'X', url: 'https://x.com/blonskr' }] },
+    { id: 'tapehub', name: 'TapeHub.ai', category: 'launchpad', radius: 56, desc: '官方生态发射台：创建挖矿币项目（池币 BEM / BNB / USD1）并用它铸造晶体管；毕业后 99% 池币与 5000 万项目币配对并上 PancakeSwap，95% 代币用于挖矿。', links: [{ label: '官网', url: 'https://tapehub.ai/' }] },
+    { id: 'tapekit', name: 'TapeKit', category: 'infra', radius: 55, desc: 'tape:// 的官方公共网关：把链上电路容器里的网站用普通浏览器打开；按链上地址跳转子域名，内容哈希在浏览器端验证，无服务器、无 DNS。', links: [{ label: '官网', url: 'https://tapekit.org/' }] },
     { id: 'tapecode', name: 'TapeCode.ai', category: 'ai', radius: 78, desc: '官方 AI 应用构建器：一句话生成合约与前端，约 10 分钟上线；合约归你的电路容器所有，使用需要钱包登录与 BEM 余额。', links: [{ label: '官网', url: 'https://tapecode.ai/' }] },
-    { id: 'taperelay', name: 'TapeRelay', category: 'infra', radius: 80, desc: '官方 XIP 提案（与 X Layer）：客户端验证的去中心化文件与消息网络；1 MiB SHA-256 分块、零 gas 消息、5 个官方节点，每个电路每个节点 5 GiB 免费额度。', links: [{ label: '官网', url: 'https://taperelay.com/' }] },
+    { id: 'taperelay', name: 'TapeRelay', category: 'infra', radius: 58, desc: '官方 XIP 提案（与 X Layer）：客户端验证的去中心化文件与消息网络；1 MiB SHA-256 分块、零 gas 消息、5 个官方节点，每个电路每个节点 5 GiB 免费额度。', links: [{ label: '官网', url: 'https://taperelay.com/' }] },
   ]
 
   function hash32(text) {
@@ -47,7 +47,7 @@ TT.Ecosystem = (function () {
   function makeBubbles(width, height) {
     const random = rng(20261120)
     return PROJECTS.map((project) => {
-      const radius = Math.max(30, project.radius * Math.min(1, width / 900))
+      const radius = Math.max(24, project.radius * Math.min(0.9, width / 1150))
       return {
         id: project.id,
         x: radius + random() * Math.max(1, width - radius * 2),
@@ -232,8 +232,8 @@ TT.EcosystemUI = (function () {
           const gy = bubble.y - radius * 0.42
 
           const halo = context.createRadialGradient(bubble.x, bubble.y, radius * 0.62, bubble.x, bubble.y, radius * 1.5)
-          halo.addColorStop(0, rgba(color, selected || hovered ? 0.34 : 0.22))
-          halo.addColorStop(0.55, rgba(color, 0.1))
+          halo.addColorStop(0, rgba(color, selected || hovered ? 0.18 : 0.12))
+          halo.addColorStop(0.55, rgba(color, 0.045))
           halo.addColorStop(1, rgba(color, 0))
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius * 1.5, 0, Math.PI * 2)
@@ -245,10 +245,10 @@ TT.EcosystemUI = (function () {
           context.shadowBlur = radius * 0.55
           context.shadowOffsetY = radius * 0.18
           const body = context.createRadialGradient(gx, gy, radius * 0.05, bubble.x, bubble.y, radius)
-          body.addColorStop(0, rgba(light, 0.98))
-          body.addColorStop(0.26, rgba(color, 0.94))
-          body.addColorStop(0.7, rgba(color, 0.62))
-          body.addColorStop(1, rgba(color, 0.3))
+          body.addColorStop(0, rgba(light, 0.72))
+          body.addColorStop(0.28, rgba(color, 0.62))
+          body.addColorStop(0.7, rgba(color, 0.36))
+          body.addColorStop(1, rgba(color, 0.12))
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius, 0, Math.PI * 2)
           context.fillStyle = body
@@ -257,8 +257,8 @@ TT.EcosystemUI = (function () {
 
           const shade = context.createRadialGradient(bubble.x + radius * 0.18, bubble.y + radius * 0.4, radius * 0.08, bubble.x, bubble.y, radius)
           shade.addColorStop(0, 'rgba(0,16,24,0)')
-          shade.addColorStop(0.72, 'rgba(0,16,24,0.06)')
-          shade.addColorStop(1, 'rgba(0,16,24,0.42)')
+          shade.addColorStop(0.72, 'rgba(0,16,24,0.04)')
+          shade.addColorStop(1, 'rgba(0,16,24,0.26)')
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius, 0, Math.PI * 2)
           context.fillStyle = shade
@@ -267,15 +267,15 @@ TT.EcosystemUI = (function () {
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius * 0.995, 0, Math.PI * 2)
           context.lineWidth = selected ? 2.6 : 1.4
-          context.strokeStyle = selected ? 'rgba(255,255,255,.95)' : rgba(light, 0.55)
+          context.strokeStyle = selected ? 'rgba(255,255,255,.85)' : rgba(light, 0.32)
           context.stroke()
 
           context.save()
           context.translate(gx, gy)
           context.rotate(-0.55)
           const spec = context.createRadialGradient(0, 0, 1, 0, 0, radius * 0.44)
-          spec.addColorStop(0, 'rgba(255,255,255,.95)')
-          spec.addColorStop(0.45, 'rgba(255,255,255,.3)')
+          spec.addColorStop(0, 'rgba(255,255,255,.78)')
+          spec.addColorStop(0.45, 'rgba(255,255,255,.2)')
           spec.addColorStop(1, 'rgba(255,255,255,0)')
           context.beginPath()
           context.ellipse(0, 0, radius * 0.36, radius * 0.2, 0, 0, Math.PI * 2)
@@ -285,22 +285,22 @@ TT.EcosystemUI = (function () {
 
           context.beginPath()
           context.arc(bubble.x + radius * 0.26, bubble.y + radius * 0.38, radius * 0.1, 0, Math.PI * 2)
-          context.fillStyle = 'rgba(255,255,255,.16)'
+          context.fillStyle = 'rgba(255,255,255,.12)'
           context.fill()
           context.beginPath()
           context.arc(gx + radius * 0.06, gy + radius * 0.04, radius * 0.045, 0, Math.PI * 2)
-          context.fillStyle = 'rgba(255,255,255,.9)'
+          context.fillStyle = 'rgba(255,255,255,.72)'
           context.fill()
 
           const label = project.name
           context.fillStyle = 'rgba(8,16,28,.86)'
-          context.font = `700 ${Math.max(11, radius * 0.2)}px ui-sans-serif, -apple-system, sans-serif`
+          context.font = `700 ${Math.max(10, radius * 0.19)}px ui-sans-serif, -apple-system, sans-serif`
           context.textAlign = 'center'
           context.textBaseline = 'middle'
           context.shadowColor = 'rgba(255,255,255,.55)'
           context.shadowBlur = 6
           const lines = label.length > 13 ? label.split(' / ') : [label]
-          const lineHeight = Math.max(12, radius * 0.24)
+          const lineHeight = Math.max(11, radius * 0.22)
           lines.slice(0, 2).forEach((line, index) => {
             context.fillText(line, bubble.x, bubble.y + (index - (lines.length - 1) / 2) * lineHeight)
           })
