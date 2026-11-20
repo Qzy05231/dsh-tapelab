@@ -699,7 +699,7 @@ TT.Missions = (function () {
     const pattern = TT.Arcade ? TT.Arcade.pattern('heart') : new Array(64).fill(0)
     return {
       game: 'music',
-      music: { playing: false, tempo: 420, scale: 0, tune: 0, step: 0 },
+      music: { playing: false, tempo: 420, scale: 0, tune: 0, step: 0, octave: 4, lastMidi: null },
       pixel: { bits: pattern, anim: false },
       lock: { code: 9, guess: 0, attempts: 0, maxAttempts: 6, last: null, solved: false, failed: false, bestAttempts: null },
       guess: { secret: 11, guess: 0, tries: 0, maxTries: 5, history: [], solved: false, score: 0 },
@@ -1790,11 +1790,12 @@ TT.Missions = (function () {
         return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, step } } }
       }
       case 'music/key': {
-        const key = Math.max(0, Math.min(24, Number(action.key) || 0))
-        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, lastKey: key, lastKeyAt: Date.now() } } }
+        const midi = Math.max(21, Math.min(108, Number(action.midi !== undefined ? action.midi : action.key) || 60))
+        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, lastMidi: midi, lastKeyAt: Date.now() } } }
       }
       case 'music/octave': {
-        const octave = Math.max(-1, Math.min(2, (state.arcade.music.octave || 0) + (Number(action.delta) || 0)))
+        const base = state.arcade.music.octave === undefined ? 4 : state.arcade.music.octave
+        const octave = Math.max(0, Math.min(7, base + (Number(action.delta) || 0)))
         return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, octave } } }
       }
       case 'music/tempo':

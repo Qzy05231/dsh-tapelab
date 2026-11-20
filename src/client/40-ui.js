@@ -372,7 +372,7 @@ TT.dict = {
     'arcade.music.now': '当前音',
     'arcade.music.next': '下一音',
     'arcade.music.piano': '键盘钢琴',
-    'arcade.music.pianoHint': 'A/W/S/E/D/F/T/G/Y/H/U/J/K 弹奏，Z/X 切换八度',
+    'arcade.music.pianoHint': '完整 A0–C8：点击琴键，或键盘 Z/S/X… 与 Q/2/W… 两排弹奏；←/→ 换八度',
     'arcade.music.preview': '点击试听这个音',
     'arcade.music.how': '它在门级上是什么',
     'arcade.music.howBody': '真实实现会用一个 4 位计数器（4 个锁存器 + 15 个与非门）驱动音阶表：每个出块计数器加一，取出的值选中一个频率，再由蜂鸣器发声。这就是「用链上出块做音乐」。',
@@ -1594,7 +1594,7 @@ TT.dict = {
     'arcade.music.now': 'Now',
     'arcade.music.next': 'Next note',
     'arcade.music.piano': 'Keyboard piano',
-    'arcade.music.pianoHint': 'Play A/W/S/E/D/F/T/G/Y/H/U/J/K, Z/X to change octave',
+    'arcade.music.pianoHint': 'Full A0–C8: click keys or use the Z/S/X… and Q/2/W… rows; ←/→ changes octave',
     'arcade.music.preview': 'Click to audition this note',
     'arcade.music.how': 'What it is at gate level',
     'arcade.music.howBody': 'A real build uses a 4-bit counter (4 latches + 15 NAND gates) to drive a note table: every block increments the counter, selects a frequency and beeps. That is music driven by chain blocks.',
@@ -3104,6 +3104,21 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-piano-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
   box-shadow:0 0 14px rgba(255,195,92,.55); color:#1a1206; }
 
+.tt-piano-scroll { overflow-x:auto; padding:6px 6px 8px; margin:4px 0 8px; border-radius:10px;
+  background:rgba(4,12,20,.55); border:1px solid rgba(86,225,255,.14); }
+.tt-piano-full { position:relative; display:flex; align-items:flex-start; height:112px; }
+.tt-piano-white { flex:0 0 28px; width:28px; height:112px; display:flex; align-items:flex-end; justify-content:center;
+  padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 5px 5px; cursor:pointer;
+  background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:8px; user-select:none; }
+.tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
+.tt-piano-white[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
+  box-shadow:inset 0 0 18px rgba(255,195,92,.6); }
+.tt-piano-black-key { position:absolute; top:0; width:18px; height:66px; z-index:2; cursor:pointer;
+  border-radius:0 0 4px 4px; border:1px solid rgba(86,225,255,.3);
+  background:linear-gradient(180deg,#22303c,#070d13); user-select:none; }
+.tt-piano-black-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
+  box-shadow:0 0 16px rgba(255,195,92,.55); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -3328,16 +3343,17 @@ TT.UI.Panel = function Panel(props) {
       }
       if (current.mode === 'arcade' && current.arcade.game === 'music' && TT.Arcade) {
         const pianoKey = (event.key || '').toLowerCase()
-        const semitone = TT.Arcade.PIANO_KEYS[pianoKey]
-        if (semitone !== undefined) {
+        const base = current.arcade.music.octave === undefined ? 4 : current.arcade.music.octave
+        const midi = TT.Arcade.keyToMidi(pianoKey, base)
+        if (midi !== null) {
           event.preventDefault()
           event.stopPropagation()
-          api.dispatch({ type: 'music/key', key: semitone })
+          api.dispatch({ type: 'music/key', midi })
           return
         }
-        if (pianoKey === 'z' || pianoKey === 'x') {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
           event.preventDefault()
-          api.dispatch({ type: 'music/octave', delta: pianoKey === 'z' ? -1 : 1 })
+          api.dispatch({ type: 'music/octave', delta: event.key === 'ArrowLeft' ? -1 : 1 })
           return
         }
       }

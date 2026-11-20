@@ -377,8 +377,8 @@ dispatch({ type: 'cinema/set', active: false })
       }
       if (after !== before) playSounds(before, after, action)
       if (action.type === 'music/key' && TT.Audio && TT.Arcade) {
-        const semitone = Number(action.key) || 0
-        TT.Audio.note(TT.Arcade.pianoFreq(semitone, after.arcade.music.octave || 0), 0.42, 'triangle', 0.24)
+        const midi = Number(action.midi !== undefined ? action.midi : action.key) || 60
+        TT.Audio.note(TT.Arcade.midiFreq(midi), 0.42, 'triangle', 0.24)
       }
       manageArcadeTimers(after)
       return after

@@ -5694,7 +5694,7 @@ TT.Missions = (function () {
     const pattern = TT.Arcade ? TT.Arcade.pattern('heart') : new Array(64).fill(0)
     return {
       game: 'music',
-      music: { playing: false, tempo: 420, scale: 0, tune: 0, step: 0 },
+      music: { playing: false, tempo: 420, scale: 0, tune: 0, step: 0, octave: 4, lastMidi: null },
       pixel: { bits: pattern, anim: false },
       lock: { code: 9, guess: 0, attempts: 0, maxAttempts: 6, last: null, solved: false, failed: false, bestAttempts: null },
       guess: { secret: 11, guess: 0, tries: 0, maxTries: 5, history: [], solved: false, score: 0 },
@@ -6785,11 +6785,12 @@ TT.Missions = (function () {
         return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, step } } }
       }
       case 'music/key': {
-        const key = Math.max(0, Math.min(24, Number(action.key) || 0))
-        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, lastKey: key, lastKeyAt: Date.now() } } }
+        const midi = Math.max(21, Math.min(108, Number(action.midi !== undefined ? action.midi : action.key) || 60))
+        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, lastMidi: midi, lastKeyAt: Date.now() } } }
       }
       case 'music/octave': {
-        const octave = Math.max(-1, Math.min(2, (state.arcade.music.octave || 0) + (Number(action.delta) || 0)))
+        const base = state.arcade.music.octave === undefined ? 4 : state.arcade.music.octave
+        const octave = Math.max(0, Math.min(7, base + (Number(action.delta) || 0)))
         return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, octave } } }
       }
       case 'music/tempo':
@@ -8816,22 +8817,6 @@ TT.Arcade = (function () {
     return tune.notes.reduce((sum, note) => sum + note.beats, 0)
   }
 
-  // Piano keyboard: chromatic C4..C5, piano-style two rows.
-  const PIANO_KEYS = {
-    a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12,
-  }
-  const PIANO_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
-  const PIANO_BLACK = [1, 3, 6, 8, 10]
-
-  function pianoFreq(semitone, octave) {
-    const shift = (Number(octave) || 0) * 12
-    return NOTE_BASE * Math.pow(2, (Number(semitone) + shift) / 12)
-  }
-  function pianoName(semitone, octave) {
-    const value = Math.max(0, Number(semitone) || 0)
-    return PIANO_NAMES[value % 12] + (4 + (Number(octave) || 0) + Math.floor(value / 12))
-  }
-
   const NOTE_BASE = 261.63 // C4
 
   function freq(step, scaleIndex) {
@@ -8844,9 +8829,44 @@ TT.Arcade = (function () {
     if (step < 0) return '·'
     const scale = SCALES[scaleIndex % SCALES.length] || SCALES[0]
     const semis = scale.steps[Math.min(step, scale.steps.length - 1)]
-    const names = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
-    return names[semis % 12] + (4 + Math.floor(semis / 12))
+    return CHROMATIC[semis % 12] + (4 + Math.floor(semis / 12))
   }
+
+  // Full 88-key piano support. The computer keyboard covers two octaves
+  // (virtual-piano style), and the octave base shifts the mapping across A0–C8.
+  const PIANO_KEYS = {
+    z: 0, s: 1, x: 2, d: 3, c: 4, v: 5, g: 6, b: 7, h: 8, n: 9, j: 10, m: 11, ',': 12,
+    q: 12, '2': 13, w: 14, '3': 15, e: 16, r: 17, '5': 18, t: 19, '6': 20, y: 21, '7': 22, u: 23, i: 24,
+  }
+  const PIANO_MIN = 21 // A0
+  const PIANO_MAX = 108 // C8
+  const CHROMATIC = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
+  const BLACK_NOTES = [1, 3, 6, 8, 10]
+
+  function isBlackMidi(midi) {
+    return BLACK_NOTES.indexOf(((Number(midi) % 12) + 12) % 12) >= 0
+  }
+  function midiName(midi) {
+    const value = Math.max(0, Math.min(127, Number(midi) || 0))
+    return CHROMATIC[value % 12] + (Math.floor(value / 12) - 1)
+  }
+  function midiFreq(midi) {
+    return 440 * Math.pow(2, ((Number(midi) || 69) - 69) / 12)
+  }
+  function keyToMidi(key, octave) {
+    const offset = PIANO_KEYS[String(key || '').toLowerCase()]
+    if (offset === undefined) return null
+    return Math.max(PIANO_MIN, Math.min(PIANO_MAX, 12 * ((Number(octave) || 4) + 1) + offset))
+  }
+
+  // keep the old helper names working for any callers
+  function pianoFreq(semitone, octave) {
+    return midiFreq(12 * ((Number(octave) || 4) + 1) + (Number(semitone) || 0))
+  }
+  function pianoName(semitone, octave) {
+    return midiName(12 * ((Number(octave) || 4) + 1) + (Number(semitone) || 0))
+  }
+
   function stepAmplitude(step, scaleIndex) {
     if (step < 0) return 0
     const scale = SCALES[scaleIndex % SCALES.length] || SCALES[0]
@@ -9066,7 +9086,12 @@ TT.Arcade = (function () {
     noteAt,
     tuneBeats,
     PIANO_KEYS,
-    PIANO_BLACK,
+    PIANO_MIN,
+    PIANO_MAX,
+    isBlackMidi,
+    midiName,
+    midiFreq,
+    keyToMidi,
     pianoFreq,
     pianoName,
     PATTERNS: PATTERN_KEYS,
@@ -9150,6 +9175,19 @@ TT.ArcadeUI = (function () {
     const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
     const windowStart = Math.max(0, Math.min(tune.notes.length - 16, (music.step | 0) - 7))
     const notes = tune.notes.slice(windowStart, windowStart + 16)
+    const whiteKeys = []
+    const blackKeys = []
+    for (let midi = TT.Arcade.PIANO_MIN; midi <= TT.Arcade.PIANO_MAX; midi += 1) {
+      if (TT.Arcade.isBlackMidi(midi)) blackKeys.push(midi)
+      else whiteKeys.push(midi)
+    }
+    const pianoRef = React.useRef(null)
+    React.useEffect(() => {
+      const el = pianoRef.current
+      if (!el) return
+      const cIndex = whiteKeys.indexOf(12 * ((music.octave === undefined ? 4 : music.octave) + 1))
+      if (cIndex >= 0) el.scrollLeft = Math.max(0, cIndex * 28 - 140)
+    }, [music.octave])
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
         h('div', { className: 'tt-labrow' },
@@ -9212,34 +9250,33 @@ TT.ArcadeUI = (function () {
         h('div', { className: 'tt-labrow' },
           h('span', { className: 'tt-lablabel' }, t('arcade.music.piano')),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: -1 }) }, '−'),
-          h('span', { className: 'tt-lablabel', style: { fontVariantNumeric: 'tabular-nums' } }, `OCT ${music.octave || 0}`),
+          h('span', { className: 'tt-lablabel', style: { fontVariantNumeric: 'tabular-nums' } }, `OCT ${music.octave === undefined ? 4 : music.octave}`),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: 1 }) }, '+'),
           h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('arcade.music.pianoHint')),
         ),
-        h('div', { className: 'tt-piano' },
-          h('div', { className: 'tt-piano-row tt-piano-black' }, TT.Arcade.PIANO_BLACK.map((semitone) => {
-            const letter = Object.keys(TT.Arcade.PIANO_KEYS).find((key) => TT.Arcade.PIANO_KEYS[key] === semitone)
-            return h('button', {
-              key: semitone,
+        h('div', { className: 'tt-piano-scroll', ref: pianoRef },
+          h('div', { className: 'tt-piano-full', style: { width: `${whiteKeys.length * 28}px` } },
+            whiteKeys.map((midi) => h('button', {
+              key: midi,
               type: 'button',
-              className: 'tt-piano-key',
-              'data-black': 'true',
-              'data-active': music.lastKey === semitone ? 'true' : 'false',
-              title: `${TT.Arcade.pianoName(semitone, music.octave || 0)} · ${letter.toUpperCase()}`,
-              onClick: () => api.dispatch({ type: 'music/key', key: semitone }),
-            }, h('span', null, TT.Arcade.pianoName(semitone, music.octave || 0)), h('kbd', null, letter.toUpperCase()))
-          })),
-          h('div', { className: 'tt-piano-row' }, [0, 2, 4, 5, 7, 9, 11, 12].map((semitone) => {
-            const letter = Object.keys(TT.Arcade.PIANO_KEYS).find((key) => TT.Arcade.PIANO_KEYS[key] === semitone)
-            return h('button', {
-              key: semitone,
-              type: 'button',
-              className: 'tt-piano-key',
-              'data-active': music.lastKey === semitone ? 'true' : 'false',
-              title: `${TT.Arcade.pianoName(semitone, music.octave || 0)} · ${letter.toUpperCase()}`,
-              onClick: () => api.dispatch({ type: 'music/key', key: semitone }),
-            }, h('span', null, TT.Arcade.pianoName(semitone, music.octave || 0)), h('kbd', null, letter.toUpperCase()))
-          })),
+              className: 'tt-piano-white',
+              'data-active': music.lastMidi === midi ? 'true' : 'false',
+              title: TT.Arcade.midiName(midi),
+              onClick: () => api.dispatch({ type: 'music/key', midi }),
+            }, h('span', null, midi % 12 === 0 ? TT.Arcade.midiName(midi) : ''))),
+            blackKeys.map((midi) => {
+              const whiteIndex = whiteKeys.indexOf(midi - 1)
+              return h('button', {
+                key: midi,
+                type: 'button',
+                className: 'tt-piano-black-key',
+                'data-active': music.lastMidi === midi ? 'true' : 'false',
+                title: TT.Arcade.midiName(midi),
+                style: { left: `${whiteIndex * 28 + 28 - 9}px` },
+                onClick: () => api.dispatch({ type: 'music/key', midi }),
+              })
+            }),
+          ),
         ),
         h('div', { className: 'tt-labrow' },
           h('button', {
@@ -13442,12 +13479,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.3'
+  const VERSION = '1.6.4'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.4',
+      date: '2026-11-21',
+      items: [
+        'NAND 音乐盒新增完整 88 键钢琴（A0–C8），可点击或键盘两排弹奏',
+        '修复《欢乐颂》音高与《小星星》节奏，音符按拍数播放',
+      ],
+    },
     {
       version: '1.6.3',
       date: '2026-11-21',
@@ -14017,7 +14062,7 @@ TT.dict = {
     'arcade.music.now': '当前音',
     'arcade.music.next': '下一音',
     'arcade.music.piano': '键盘钢琴',
-    'arcade.music.pianoHint': 'A/W/S/E/D/F/T/G/Y/H/U/J/K 弹奏，Z/X 切换八度',
+    'arcade.music.pianoHint': '完整 A0–C8：点击琴键，或键盘 Z/S/X… 与 Q/2/W… 两排弹奏；←/→ 换八度',
     'arcade.music.preview': '点击试听这个音',
     'arcade.music.how': '它在门级上是什么',
     'arcade.music.howBody': '真实实现会用一个 4 位计数器（4 个锁存器 + 15 个与非门）驱动音阶表：每个出块计数器加一，取出的值选中一个频率，再由蜂鸣器发声。这就是「用链上出块做音乐」。',
@@ -15239,7 +15284,7 @@ TT.dict = {
     'arcade.music.now': 'Now',
     'arcade.music.next': 'Next note',
     'arcade.music.piano': 'Keyboard piano',
-    'arcade.music.pianoHint': 'Play A/W/S/E/D/F/T/G/Y/H/U/J/K, Z/X to change octave',
+    'arcade.music.pianoHint': 'Full A0–C8: click keys or use the Z/S/X… and Q/2/W… rows; ←/→ changes octave',
     'arcade.music.preview': 'Click to audition this note',
     'arcade.music.how': 'What it is at gate level',
     'arcade.music.howBody': 'A real build uses a 4-bit counter (4 latches + 15 NAND gates) to drive a note table: every block increments the counter, selects a frequency and beeps. That is music driven by chain blocks.',
@@ -16749,6 +16794,21 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-piano-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
   box-shadow:0 0 14px rgba(255,195,92,.55); color:#1a1206; }
 
+.tt-piano-scroll { overflow-x:auto; padding:6px 6px 8px; margin:4px 0 8px; border-radius:10px;
+  background:rgba(4,12,20,.55); border:1px solid rgba(86,225,255,.14); }
+.tt-piano-full { position:relative; display:flex; align-items:flex-start; height:112px; }
+.tt-piano-white { flex:0 0 28px; width:28px; height:112px; display:flex; align-items:flex-end; justify-content:center;
+  padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 5px 5px; cursor:pointer;
+  background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:8px; user-select:none; }
+.tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
+.tt-piano-white[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
+  box-shadow:inset 0 0 18px rgba(255,195,92,.6); }
+.tt-piano-black-key { position:absolute; top:0; width:18px; height:66px; z-index:2; cursor:pointer;
+  border-radius:0 0 4px 4px; border:1px solid rgba(86,225,255,.3);
+  background:linear-gradient(180deg,#22303c,#070d13); user-select:none; }
+.tt-piano-black-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
+  box-shadow:0 0 16px rgba(255,195,92,.55); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -16973,16 +17033,17 @@ TT.UI.Panel = function Panel(props) {
       }
       if (current.mode === 'arcade' && current.arcade.game === 'music' && TT.Arcade) {
         const pianoKey = (event.key || '').toLowerCase()
-        const semitone = TT.Arcade.PIANO_KEYS[pianoKey]
-        if (semitone !== undefined) {
+        const base = current.arcade.music.octave === undefined ? 4 : current.arcade.music.octave
+        const midi = TT.Arcade.keyToMidi(pianoKey, base)
+        if (midi !== null) {
           event.preventDefault()
           event.stopPropagation()
-          api.dispatch({ type: 'music/key', key: semitone })
+          api.dispatch({ type: 'music/key', midi })
           return
         }
-        if (pianoKey === 'z' || pianoKey === 'x') {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
           event.preventDefault()
-          api.dispatch({ type: 'music/octave', delta: pianoKey === 'z' ? -1 : 1 })
+          api.dispatch({ type: 'music/octave', delta: event.key === 'ArrowLeft' ? -1 : 1 })
           return
         }
       }
@@ -18180,8 +18241,8 @@ dispatch({ type: 'cinema/set', active: false })
       }
       if (after !== before) playSounds(before, after, action)
       if (action.type === 'music/key' && TT.Audio && TT.Arcade) {
-        const semitone = Number(action.key) || 0
-        TT.Audio.note(TT.Arcade.pianoFreq(semitone, after.arcade.music.octave || 0), 0.42, 'triangle', 0.24)
+        const midi = Number(action.midi !== undefined ? action.midi : action.key) || 60
+        TT.Audio.note(TT.Arcade.midiFreq(midi), 0.42, 'triangle', 0.24)
       }
       manageArcadeTimers(after)
       return after

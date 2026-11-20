@@ -58,22 +58,6 @@ TT.Arcade = (function () {
     return tune.notes.reduce((sum, note) => sum + note.beats, 0)
   }
 
-  // Piano keyboard: chromatic C4..C5, piano-style two rows.
-  const PIANO_KEYS = {
-    a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12,
-  }
-  const PIANO_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
-  const PIANO_BLACK = [1, 3, 6, 8, 10]
-
-  function pianoFreq(semitone, octave) {
-    const shift = (Number(octave) || 0) * 12
-    return NOTE_BASE * Math.pow(2, (Number(semitone) + shift) / 12)
-  }
-  function pianoName(semitone, octave) {
-    const value = Math.max(0, Number(semitone) || 0)
-    return PIANO_NAMES[value % 12] + (4 + (Number(octave) || 0) + Math.floor(value / 12))
-  }
-
   const NOTE_BASE = 261.63 // C4
 
   function freq(step, scaleIndex) {
@@ -86,9 +70,44 @@ TT.Arcade = (function () {
     if (step < 0) return '·'
     const scale = SCALES[scaleIndex % SCALES.length] || SCALES[0]
     const semis = scale.steps[Math.min(step, scale.steps.length - 1)]
-    const names = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
-    return names[semis % 12] + (4 + Math.floor(semis / 12))
+    return CHROMATIC[semis % 12] + (4 + Math.floor(semis / 12))
   }
+
+  // Full 88-key piano support. The computer keyboard covers two octaves
+  // (virtual-piano style), and the octave base shifts the mapping across A0–C8.
+  const PIANO_KEYS = {
+    z: 0, s: 1, x: 2, d: 3, c: 4, v: 5, g: 6, b: 7, h: 8, n: 9, j: 10, m: 11, ',': 12,
+    q: 12, '2': 13, w: 14, '3': 15, e: 16, r: 17, '5': 18, t: 19, '6': 20, y: 21, '7': 22, u: 23, i: 24,
+  }
+  const PIANO_MIN = 21 // A0
+  const PIANO_MAX = 108 // C8
+  const CHROMATIC = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
+  const BLACK_NOTES = [1, 3, 6, 8, 10]
+
+  function isBlackMidi(midi) {
+    return BLACK_NOTES.indexOf(((Number(midi) % 12) + 12) % 12) >= 0
+  }
+  function midiName(midi) {
+    const value = Math.max(0, Math.min(127, Number(midi) || 0))
+    return CHROMATIC[value % 12] + (Math.floor(value / 12) - 1)
+  }
+  function midiFreq(midi) {
+    return 440 * Math.pow(2, ((Number(midi) || 69) - 69) / 12)
+  }
+  function keyToMidi(key, octave) {
+    const offset = PIANO_KEYS[String(key || '').toLowerCase()]
+    if (offset === undefined) return null
+    return Math.max(PIANO_MIN, Math.min(PIANO_MAX, 12 * ((Number(octave) || 4) + 1) + offset))
+  }
+
+  // keep the old helper names working for any callers
+  function pianoFreq(semitone, octave) {
+    return midiFreq(12 * ((Number(octave) || 4) + 1) + (Number(semitone) || 0))
+  }
+  function pianoName(semitone, octave) {
+    return midiName(12 * ((Number(octave) || 4) + 1) + (Number(semitone) || 0))
+  }
+
   function stepAmplitude(step, scaleIndex) {
     if (step < 0) return 0
     const scale = SCALES[scaleIndex % SCALES.length] || SCALES[0]
@@ -308,7 +327,12 @@ TT.Arcade = (function () {
     noteAt,
     tuneBeats,
     PIANO_KEYS,
-    PIANO_BLACK,
+    PIANO_MIN,
+    PIANO_MAX,
+    isBlackMidi,
+    midiName,
+    midiFreq,
+    keyToMidi,
     pianoFreq,
     pianoName,
     PATTERNS: PATTERN_KEYS,
@@ -392,6 +416,19 @@ TT.ArcadeUI = (function () {
     const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
     const windowStart = Math.max(0, Math.min(tune.notes.length - 16, (music.step | 0) - 7))
     const notes = tune.notes.slice(windowStart, windowStart + 16)
+    const whiteKeys = []
+    const blackKeys = []
+    for (let midi = TT.Arcade.PIANO_MIN; midi <= TT.Arcade.PIANO_MAX; midi += 1) {
+      if (TT.Arcade.isBlackMidi(midi)) blackKeys.push(midi)
+      else whiteKeys.push(midi)
+    }
+    const pianoRef = React.useRef(null)
+    React.useEffect(() => {
+      const el = pianoRef.current
+      if (!el) return
+      const cIndex = whiteKeys.indexOf(12 * ((music.octave === undefined ? 4 : music.octave) + 1))
+      if (cIndex >= 0) el.scrollLeft = Math.max(0, cIndex * 28 - 140)
+    }, [music.octave])
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
         h('div', { className: 'tt-labrow' },
@@ -454,34 +491,33 @@ TT.ArcadeUI = (function () {
         h('div', { className: 'tt-labrow' },
           h('span', { className: 'tt-lablabel' }, t('arcade.music.piano')),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: -1 }) }, '−'),
-          h('span', { className: 'tt-lablabel', style: { fontVariantNumeric: 'tabular-nums' } }, `OCT ${music.octave || 0}`),
+          h('span', { className: 'tt-lablabel', style: { fontVariantNumeric: 'tabular-nums' } }, `OCT ${music.octave === undefined ? 4 : music.octave}`),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: 1 }) }, '+'),
           h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('arcade.music.pianoHint')),
         ),
-        h('div', { className: 'tt-piano' },
-          h('div', { className: 'tt-piano-row tt-piano-black' }, TT.Arcade.PIANO_BLACK.map((semitone) => {
-            const letter = Object.keys(TT.Arcade.PIANO_KEYS).find((key) => TT.Arcade.PIANO_KEYS[key] === semitone)
-            return h('button', {
-              key: semitone,
+        h('div', { className: 'tt-piano-scroll', ref: pianoRef },
+          h('div', { className: 'tt-piano-full', style: { width: `${whiteKeys.length * 28}px` } },
+            whiteKeys.map((midi) => h('button', {
+              key: midi,
               type: 'button',
-              className: 'tt-piano-key',
-              'data-black': 'true',
-              'data-active': music.lastKey === semitone ? 'true' : 'false',
-              title: `${TT.Arcade.pianoName(semitone, music.octave || 0)} · ${letter.toUpperCase()}`,
-              onClick: () => api.dispatch({ type: 'music/key', key: semitone }),
-            }, h('span', null, TT.Arcade.pianoName(semitone, music.octave || 0)), h('kbd', null, letter.toUpperCase()))
-          })),
-          h('div', { className: 'tt-piano-row' }, [0, 2, 4, 5, 7, 9, 11, 12].map((semitone) => {
-            const letter = Object.keys(TT.Arcade.PIANO_KEYS).find((key) => TT.Arcade.PIANO_KEYS[key] === semitone)
-            return h('button', {
-              key: semitone,
-              type: 'button',
-              className: 'tt-piano-key',
-              'data-active': music.lastKey === semitone ? 'true' : 'false',
-              title: `${TT.Arcade.pianoName(semitone, music.octave || 0)} · ${letter.toUpperCase()}`,
-              onClick: () => api.dispatch({ type: 'music/key', key: semitone }),
-            }, h('span', null, TT.Arcade.pianoName(semitone, music.octave || 0)), h('kbd', null, letter.toUpperCase()))
-          })),
+              className: 'tt-piano-white',
+              'data-active': music.lastMidi === midi ? 'true' : 'false',
+              title: TT.Arcade.midiName(midi),
+              onClick: () => api.dispatch({ type: 'music/key', midi }),
+            }, h('span', null, midi % 12 === 0 ? TT.Arcade.midiName(midi) : ''))),
+            blackKeys.map((midi) => {
+              const whiteIndex = whiteKeys.indexOf(midi - 1)
+              return h('button', {
+                key: midi,
+                type: 'button',
+                className: 'tt-piano-black-key',
+                'data-active': music.lastMidi === midi ? 'true' : 'false',
+                title: TT.Arcade.midiName(midi),
+                style: { left: `${whiteIndex * 28 + 28 - 9}px` },
+                onClick: () => api.dispatch({ type: 'music/key', midi }),
+              })
+            }),
+          ),
         ),
         h('div', { className: 'tt-labrow' },
           h('button', {

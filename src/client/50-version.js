@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.3'
+  const VERSION = '1.6.4'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.4',
+      date: '2026-11-21',
+      items: [
+        'NAND 音乐盒新增完整 88 键钢琴（A0–C8），可点击或键盘两排弹奏',
+        '修复《欢乐颂》音高与《小星星》节奏，音符按拍数播放',
+      ],
+    },
     {
       version: '1.6.3',
       date: '2026-11-21',
