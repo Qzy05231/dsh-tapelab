@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.3.0'
+  const VERSION = '1.4.0'
   const BUILT_AT = '2026-11-20'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.4.0',
+      date: '2026-11-20',
+      items: [
+        '主线扩展为 14 章：新增 DeWeb、TapeRelay、容器化部署三个独立章节',
+        '三个新章节各有独立 3D 场景与任务/操作坞，终局与成就同步更新',
+      ],
+    },
     {
       version: '1.3.0',
       date: '2026-11-20',

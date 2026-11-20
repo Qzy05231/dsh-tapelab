@@ -23,6 +23,7 @@ TT.Achievements = (function () {
     { id: 'daily3', tier: 'gold', titleKey: 'achv.daily3.title', descKey: 'achv.daily3.desc', check: (s) => Object.keys(stats(s).daily || {}).length >= 3 },
     { id: 'challenge1', tier: 'silver', titleKey: 'achv.challenge1.title', descKey: 'achv.challenge1.desc', check: (s) => Object.keys(stats(s).challenge || {}).length >= 1 },
     { id: 'challengeGold', tier: 'gold', titleKey: 'achv.challengeGold.title', descKey: 'achv.challengeGold.desc', check: (s) => Object.values(stats(s).challenge || {}).some((entry) => entry && entry.stars >= 3) },
+    { id: 'apps', tier: 'gold', titleKey: 'achv.apps.title', descKey: 'achv.apps.desc', check: (s) => Boolean(s.completed && s.completed[11] && s.completed[12] && s.completed[13]) },
   ]
 
   function stats(state) {
@@ -31,7 +32,8 @@ TT.Achievements = (function () {
 
   function allDone(state) {
     if (!state || !state.completed) return false
-    for (let index = 0; index < 11; index += 1) if (!state.completed[index]) return false
+    const total = TT.protocol && TT.protocol.CHAPTERS ? TT.protocol.CHAPTERS.length : 14
+    for (let index = 0; index < total; index += 1) if (!state.completed[index]) return false
     return true
   }
 

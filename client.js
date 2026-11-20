@@ -157,6 +157,9 @@ TT.protocol = Object.freeze({
     'counter',
     'cpu',
     'safety',
+    'deweb',
+    'relay',
+    'container',
   ],
 })
 
@@ -5545,6 +5548,15 @@ TT.Missions = (function () {
         halted: false,
       }
     }
+    if (index === 11) {
+      return { ...shared, step: 0, hash: '', published: false, verified: false, done: false, log: [] }
+    }
+    if (index === 12) {
+      return { ...shared, step: 0, chunks: [], replicated: false, sent: false, done: false, log: [] }
+    }
+    if (index === 13) {
+      return { ...shared, step: 0, image: '', auth: false, running: false, done: false, log: [] }
+    }
     return {
       ...shared,
       netlist: null,
@@ -5882,6 +5894,30 @@ TT.Missions = (function () {
       play.verify = { status: 'idle', rows: [], count: 0, mismatchCount: 0, violations: null }
       play.taped = false
     }
+    if (index === 11) {
+      play.step = 0
+      play.hash = ''
+      play.published = false
+      play.verified = false
+      play.done = false
+      play.log = []
+    }
+    if (index === 12) {
+      play.step = 0
+      play.chunks = []
+      play.replicated = false
+      play.sent = false
+      play.done = false
+      play.log = []
+    }
+    if (index === 13) {
+      play.step = 0
+      play.image = ''
+      play.auth = false
+      play.running = false
+      play.done = false
+      play.log = []
+    }
     return play
   }
 
@@ -5989,6 +6025,27 @@ TT.Missions = (function () {
         { key: 'goal.cpuStep', params: { n: Math.min(3, play.manualSteps || 0) }, done: (play.manualSteps || 0) >= 3 },
       ]
     }
+    if (index === 11) {
+      return [
+        { key: 'goal.dewebHash', params: {}, done: Boolean(play.hash) },
+        { key: 'goal.dewebPublish', params: {}, done: Boolean(play.published) },
+        { key: 'goal.dewebVerify', params: {}, done: Boolean(play.verified) },
+      ]
+    }
+    if (index === 12) {
+      return [
+        { key: 'goal.relaySplit', params: {}, done: (play.chunks || []).length >= 4 },
+        { key: 'goal.relayReplicate', params: {}, done: Boolean(play.replicated) },
+        { key: 'goal.relayMessage', params: {}, done: Boolean(play.sent) },
+      ]
+    }
+    if (index === 13) {
+      return [
+        { key: 'goal.containerImage', params: {}, done: Boolean(play.image) },
+        { key: 'goal.containerAuth', params: {}, done: Boolean(play.auth) },
+        { key: 'goal.containerRun', params: {}, done: Boolean(play.running) },
+      ]
+    }
     return [
       { key: 'goal.safetyModes', params: { n: countBits(play.seenMask || 0) }, done: (play.seenMask || 0) === 15 },
       { key: 'goal.safetyAudit', params: {}, done: Boolean(play.verify && play.verify.status === 'pass') },
@@ -6029,6 +6086,9 @@ TT.Missions = (function () {
     if (index === 10) {
       return Boolean(state.play.taped && state.play.verify.status === 'pass' && (state.play.seenMask || 0) === 15)
     }
+    if (index === 11) return Boolean(state.play.done)
+    if (index === 12) return Boolean(state.play.done)
+    if (index === 13) return Boolean(state.play.done)
     return false
   }
 
@@ -6927,6 +6987,48 @@ TT.Missions = (function () {
           toast: { key: 'challenge.abandoned', params: {}, tone: 'info', at: Date.now() },
         }
       }
+      case 'deweb/hash': {
+        if (state.chapter !== 11 || !TT.AppSims) return state
+        const hash = TT.AppSims.dewebAddress('tapeout-site')
+        return { ...state, play: { ...state.play, hash, step: 1 } }
+      }
+      case 'deweb/publish': {
+        if (state.chapter !== 11 || !state.play.hash) return state
+        return { ...state, play: { ...state.play, published: true, step: 2 } }
+      }
+      case 'deweb/verify': {
+        if (state.chapter !== 11 || !state.play.published) return state
+        const next = { ...state, play: { ...state.play, verified: true, done: true, step: 3 } }
+        return markComplete(next, 11, 'toast.dewebDone')
+      }
+      case 'relay/split': {
+        if (state.chapter !== 12 || !TT.AppSims) return state
+        const chunks = TT.AppSims.chunkFile('demo-video', 4)
+        return { ...state, play: { ...state.play, chunks, step: 1 } }
+      }
+      case 'relay/replicate': {
+        if (state.chapter !== 12 || !(state.play.chunks || []).length) return state
+        return { ...state, play: { ...state.play, replicated: true, step: 2 } }
+      }
+      case 'relay/send': {
+        if (state.chapter !== 12 || !state.play.replicated) return state
+        const next = { ...state, play: { ...state.play, sent: true, done: true, step: 3 } }
+        return markComplete(next, 12, 'toast.relayDone')
+      }
+      case 'container/pack': {
+        if (state.chapter !== 13 || !TT.AppSims) return state
+        const image = TT.AppSims.imageHash({ base: 'tapeos-min', circuit: 'half-adder', app: 'deweb-site' })
+        return { ...state, play: { ...state.play, image, step: 1 } }
+      }
+      case 'container/auth': {
+        if (state.chapter !== 13 || !state.play.image) return state
+        return { ...state, play: { ...state.play, auth: true, step: 2 } }
+      }
+      case 'container/run': {
+        if (state.chapter !== 13 || !state.play.auth) return state
+        const next = { ...state, play: { ...state.play, running: true, done: true, step: 3 } }
+        return markComplete(next, 13, 'toast.containerDone')
+      }
       case 'chapter/reset': {
         const next = {
           ...state,
@@ -7619,6 +7721,24 @@ TT.Missions = (function () {
       if (play.running) return { key: 'hint.cpuRunning', params: {} }
       return { key: 'hint.cpuRun', params: {} }
     }
+    if (index === 11) {
+      if (!play.hash) return { key: 'hint.dewebHash', params: {} }
+      if (!play.published) return { key: 'hint.dewebPublish', params: {} }
+      if (!play.verified) return { key: 'hint.dewebVerify', params: {} }
+      return { key: 'hint.dewebDone', params: {} }
+    }
+    if (index === 12) {
+      if (!(play.chunks || []).length) return { key: 'hint.relaySplit', params: {} }
+      if (!play.replicated) return { key: 'hint.relayReplicate', params: {} }
+      if (!play.sent) return { key: 'hint.relaySend', params: {} }
+      return { key: 'hint.relayDone', params: {} }
+    }
+    if (index === 13) {
+      if (!play.image) return { key: 'hint.containerPack', params: {} }
+      if (!play.auth) return { key: 'hint.containerAuth', params: {} }
+      if (!play.running) return { key: 'hint.containerRun', params: {} }
+      return { key: 'hint.containerDone', params: {} }
+    }
     if (!play.verify || play.verify.status !== 'pass') return { key: 'hint.safetyAudit', params: {} }
     if ((play.seenMask || 0) !== 15) return { key: 'hint.safetyModes', params: { n: countBits(play.seenMask || 0) } }
     if (!play.taped) return { key: 'hint.safetyTapeout', params: {} }
@@ -7748,6 +7868,21 @@ TT.Missions = (function () {
       add('tapeout', 'dock.safetyTapeout', { type: 'safety/tapeout' }, 'primary', {
         disabled: Boolean(play.taped) || !(play.verify && play.verify.status === 'pass'),
       })
+    }
+    if (index === 11) {
+      add('hash', 'dock.dewebHash', { type: 'deweb/hash' }, 'primary', { disabled: Boolean(play.hash) })
+      add('publish', 'dock.dewebPublish', { type: 'deweb/publish' }, 'primary', { disabled: !play.hash || Boolean(play.published) })
+      add('verify', 'dock.dewebVerify', { type: 'deweb/verify' }, 'secondary', { disabled: !play.published || Boolean(play.verified) })
+    }
+    if (index === 12) {
+      add('split', 'dock.relaySplit', { type: 'relay/split' }, 'primary', { disabled: (play.chunks || []).length > 0 })
+      add('replicate', 'dock.relayReplicate', { type: 'relay/replicate' }, 'primary', { disabled: (play.chunks || []).length === 0 || Boolean(play.replicated) })
+      add('send', 'dock.relaySend', { type: 'relay/send' }, 'secondary', { disabled: !play.replicated || Boolean(play.sent) })
+    }
+    if (index === 13) {
+      add('pack', 'dock.containerPack', { type: 'container/pack' }, 'primary', { disabled: Boolean(play.image) })
+      add('auth', 'dock.containerAuth', { type: 'container/auth' }, 'primary', { disabled: !play.image || Boolean(play.auth) })
+      add('run', 'dock.containerRun', { type: 'container/run' }, 'secondary', { disabled: !play.auth || Boolean(play.running) })
     }
     if (done && index < CHAPTERS.length - 1) {
       add('next', 'dock.nextChapter', { type: 'chapter/next' }, 'primary')
@@ -11877,6 +12012,7 @@ TT.Achievements = (function () {
     { id: 'daily3', tier: 'gold', titleKey: 'achv.daily3.title', descKey: 'achv.daily3.desc', check: (s) => Object.keys(stats(s).daily || {}).length >= 3 },
     { id: 'challenge1', tier: 'silver', titleKey: 'achv.challenge1.title', descKey: 'achv.challenge1.desc', check: (s) => Object.keys(stats(s).challenge || {}).length >= 1 },
     { id: 'challengeGold', tier: 'gold', titleKey: 'achv.challengeGold.title', descKey: 'achv.challengeGold.desc', check: (s) => Object.values(stats(s).challenge || {}).some((entry) => entry && entry.stars >= 3) },
+    { id: 'apps', tier: 'gold', titleKey: 'achv.apps.title', descKey: 'achv.apps.desc', check: (s) => Boolean(s.completed && s.completed[11] && s.completed[12] && s.completed[13]) },
   ]
 
   function stats(state) {
@@ -11885,7 +12021,8 @@ TT.Achievements = (function () {
 
   function allDone(state) {
     if (!state || !state.completed) return false
-    for (let index = 0; index < 11; index += 1) if (!state.completed[index]) return false
+    const total = TT.protocol && TT.protocol.CHAPTERS ? TT.protocol.CHAPTERS.length : 14
+    for (let index = 0; index < total; index += 1) if (!state.completed[index]) return false
     return true
   }
 
@@ -13032,12 +13169,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.3.0'
+  const VERSION = '1.4.0'
   const BUILT_AT = '2026-11-20'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.4.0',
+      date: '2026-11-20',
+      items: [
+        '主线扩展为 14 章：新增 DeWeb、TapeRelay、容器化部署三个独立章节',
+        '三个新章节各有独立 3D 场景与任务/操作坞，终局与成就同步更新',
+      ],
+    },
     {
       version: '1.3.0',
       date: '2026-11-20',
@@ -13313,6 +13458,8 @@ TT.dict = {
     'achv.challenge1.desc': '完成一次章节挑战模式',
     'achv.challengeGold.title': '三星挑战',
     'achv.challengeGold.desc': '在任意章节挑战中拿到 3 星',
+    'achv.apps.title': '应用三连',
+    'achv.apps.desc': '完成 DeWeb、TapeRelay 与容器三个应用章节',
     'achv.daily1.title': '每日第一题',
     'achv.daily1.desc': '完成任意一天的每日挑战',
     'achv.daily3.title': '每日连胜',
@@ -13338,8 +13485,8 @@ TT.dict = {
     'achv.cpu.desc': '完成第 10 章，跑通 3 + 5',
     'achv.safety.title': '真实安全电路',
     'achv.safety.desc': '完成第 11 章，审计 65536 组输入',
-    'achv.finale.title': '十一章通关',
-    'achv.finale.desc': '完成全部 11 章主线',
+    'achv.finale.title': '十四章通关',
+    'achv.finale.desc': '完成全部 14 章主线',
     'achv.snake10.title': '蛇王',
     'achv.snake10.desc': '链上贪吃蛇得分达到 10',
     'achv.debug5.title': '电路医生',
@@ -13365,7 +13512,7 @@ TT.dict = {
     'panel.modeNews': '资讯',
     'panel.modeEco': '生态',
     'sim.bonus': '扩展任务 · 应用模拟',
-    'sim.bonusHint': '点开体验，不计入 11 章通关',
+    'sim.bonusHint': '点开体验，不计入 14 章通关',
     'sim.bonusDone': '已完成 ✓',
     'sim.common.finish': '完成模拟',
     'sim.common.later': '以后再说',
@@ -13615,23 +13762,23 @@ TT.dict = {
     'cinema.running': '自动演示中',
     'cinema.started': '电影模式开始：从铸币一路演到安全电路。',
     'cinema.stopped': '电影模式已停止。',
-    'cinema.done': '自动演示完成：11 章链路已跑完。',
+    'cinema.done': '自动演示完成：14 章链路已跑完。',
     'panel.nextChapter': '下一章',
     'panel.modeLab': '实验室',
     'panel.progress': '{done}/{total} 章',
-    'panel.progressAll': '十一章完成',
-    'finale.title': '十一章全部完成',
+    'panel.progressAll': '十四章完成',
+    'finale.title': '十四章全部完成',
     'finale.sub': '从一颗 7 字节的与非门，一路走到七段显示、计数器、小计算机和真实项目的安全电路。',
     'finale.stat.chapters': '完成章节',
     'finale.stat.minted': '铸造晶体管',
     'finale.stat.circuits': '流片电路',
     'finale.stat.gates': '销毁 NAND',
     'finale.stat.blocks': '链上区块',
-    'finale.chapters': '十一章回顾',
-    'finale.note': '这条链路在 TapeOut 协议里是真实存在的：Token → 画布连线 → 流片 → 电路 NFT → 黑盒复用 → 链上 CPU；后四章还把它接到了综合工具、七段显示、计数器和 TapeRover 的真实安全电路。',
+    'finale.chapters': '十四章回顾',
+    'finale.note': '这条链路在 TapeOut 协议里是真实存在的：Token → 画布连线 → 流片 → 电路 NFT → 黑盒复用 → 链上 CPU；后面几章还把它接到了综合工具、七段显示、计数器、TapeRover 安全电路，以及 DeWeb、TapeRelay 与容器化应用。',
     'finale.replay': '再玩一次',
     'finale.stay': '留在实验室',
-    'toast.allDone': '十一章全部完成！从晶体管到安全电路，你已经走完整条 TapeOut 链路。',
+    'toast.allDone': '十四章全部完成！从晶体管到安全电路、DeWeb、TapeRelay 与容器，你已经走完整条 TapeOut 链路。',
     'toast.resetAll': '实验室已重置，七章从头再来。',
 
     'hud.nand': 'NAND 余额',
@@ -13747,6 +13894,55 @@ TT.dict = {
     'chapter.10.title': '安全电路 · 真实项目联动',
     'chapter.10.subtitle': 'TapeRover 的 16 输入 / 80 门安全闸门',
     'chapter.10.tag': '第十一章',
+    'chapter.11.tag': '第十二章',
+    'chapter.11.title': 'DeWeb · 可验证网站',
+    'chapter.11.subtitle': '哈希上链，文件走 relay',
+    'chapter.11.intro': 'DeWeb 不把网页塞进区块：链上只记录内容的哈希指针与节点名单，页面文件由 relay 网络分发，浏览器逐块校验。',
+    'chapter.11.fact': '哈希指针上链，2GB 内容也不拖垮共识层。',
+    'chapter.12.tag': '第十三章',
+    'chapter.12.title': 'TapeRelay · 分块与副本',
+    'chapter.12.subtitle': '1 MiB 分块，三副本',
+    'chapter.12.intro': 'TapeRelay 把文件切成 1 MiB 分块，分发到三个独立节点；任意一份副本可恢复，消息走链下签名、零 gas。',
+    'chapter.12.fact': '每个分块都要过客户端哈希校验，节点名气不能替代校验。',
+    'chapter.13.tag': '第十四章',
+    'chapter.13.title': '容器 · 打包与运行',
+    'chapter.13.subtitle': '镜像、NFT 权限与限额',
+    'chapter.13.intro': '把电路和应用打包成镜像：镜像哈希可核验，管理权绑定电路 NFT，运行时受 CPU/内存限额约束。',
+    'chapter.13.fact': '镜像哈希 + NFT 所有权 + 资源限额，是容器安全的三道闸。',
+    'goal.dewebHash': '计算内容哈希指针',
+    'goal.dewebPublish': '发布到 3 个 relay 节点',
+    'goal.dewebVerify': '验证网站内容哈希',
+    'goal.relaySplit': '把文件切成 4 × 1 MiB',
+    'goal.relayReplicate': '分发到 3 个 relay 节点',
+    'goal.relayMessage': '发送一条零 gas 消息',
+    'goal.containerImage': '打包镜像并计算哈希',
+    'goal.containerAuth': '绑定电路 NFT 权限',
+    'goal.containerRun': '启动并完成检查',
+    'dock.dewebHash': '计算哈希指针',
+    'dock.dewebPublish': '发布到 relay',
+    'dock.dewebVerify': '验证并打开',
+    'dock.relaySplit': '切成 1 MiB 分块',
+    'dock.relayReplicate': '分发三副本',
+    'dock.relaySend': '发送零 gas 消息',
+    'dock.containerPack': '打包镜像',
+    'dock.containerAuth': '绑定 NFT 权限',
+    'dock.containerRun': '启动容器',
+    'hint.dewebHash': '先点「计算哈希指针」：链上只会记录这一小段。',
+    'hint.dewebPublish': '点「发布到 relay」：把页面分块交给 3 个节点。',
+    'hint.dewebVerify': '点「验证并打开」：浏览器会逐块核对哈希。',
+    'hint.dewebDone': 'DeWeb 发布完成：哈希指针在链上，文件在 relay。',
+    'hint.relaySplit': '先点「切成 1 MiB 分块」，观察每块独立哈希。',
+    'hint.relayReplicate': '点「分发三副本」：任意一个节点离线都不影响恢复。',
+    'hint.relaySend': '最后点「发送零 gas 消息」：消息签名投递，不逐条上链。',
+    'hint.relayDone': 'TapeRelay 流程完成：分块、三副本、零 gas 消息。',
+    'hint.containerPack': '先点「打包镜像」：把电路与应用打成一个镜像。',
+    'hint.containerAuth': '点「绑定 NFT 权限」：管理权跟随电路 NFT。',
+    'hint.containerRun': '点「启动容器」：镜像哈希、权限与限额全部通过。',
+    'hint.containerDone': '容器已运行：哈希可核验、权限可转移、资源受限额。',
+    'toast.dewebDone': 'DeWeb 网站发布完成：可验证地址已生成。',
+    'toast.relayDone': 'TapeRelay 模拟完成：三副本与零 gas 消息就绪。',
+    'toast.containerDone': '容器启动完成：镜像哈希与权限检查通过。',
+
     'chapter.10.intro': '这是 TapeRover 真实使用的安全电路：16 个布尔输入、80 个与非门、4 个互斥输出。拨动输入，看小车被允许前进、减速、返航还是停车；再穷举全部 65536 种输入，验证“永远只有一个输出为真”。',
     'chapter.10.fact': '16 输入 / 80 门 / 4 互斥输出 · 65536 种组合全部审计。',
     'goal.segSynth': '用综合器造出七段译码器',
@@ -14420,6 +14616,8 @@ TT.dict = {
     'achv.challenge1.desc': 'Complete a chapter challenge run',
     'achv.challengeGold.title': 'Three-star run',
     'achv.challengeGold.desc': 'Earn 3 stars in any chapter challenge',
+    'achv.apps.title': 'App trio',
+    'achv.apps.desc': 'Complete the DeWeb, TapeRelay and container chapters',
     'achv.daily1.title': 'First daily',
     'achv.daily1.desc': 'Solve any daily challenge',
     'achv.daily3.title': 'Daily streak',
@@ -14445,8 +14643,8 @@ TT.dict = {
     'achv.cpu.desc': 'Complete chapter 10 and run 3 + 5',
     'achv.safety.title': 'Real safety circuit',
     'achv.safety.desc': 'Complete chapter 11 and audit 65,536 inputs',
-    'achv.finale.title': 'Eleven chapters',
-    'achv.finale.desc': 'Finish all 11 missions',
+    'achv.finale.title': 'Fourteen chapters',
+    'achv.finale.desc': 'Finish all 14 chapters',
     'achv.snake10.title': 'Snake charmer',
     'achv.snake10.desc': 'Reach score 10 in chain snake',
     'achv.debug5.title': 'Circuit doctor',
@@ -14727,7 +14925,7 @@ TT.dict = {
     'panel.modeLab': 'Lab',
     'panel.progress': '{done}/{total} chapters',
     'panel.progressAll': 'all eleven done',
-    'finale.title': 'All eleven chapters complete',
+    'finale.title': 'All fourteen chapters complete',
     'finale.sub': 'From a 7-byte NAND gate to seven-segment displays, counters, a mini computer and a real project safety circuit.',
     'finale.stat.chapters': 'Chapters',
     'finale.stat.minted': 'Transistors minted',
@@ -14854,6 +15052,55 @@ TT.dict = {
     'chapter.10.title': 'Safety circuit · real project link',
     'chapter.10.subtitle': 'TapeRover’s 16-input / 80-gate safety gate',
     'chapter.10.tag': 'Chapter 11',
+    'chapter.11.tag': 'Chapter 12',
+    'chapter.11.title': 'DeWeb · verifiable sites',
+    'chapter.11.subtitle': 'Hash on chain, files over relays',
+    'chapter.11.intro': 'DeWeb does not put pages inside blocks: the chain stores only the content hash pointer and node list, files travel over relays, and the browser verifies every chunk.',
+    'chapter.11.fact': 'Hash pointers on chain keep even 2 GB content off consensus.',
+    'chapter.12.tag': 'Chapter 13',
+    'chapter.12.title': 'TapeRelay · chunks & replicas',
+    'chapter.12.subtitle': '1 MiB chunks, three replicas',
+    'chapter.12.intro': 'TapeRelay splits files into 1 MiB chunks across three independent nodes; any replica can recover, and messages are signed off-chain with zero gas.',
+    'chapter.12.fact': 'Every chunk is hash-checked client-side; node reputation cannot replace verification.',
+    'chapter.13.tag': 'Chapter 14',
+    'chapter.13.title': 'Containers · pack & run',
+    'chapter.13.subtitle': 'Image, NFT auth and limits',
+    'chapter.13.intro': 'Package a circuit and app into an image: the image hash is verifiable, admin rights follow the circuit NFT, and runtime is bound by CPU/memory limits.',
+    'chapter.13.fact': 'Image hash, NFT ownership and resource limits are three container safety gates.',
+    'goal.dewebHash': 'Compute the content hash pointer',
+    'goal.dewebPublish': 'Publish to 3 relay nodes',
+    'goal.dewebVerify': 'Verify the site content hash',
+    'goal.relaySplit': 'Split the file into 4 × 1 MiB',
+    'goal.relayReplicate': 'Distribute to 3 relay nodes',
+    'goal.relayMessage': 'Send a zero-gas message',
+    'goal.containerImage': 'Pack the image and hash it',
+    'goal.containerAuth': 'Bind circuit NFT ownership',
+    'goal.containerRun': 'Start and pass checks',
+    'dock.dewebHash': 'Compute hash pointer',
+    'dock.dewebPublish': 'Publish to relays',
+    'dock.dewebVerify': 'Verify & open',
+    'dock.relaySplit': 'Split into 1 MiB chunks',
+    'dock.relayReplicate': 'Distribute three replicas',
+    'dock.relaySend': 'Send zero-gas message',
+    'dock.containerPack': 'Pack image',
+    'dock.containerAuth': 'Bind NFT auth',
+    'dock.containerRun': 'Start container',
+    'hint.dewebHash': 'Press “Compute hash pointer”: only this small value goes on chain.',
+    'hint.dewebPublish': 'Press “Publish to relays”: hand the page chunks to 3 nodes.',
+    'hint.dewebVerify': 'Press “Verify & open”: the browser checks every chunk hash.',
+    'hint.dewebDone': 'DeWeb publish complete: hash pointer on chain, files on relays.',
+    'hint.relaySplit': 'Press “Split into 1 MiB chunks” and watch each chunk get its own hash.',
+    'hint.relayReplicate': 'Press “Distribute three replicas”: any single node can fail.',
+    'hint.relaySend': 'Finally press “Send zero-gas message”: signed and delivered off-chain.',
+    'hint.relayDone': 'TapeRelay flow complete: chunks, three replicas, zero-gas message.',
+    'hint.containerPack': 'Press “Pack image” to bundle the circuit and app.',
+    'hint.containerAuth': 'Press “Bind NFT auth”: admin rights follow the circuit NFT.',
+    'hint.containerRun': 'Press “Start container”: image hash, auth and limits all pass.',
+    'hint.containerDone': 'Container running: verifiable image, transferable auth, bounded resources.',
+    'toast.dewebDone': 'DeWeb site published: verifiable address generated.',
+    'toast.relayDone': 'TapeRelay simulation complete: replicas and zero-gas message ready.',
+    'toast.containerDone': 'Container started: image hash and auth checks passed.',
+
     'chapter.10.intro': 'This is the real safety circuit used by TapeRover: 16 boolean inputs, 80 NAND gates, 4 mutually exclusive outputs. Flip the inputs to let the rover move, slow down, return home or stop, then audit all 65,536 combinations to prove exactly one output is ever true.',
     'chapter.10.fact': '16 inputs / 80 gates / 4 exclusive outputs · 65,536 combinations audited.',
     'goal.segSynth': 'Synthesize the seven-segment decoder',
@@ -16419,7 +16666,6 @@ TT.UI.Panel = function Panel(props) {
   ) : null
 
   const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
-  const simModal = state.simOpen && TT.AppSimsUI ? TT.h(TT.AppSimsUI.Page, { sim: state.simOpen, state, t, api }) : null
 
   return TT.h('div', {
     className: 'tt-lab',
@@ -16610,7 +16856,6 @@ TT.UI.Panel = function Panel(props) {
             narrow ? null : TT.h('div', { className: 'tt-msub' }, resolve(chapter.subtitleKey)),
             TT.h(ChallengeBar, { state, t, api }),
             TT.h(TapeoutQuiz, { state, t, api }),
-            TT.h(ChapterSims, { state, t, api }),
             TT.h('ul', { className: 'tt-goals' }, goals.map((goal, index) =>
               TT.h('li', { key: index, className: 'tt-goal', 'data-done': goal.done ? 'true' : 'false' },
                 TT.h('span', { className: 'tt-check' }, '✓'),
@@ -16666,7 +16911,6 @@ TT.UI.Panel = function Panel(props) {
       welcome,
       achievements,
       versionModal,
-      simModal,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),
@@ -17276,7 +17520,19 @@ TT.App = (function () {
       run({ type: 'safety/tapeout' }, 900)
       later(1800, () => {
         clearCinemaTimers()
-        dispatch({ type: 'cinema/set', active: false })
+              run({ type: 'chapter/select', index: 11 }, 1400)
+      run({ type: 'deweb/hash' }, 260)
+      run({ type: 'deweb/publish' }, 260)
+      run({ type: 'deweb/verify' }, 320)
+      run({ type: 'chapter/select', index: 12 }, 900)
+      run({ type: 'relay/split' }, 240)
+      run({ type: 'relay/replicate' }, 260)
+      run({ type: 'relay/send' }, 320)
+      run({ type: 'chapter/select', index: 13 }, 900)
+      run({ type: 'container/pack' }, 260)
+      run({ type: 'container/auth' }, 260)
+      run({ type: 'container/run' }, 360)
+dispatch({ type: 'cinema/set', active: false })
         dispatch({ type: 'toast/show', key: 'cinema.done', tone: 'good' })
         dispatch({ type: 'finale/open' })
         if (TT.Audio) TT.Audio.play('success')
@@ -18442,6 +18698,61 @@ TT.WorldView = (function () {
         })
         index += 1
       }
+      if (state.chapter === 11) {
+        specs.push({ kind: 'plate', pos: [0, 0.02, 0], size: [16, 9], color: P.wafer, ring: P.dieEdge })
+        const hash = play.hash || ''
+        const published = Boolean(play.published)
+        const verified = Boolean(play.verified)
+        specs.push({ kind: 'cube', id: 'web:site', pos: [-5.4, 0.9, 0], size: [2.2, 2.6, 0.5], color: '#0f3346', emissive: 0.3, edge: P.cyan, label: 'DeWeb', sub: 'site' })
+        specs.push({ kind: 'cube', id: 'web:chain', pos: [5.6, 0.7, 0], size: [1.6, 1.4, 1.6], color: '#132c3a', emissive: 0.2, edge: P.mint, label: 'CHAIN', sub: 'pointer' })
+        const nodes = [[-2.2, 0.6, -2.8], [0.2, 0.6, 2.9], [2.4, 0.6, 0.1]]
+        nodes.forEach((pos, index) => {
+          specs.push({ kind: 'cube', id: `web:relay:${index}`, pos, size: [1.0, 1.0, 1.0], color: published ? '#12424a' : '#0a1a28', emissive: published ? 0.4 : 0.1, edge: published ? P.mint : P.cyanDim, label: `R${index + 1}`, sub: 'relay' })
+          specs.push({ kind: 'ring', pos: [pos[0], 0.06, pos[2]], radius: 0.7, width: 1, color: published ? P.mint : P.cyanDim, glow: published ? 0.4 : 0.1 })
+          if (published) specs.push({ kind: 'wire', id: `web:wire:${index}`, points: [[-4.4, 1.0, 0], [pos[0], 1.0, pos[2]]], color: P.mint, width: 0.03, glow: 0.5, arrows: true })
+        })
+        if (published) specs.push({ kind: 'wire', id: 'web:pointer', points: [[-4.4, 1.2, 0], [4.8, 1.2, 0]], color: P.amber, width: 0.035, glow: 0.7, dash: 1, arrows: true })
+        specs.push({ kind: 'text', pos: [0, 0.05, -4.2], text: hash || 'content hash → pending', size: 10, color: P.cyanDim })
+        specs.push({ kind: 'text', pos: [0, 0.05, 4.2], text: verified ? 'DEWEB · hash verified' : published ? 'DEWEB · published to 3 relays' : 'DEWEB · publish a verifiable site', size: 10, color: verified ? P.mint : P.cyanDim })
+        specs.push({ kind: 'glow', pos: [5.6, 1.2, 0], radius: verified ? 2.2 : 1.2, color: verified ? P.mint : P.amber, intensity: 0.08 })
+        return specs
+      }
+
+      if (state.chapter === 12) {
+        specs.push({ kind: 'plate', pos: [0, 0.02, 0], size: [17, 9], color: P.wafer, ring: P.dieEdge })
+        const chunks = play.chunks || []
+        for (let index = 0; index < 4; index += 1) {
+          const filled = index < chunks.length
+          specs.push({ kind: 'cube', id: `relay:chunk:${index}`, pos: [-6.4 + index * 1.45, 0.5, -2.6], size: [1.05, 0.75, 1.05], color: filled ? '#123c4e' : '#0a1a28', emissive: filled ? 0.3 : 0.05, edge: filled ? P.cyan : P.cyanDim, label: `#${index + 1}`, sub: filled ? chunks[index].hash.slice(0, 6) : '1 MiB' })
+        }
+        const nodePositions = [[2.2, 0.6, -2.6], [4.6, 0.6, 0], [2.2, 0.6, 2.6]]
+        nodePositions.forEach((pos, index) => {
+          specs.push({ kind: 'cube', id: `relay:node:${index}`, pos, size: [1.2, 1.2, 1.2], color: play.replicated ? '#12424a' : '#0a1a28', emissive: play.replicated ? 0.35 : 0.08, edge: play.replicated ? P.mint : P.cyanDim, label: `RELAY ${['A', 'B', 'C'][index]}`, sub: play.replicated ? '4/4' : 'idle' })
+          if (play.replicated) specs.push({ kind: 'ring', pos: [pos[0], 0.06, pos[2]], radius: 0.9, width: 1.2, color: P.mint, glow: 0.5 })
+        })
+        if (play.replicated) {
+          for (let index = 0; index < 4; index += 1) specs.push({ kind: 'wire', id: `relay:wire:${index}`, points: [[-6.4 + index * 1.45, 0.9, -2.6], [2.2, 0.9, -2.6]], color: P.mint, width: 0.025, glow: 0.4, arrows: true })
+        }
+        if (play.sent) specs.push({ kind: 'wire', id: 'relay:msg', points: [[2.2, 1.6, 2.6], [6.2, 2.2, 2.6]], color: P.amber, width: 0.05, glow: 1, arrows: true })
+        specs.push({ kind: 'text', pos: [0, 0.05, -4.2], text: play.sent ? 'TAPERELAY · message sent · gas 0' : play.replicated ? 'TAPERELAY · 3 replicas ready' : chunks.length ? 'TAPERELAY · chunks ready' : 'TAPERELAY · split a file into 1 MiB chunks', size: 10, color: play.sent ? P.amber : P.cyanDim })
+        return specs
+      }
+
+      if (state.chapter === 13) {
+        specs.push({ kind: 'plate', pos: [0, 0.02, 0], size: [16, 9], color: P.wafer, ring: P.dieEdge })
+        for (let layer = 0; layer < 3; layer += 1) {
+          specs.push({ kind: 'cube', id: `box:layer:${layer}`, pos: [0, 0.35 + layer * 0.55, 0], size: [3.0 - layer * 0.35, 0.32, 3.0 - layer * 0.35], color: play.image ? '#123c4e' : '#0a1a28', emissive: play.image ? 0.25 : 0.05, edge: play.image ? P.cyan : P.cyanDim, label: layer === 0 ? 'TapeOS' : '', sub: '' })
+        }
+        specs.push({ kind: 'cube', id: 'box:circuit', pos: [0, 1.95, 0], size: [1.1, 0.5, 1.1], color: '#173a2c', emissive: play.auth ? 0.45 : 0.15, edge: play.auth ? P.mint : P.cyanDim, label: 'NAND', sub: 'half adder' })
+        specs.push({ kind: 'ring', pos: [0, 0.08, 0], radius: play.auth ? 2.6 : 1.9, width: 1.4, color: play.auth ? P.mint : P.cyanDim, glow: play.auth ? 0.45 : 0.12, spin: 8 })
+        if (play.running) specs.push({ kind: 'glow', pos: [0, 1.2, 0], radius: 3.4, color: P.mint, intensity: 0.1 })
+        if (play.running) specs.push({ kind: 'beam', pos: [0, 0.4, 0], radius: 0.4, color: P.mint, height: 3.2 })
+        const image = play.image || 'sha256:pending'
+        specs.push({ kind: 'text', pos: [0, 0.05, -3.8], text: image, size: 9, color: P.cyanDim })
+        specs.push({ kind: 'text', pos: [0, 0.05, 3.8], text: play.running ? 'CONTAINER · running · limits ok' : play.auth ? 'CONTAINER · NFT auth bound' : play.image ? 'CONTAINER · image packed' : 'CONTAINER · pack circuit + app', size: 10, color: play.running ? P.mint : P.cyanDim })
+        return specs
+      }
+
       const pending = api.getPending()
       if (pending) {
         const from = portPos(state, pending)
@@ -18532,6 +18843,9 @@ TT.WorldView = (function () {
           ? `cpu:${p.programId}:${p.state.PC},${p.state.A},${p.state.OUT},${p.state.IR},${p.state.halted ? 1 : 0}:${p.running ? 1 : 0}:${(p.trace || []).length}`
           : state.chapter === 9 ? 'cpu:none' : '',
         state.chapter === 10 ? `saf:${p.bits || 0}:${p.mode || 0}:${p.seenMask || 0}:${p.taped ? 1 : 0}` : '',
+        state.chapter === 11 ? `web:${p.step || 0}:${p.published ? 1 : 0}:${p.verified ? 1 : 0}` : '',
+        state.chapter === 12 ? `relay:${p.step || 0}:${p.replicated ? 1 : 0}:${p.sent ? 1 : 0}` : '',
+        state.chapter === 13 ? `box:${p.step || 0}:${p.auth ? 1 : 0}:${p.running ? 1 : 0}` : '',
       ].join('|')
     }
 

@@ -553,6 +553,15 @@ TT.Missions = (function () {
         halted: false,
       }
     }
+    if (index === 11) {
+      return { ...shared, step: 0, hash: '', published: false, verified: false, done: false, log: [] }
+    }
+    if (index === 12) {
+      return { ...shared, step: 0, chunks: [], replicated: false, sent: false, done: false, log: [] }
+    }
+    if (index === 13) {
+      return { ...shared, step: 0, image: '', auth: false, running: false, done: false, log: [] }
+    }
     return {
       ...shared,
       netlist: null,
@@ -890,6 +899,30 @@ TT.Missions = (function () {
       play.verify = { status: 'idle', rows: [], count: 0, mismatchCount: 0, violations: null }
       play.taped = false
     }
+    if (index === 11) {
+      play.step = 0
+      play.hash = ''
+      play.published = false
+      play.verified = false
+      play.done = false
+      play.log = []
+    }
+    if (index === 12) {
+      play.step = 0
+      play.chunks = []
+      play.replicated = false
+      play.sent = false
+      play.done = false
+      play.log = []
+    }
+    if (index === 13) {
+      play.step = 0
+      play.image = ''
+      play.auth = false
+      play.running = false
+      play.done = false
+      play.log = []
+    }
     return play
   }
 
@@ -997,6 +1030,27 @@ TT.Missions = (function () {
         { key: 'goal.cpuStep', params: { n: Math.min(3, play.manualSteps || 0) }, done: (play.manualSteps || 0) >= 3 },
       ]
     }
+    if (index === 11) {
+      return [
+        { key: 'goal.dewebHash', params: {}, done: Boolean(play.hash) },
+        { key: 'goal.dewebPublish', params: {}, done: Boolean(play.published) },
+        { key: 'goal.dewebVerify', params: {}, done: Boolean(play.verified) },
+      ]
+    }
+    if (index === 12) {
+      return [
+        { key: 'goal.relaySplit', params: {}, done: (play.chunks || []).length >= 4 },
+        { key: 'goal.relayReplicate', params: {}, done: Boolean(play.replicated) },
+        { key: 'goal.relayMessage', params: {}, done: Boolean(play.sent) },
+      ]
+    }
+    if (index === 13) {
+      return [
+        { key: 'goal.containerImage', params: {}, done: Boolean(play.image) },
+        { key: 'goal.containerAuth', params: {}, done: Boolean(play.auth) },
+        { key: 'goal.containerRun', params: {}, done: Boolean(play.running) },
+      ]
+    }
     return [
       { key: 'goal.safetyModes', params: { n: countBits(play.seenMask || 0) }, done: (play.seenMask || 0) === 15 },
       { key: 'goal.safetyAudit', params: {}, done: Boolean(play.verify && play.verify.status === 'pass') },
@@ -1037,6 +1091,9 @@ TT.Missions = (function () {
     if (index === 10) {
       return Boolean(state.play.taped && state.play.verify.status === 'pass' && (state.play.seenMask || 0) === 15)
     }
+    if (index === 11) return Boolean(state.play.done)
+    if (index === 12) return Boolean(state.play.done)
+    if (index === 13) return Boolean(state.play.done)
     return false
   }
 
@@ -1935,6 +1992,48 @@ TT.Missions = (function () {
           toast: { key: 'challenge.abandoned', params: {}, tone: 'info', at: Date.now() },
         }
       }
+      case 'deweb/hash': {
+        if (state.chapter !== 11 || !TT.AppSims) return state
+        const hash = TT.AppSims.dewebAddress('tapeout-site')
+        return { ...state, play: { ...state.play, hash, step: 1 } }
+      }
+      case 'deweb/publish': {
+        if (state.chapter !== 11 || !state.play.hash) return state
+        return { ...state, play: { ...state.play, published: true, step: 2 } }
+      }
+      case 'deweb/verify': {
+        if (state.chapter !== 11 || !state.play.published) return state
+        const next = { ...state, play: { ...state.play, verified: true, done: true, step: 3 } }
+        return markComplete(next, 11, 'toast.dewebDone')
+      }
+      case 'relay/split': {
+        if (state.chapter !== 12 || !TT.AppSims) return state
+        const chunks = TT.AppSims.chunkFile('demo-video', 4)
+        return { ...state, play: { ...state.play, chunks, step: 1 } }
+      }
+      case 'relay/replicate': {
+        if (state.chapter !== 12 || !(state.play.chunks || []).length) return state
+        return { ...state, play: { ...state.play, replicated: true, step: 2 } }
+      }
+      case 'relay/send': {
+        if (state.chapter !== 12 || !state.play.replicated) return state
+        const next = { ...state, play: { ...state.play, sent: true, done: true, step: 3 } }
+        return markComplete(next, 12, 'toast.relayDone')
+      }
+      case 'container/pack': {
+        if (state.chapter !== 13 || !TT.AppSims) return state
+        const image = TT.AppSims.imageHash({ base: 'tapeos-min', circuit: 'half-adder', app: 'deweb-site' })
+        return { ...state, play: { ...state.play, image, step: 1 } }
+      }
+      case 'container/auth': {
+        if (state.chapter !== 13 || !state.play.image) return state
+        return { ...state, play: { ...state.play, auth: true, step: 2 } }
+      }
+      case 'container/run': {
+        if (state.chapter !== 13 || !state.play.auth) return state
+        const next = { ...state, play: { ...state.play, running: true, done: true, step: 3 } }
+        return markComplete(next, 13, 'toast.containerDone')
+      }
       case 'chapter/reset': {
         const next = {
           ...state,
@@ -2627,6 +2726,24 @@ TT.Missions = (function () {
       if (play.running) return { key: 'hint.cpuRunning', params: {} }
       return { key: 'hint.cpuRun', params: {} }
     }
+    if (index === 11) {
+      if (!play.hash) return { key: 'hint.dewebHash', params: {} }
+      if (!play.published) return { key: 'hint.dewebPublish', params: {} }
+      if (!play.verified) return { key: 'hint.dewebVerify', params: {} }
+      return { key: 'hint.dewebDone', params: {} }
+    }
+    if (index === 12) {
+      if (!(play.chunks || []).length) return { key: 'hint.relaySplit', params: {} }
+      if (!play.replicated) return { key: 'hint.relayReplicate', params: {} }
+      if (!play.sent) return { key: 'hint.relaySend', params: {} }
+      return { key: 'hint.relayDone', params: {} }
+    }
+    if (index === 13) {
+      if (!play.image) return { key: 'hint.containerPack', params: {} }
+      if (!play.auth) return { key: 'hint.containerAuth', params: {} }
+      if (!play.running) return { key: 'hint.containerRun', params: {} }
+      return { key: 'hint.containerDone', params: {} }
+    }
     if (!play.verify || play.verify.status !== 'pass') return { key: 'hint.safetyAudit', params: {} }
     if ((play.seenMask || 0) !== 15) return { key: 'hint.safetyModes', params: { n: countBits(play.seenMask || 0) } }
     if (!play.taped) return { key: 'hint.safetyTapeout', params: {} }
@@ -2756,6 +2873,21 @@ TT.Missions = (function () {
       add('tapeout', 'dock.safetyTapeout', { type: 'safety/tapeout' }, 'primary', {
         disabled: Boolean(play.taped) || !(play.verify && play.verify.status === 'pass'),
       })
+    }
+    if (index === 11) {
+      add('hash', 'dock.dewebHash', { type: 'deweb/hash' }, 'primary', { disabled: Boolean(play.hash) })
+      add('publish', 'dock.dewebPublish', { type: 'deweb/publish' }, 'primary', { disabled: !play.hash || Boolean(play.published) })
+      add('verify', 'dock.dewebVerify', { type: 'deweb/verify' }, 'secondary', { disabled: !play.published || Boolean(play.verified) })
+    }
+    if (index === 12) {
+      add('split', 'dock.relaySplit', { type: 'relay/split' }, 'primary', { disabled: (play.chunks || []).length > 0 })
+      add('replicate', 'dock.relayReplicate', { type: 'relay/replicate' }, 'primary', { disabled: (play.chunks || []).length === 0 || Boolean(play.replicated) })
+      add('send', 'dock.relaySend', { type: 'relay/send' }, 'secondary', { disabled: !play.replicated || Boolean(play.sent) })
+    }
+    if (index === 13) {
+      add('pack', 'dock.containerPack', { type: 'container/pack' }, 'primary', { disabled: Boolean(play.image) })
+      add('auth', 'dock.containerAuth', { type: 'container/auth' }, 'primary', { disabled: !play.image || Boolean(play.auth) })
+      add('run', 'dock.containerRun', { type: 'container/run' }, 'secondary', { disabled: !play.auth || Boolean(play.running) })
     }
     if (done && index < CHAPTERS.length - 1) {
       add('next', 'dock.nextChapter', { type: 'chapter/next' }, 'primary')

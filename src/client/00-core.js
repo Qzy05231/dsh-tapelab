@@ -151,6 +151,9 @@ TT.protocol = Object.freeze({
     'counter',
     'cpu',
     'safety',
+    'deweb',
+    'relay',
+    'container',
   ],
 })
 

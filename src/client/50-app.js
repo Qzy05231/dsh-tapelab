@@ -195,7 +195,19 @@ TT.App = (function () {
       run({ type: 'safety/tapeout' }, 900)
       later(1800, () => {
         clearCinemaTimers()
-        dispatch({ type: 'cinema/set', active: false })
+              run({ type: 'chapter/select', index: 11 }, 1400)
+      run({ type: 'deweb/hash' }, 260)
+      run({ type: 'deweb/publish' }, 260)
+      run({ type: 'deweb/verify' }, 320)
+      run({ type: 'chapter/select', index: 12 }, 900)
+      run({ type: 'relay/split' }, 240)
+      run({ type: 'relay/replicate' }, 260)
+      run({ type: 'relay/send' }, 320)
+      run({ type: 'chapter/select', index: 13 }, 900)
+      run({ type: 'container/pack' }, 260)
+      run({ type: 'container/auth' }, 260)
+      run({ type: 'container/run' }, 360)
+dispatch({ type: 'cinema/set', active: false })
         dispatch({ type: 'toast/show', key: 'cinema.done', tone: 'good' })
         dispatch({ type: 'finale/open' })
         if (TT.Audio) TT.Audio.play('success')
@@ -1361,6 +1373,61 @@ TT.WorldView = (function () {
         })
         index += 1
       }
+      if (state.chapter === 11) {
+        specs.push({ kind: 'plate', pos: [0, 0.02, 0], size: [16, 9], color: P.wafer, ring: P.dieEdge })
+        const hash = play.hash || ''
+        const published = Boolean(play.published)
+        const verified = Boolean(play.verified)
+        specs.push({ kind: 'cube', id: 'web:site', pos: [-5.4, 0.9, 0], size: [2.2, 2.6, 0.5], color: '#0f3346', emissive: 0.3, edge: P.cyan, label: 'DeWeb', sub: 'site' })
+        specs.push({ kind: 'cube', id: 'web:chain', pos: [5.6, 0.7, 0], size: [1.6, 1.4, 1.6], color: '#132c3a', emissive: 0.2, edge: P.mint, label: 'CHAIN', sub: 'pointer' })
+        const nodes = [[-2.2, 0.6, -2.8], [0.2, 0.6, 2.9], [2.4, 0.6, 0.1]]
+        nodes.forEach((pos, index) => {
+          specs.push({ kind: 'cube', id: `web:relay:${index}`, pos, size: [1.0, 1.0, 1.0], color: published ? '#12424a' : '#0a1a28', emissive: published ? 0.4 : 0.1, edge: published ? P.mint : P.cyanDim, label: `R${index + 1}`, sub: 'relay' })
+          specs.push({ kind: 'ring', pos: [pos[0], 0.06, pos[2]], radius: 0.7, width: 1, color: published ? P.mint : P.cyanDim, glow: published ? 0.4 : 0.1 })
+          if (published) specs.push({ kind: 'wire', id: `web:wire:${index}`, points: [[-4.4, 1.0, 0], [pos[0], 1.0, pos[2]]], color: P.mint, width: 0.03, glow: 0.5, arrows: true })
+        })
+        if (published) specs.push({ kind: 'wire', id: 'web:pointer', points: [[-4.4, 1.2, 0], [4.8, 1.2, 0]], color: P.amber, width: 0.035, glow: 0.7, dash: 1, arrows: true })
+        specs.push({ kind: 'text', pos: [0, 0.05, -4.2], text: hash || 'content hash → pending', size: 10, color: P.cyanDim })
+        specs.push({ kind: 'text', pos: [0, 0.05, 4.2], text: verified ? 'DEWEB · hash verified' : published ? 'DEWEB · published to 3 relays' : 'DEWEB · publish a verifiable site', size: 10, color: verified ? P.mint : P.cyanDim })
+        specs.push({ kind: 'glow', pos: [5.6, 1.2, 0], radius: verified ? 2.2 : 1.2, color: verified ? P.mint : P.amber, intensity: 0.08 })
+        return specs
+      }
+
+      if (state.chapter === 12) {
+        specs.push({ kind: 'plate', pos: [0, 0.02, 0], size: [17, 9], color: P.wafer, ring: P.dieEdge })
+        const chunks = play.chunks || []
+        for (let index = 0; index < 4; index += 1) {
+          const filled = index < chunks.length
+          specs.push({ kind: 'cube', id: `relay:chunk:${index}`, pos: [-6.4 + index * 1.45, 0.5, -2.6], size: [1.05, 0.75, 1.05], color: filled ? '#123c4e' : '#0a1a28', emissive: filled ? 0.3 : 0.05, edge: filled ? P.cyan : P.cyanDim, label: `#${index + 1}`, sub: filled ? chunks[index].hash.slice(0, 6) : '1 MiB' })
+        }
+        const nodePositions = [[2.2, 0.6, -2.6], [4.6, 0.6, 0], [2.2, 0.6, 2.6]]
+        nodePositions.forEach((pos, index) => {
+          specs.push({ kind: 'cube', id: `relay:node:${index}`, pos, size: [1.2, 1.2, 1.2], color: play.replicated ? '#12424a' : '#0a1a28', emissive: play.replicated ? 0.35 : 0.08, edge: play.replicated ? P.mint : P.cyanDim, label: `RELAY ${['A', 'B', 'C'][index]}`, sub: play.replicated ? '4/4' : 'idle' })
+          if (play.replicated) specs.push({ kind: 'ring', pos: [pos[0], 0.06, pos[2]], radius: 0.9, width: 1.2, color: P.mint, glow: 0.5 })
+        })
+        if (play.replicated) {
+          for (let index = 0; index < 4; index += 1) specs.push({ kind: 'wire', id: `relay:wire:${index}`, points: [[-6.4 + index * 1.45, 0.9, -2.6], [2.2, 0.9, -2.6]], color: P.mint, width: 0.025, glow: 0.4, arrows: true })
+        }
+        if (play.sent) specs.push({ kind: 'wire', id: 'relay:msg', points: [[2.2, 1.6, 2.6], [6.2, 2.2, 2.6]], color: P.amber, width: 0.05, glow: 1, arrows: true })
+        specs.push({ kind: 'text', pos: [0, 0.05, -4.2], text: play.sent ? 'TAPERELAY · message sent · gas 0' : play.replicated ? 'TAPERELAY · 3 replicas ready' : chunks.length ? 'TAPERELAY · chunks ready' : 'TAPERELAY · split a file into 1 MiB chunks', size: 10, color: play.sent ? P.amber : P.cyanDim })
+        return specs
+      }
+
+      if (state.chapter === 13) {
+        specs.push({ kind: 'plate', pos: [0, 0.02, 0], size: [16, 9], color: P.wafer, ring: P.dieEdge })
+        for (let layer = 0; layer < 3; layer += 1) {
+          specs.push({ kind: 'cube', id: `box:layer:${layer}`, pos: [0, 0.35 + layer * 0.55, 0], size: [3.0 - layer * 0.35, 0.32, 3.0 - layer * 0.35], color: play.image ? '#123c4e' : '#0a1a28', emissive: play.image ? 0.25 : 0.05, edge: play.image ? P.cyan : P.cyanDim, label: layer === 0 ? 'TapeOS' : '', sub: '' })
+        }
+        specs.push({ kind: 'cube', id: 'box:circuit', pos: [0, 1.95, 0], size: [1.1, 0.5, 1.1], color: '#173a2c', emissive: play.auth ? 0.45 : 0.15, edge: play.auth ? P.mint : P.cyanDim, label: 'NAND', sub: 'half adder' })
+        specs.push({ kind: 'ring', pos: [0, 0.08, 0], radius: play.auth ? 2.6 : 1.9, width: 1.4, color: play.auth ? P.mint : P.cyanDim, glow: play.auth ? 0.45 : 0.12, spin: 8 })
+        if (play.running) specs.push({ kind: 'glow', pos: [0, 1.2, 0], radius: 3.4, color: P.mint, intensity: 0.1 })
+        if (play.running) specs.push({ kind: 'beam', pos: [0, 0.4, 0], radius: 0.4, color: P.mint, height: 3.2 })
+        const image = play.image || 'sha256:pending'
+        specs.push({ kind: 'text', pos: [0, 0.05, -3.8], text: image, size: 9, color: P.cyanDim })
+        specs.push({ kind: 'text', pos: [0, 0.05, 3.8], text: play.running ? 'CONTAINER · running · limits ok' : play.auth ? 'CONTAINER · NFT auth bound' : play.image ? 'CONTAINER · image packed' : 'CONTAINER · pack circuit + app', size: 10, color: play.running ? P.mint : P.cyanDim })
+        return specs
+      }
+
       const pending = api.getPending()
       if (pending) {
         const from = portPos(state, pending)
@@ -1451,6 +1518,9 @@ TT.WorldView = (function () {
           ? `cpu:${p.programId}:${p.state.PC},${p.state.A},${p.state.OUT},${p.state.IR},${p.state.halted ? 1 : 0}:${p.running ? 1 : 0}:${(p.trace || []).length}`
           : state.chapter === 9 ? 'cpu:none' : '',
         state.chapter === 10 ? `saf:${p.bits || 0}:${p.mode || 0}:${p.seenMask || 0}:${p.taped ? 1 : 0}` : '',
+        state.chapter === 11 ? `web:${p.step || 0}:${p.published ? 1 : 0}:${p.verified ? 1 : 0}` : '',
+        state.chapter === 12 ? `relay:${p.step || 0}:${p.replicated ? 1 : 0}:${p.sent ? 1 : 0}` : '',
+        state.chapter === 13 ? `box:${p.step || 0}:${p.auth ? 1 : 0}:${p.running ? 1 : 0}` : '',
       ].join('|')
     }
 
