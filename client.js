@@ -13183,26 +13183,31 @@ TT.EcosystemUI = (function () {
           context.save()
           context.shadowColor = rgba(color, selected || hovered ? 0.85 : 0.55)
           context.shadowBlur = selected ? 34 : 20
-          // dark coin body with a tinted edge
+          // transparent coin body: no colored fill, just a faint dark glass wash
           const body = context.createRadialGradient(
-            bubble.x - radius * 0.22, bubble.y - radius * 0.28, radius * 0.08,
+            bubble.x - radius * 0.18, bubble.y - radius * 0.22, radius * 0.1,
             bubble.x, bubble.y, radius,
           )
-          body.addColorStop(0, '#241820')
-          body.addColorStop(0.55, '#150d13')
-          body.addColorStop(0.85, rgba(color, 0.14))
-          body.addColorStop(1, '#0a0609')
+          body.addColorStop(0, 'rgba(18,10,14,0.34)')
+          body.addColorStop(0.7, 'rgba(12,7,10,0.24)')
+          body.addColorStop(1, 'rgba(8,4,7,0.1)')
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius, 0, Math.PI * 2)
           context.fillStyle = body
           context.fill()
           context.restore()
 
-          // rim
+          // colored glowing rim (the only color in the bubble)
           context.beginPath()
-          context.arc(bubble.x, bubble.y, radius * 0.98, 0, Math.PI * 2)
-          context.lineWidth = selected ? 2.6 : 1.8
-          context.strokeStyle = rgba(color, selected ? 1 : 0.72)
+          context.arc(bubble.x, bubble.y, radius * 0.985, 0, Math.PI * 2)
+          context.lineWidth = selected ? 2.8 : 2
+          context.strokeStyle = rgba(color, selected ? 1 : 0.88)
+          context.stroke()
+          // faint inner highlight ring for a glass edge
+          context.beginPath()
+          context.arc(bubble.x, bubble.y, radius * 0.94, 0, Math.PI * 2)
+          context.lineWidth = 0.8
+          context.strokeStyle = 'rgba(255,255,255,.08)'
           context.stroke()
           if (selected) {
             context.beginPath()
