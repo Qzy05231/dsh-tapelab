@@ -15,12 +15,12 @@ const E = TT.Ecosystem
 
 test('only official entries are listed', () => {
   const names = E.PROJECTS.map((project) => project.name)
-  assert.deepEqual(names, ['TapeOut', 'TapeOut Linux', 'Dashboard', 'Beginner Guide', 'Blonskr', 'TapeRelay', 'Relay Nodes', 'TapeKit', 'TapeCode.ai', 'TapeHub.ai', 'TapeOut X', 'Telegram', 'News', 'Roadmap', 'Milestones', 'Articles'])
+  assert.deepEqual(names, ['TapeOut', 'Blonskr', 'TapeHub.ai', 'TapeKit', 'TapeCode.ai', 'TapeRelay'])
   assert.equal(E.PROJECTS.every((project) => E.CATEGORIES[project.category]), true)
 })
 
 test('every project has a category, description and https links', () => {
-  assert.equal(E.PROJECTS.length, 16)
+  assert.equal(E.PROJECTS.length, 6)
   for (const project of E.PROJECTS) {
     assert.ok(E.CATEGORIES[project.category], project.id)
     assert.ok(project.desc.length > 10, project.id)

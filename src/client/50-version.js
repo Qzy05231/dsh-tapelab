@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.2'
+  const VERSION = '1.6.3'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.3',
+      date: '2026-11-21',
+      items: [
+        '官方生态回归 6 个 Official 项目（TapeOut / Blonskr / TapeHub / TapeKit / TapeCode / TapeRelay）',
+        '气泡改为参考图的深色币面 + 发光圆环 + 图标/名称/彩色副标题',
+      ],
+    },
     {
       version: '1.6.2',
       date: '2026-11-21',

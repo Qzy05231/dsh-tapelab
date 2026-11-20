@@ -16,22 +16,12 @@ TT.Ecosystem = (function () {
 
   // TapeOut official entry points (Official category) plus the official protocol site.
   const PROJECTS = [
-    { id: 'tapeout', name: 'TapeOut', symbol: '⊗', sub: '协议主站', category: 'protocol', radius: 78, desc: '官方链上流片协议：铸造 NAND / LATCH 元件，在画布上连线组成电路，再流片为电路 NFT。', links: [{ label: '官网', url: 'https://tapeout.net/' }] },
-    { id: 'linux', name: 'TapeOut Linux', symbol: '🐧', sub: '链上 Linux', category: 'official', radius: 52, desc: '官方展示：第一条原生运行在 L1 主网上的 Linux，每条 RISC-V 指令由真实的 BNB Chain 交易执行。', links: [{ label: '体验', url: 'https://tapeout.net/linux.html' }] },
-    { id: 'dashboard', name: 'Dashboard', symbol: '📊', sub: '官方数据', category: 'official', radius: 46, desc: 'TapeOut 官方数据面板：处理器与电路数量、铸造进度、BEM 交易、空投领取与活动热力图。', links: [{ label: '打开', url: 'https://tapeout.link/dashboard' }] },
-    { id: 'guide', name: 'Beginner Guide', symbol: '📖', sub: '新手指南', category: 'official', radius: 44, desc: '官方新手指南：从 NAND 元件、画布连线到流片、挖矿与电路 NFT 的完整入门路径。', links: [{ label: '阅读', url: 'https://tapeout.link/guide' }] },
-    { id: 'blonskr', name: 'Blonskr', symbol: 'X', sub: '官方公告', category: 'official', radius: 52, desc: 'TapeOut 发起人的官方账号：协议公告、产品发布与重大决策的首要发布渠道。', links: [{ label: 'X', url: 'https://x.com/blonskr' }] },
-    { id: 'taperelay', name: 'TapeRelay', symbol: '📡', sub: '文件与消息', category: 'infra', radius: 66, desc: '官方 XIP 提案（与 X Layer）：客户端验证的去中心化文件与消息网络；1 MiB SHA-256 分块、零 gas 消息、5 个官方节点。', links: [{ label: '官网', url: 'https://taperelay.com/' }] },
-    { id: 'relay', name: 'Relay Nodes', symbol: '🛰️', sub: '官方节点', category: 'infra', radius: 48, desc: 'TapeRelay 官方节点入口：relay1–relay5 五个官方节点，每电路每节点 5 GiB 免费额度。', links: [{ label: '节点页', url: 'https://tapeout.link/relay' }] },
-    { id: 'tapekit', name: 'TapeKit', symbol: '🌐', sub: 'tape:// 网关', category: 'infra', radius: 60, desc: 'tape:// 的官方公共网关：把链上电路容器里的网站用普通浏览器打开；按链上地址跳转，内容哈希在浏览器端验证。', links: [{ label: '官网', url: 'https://tapekit.org/' }] },
-    { id: 'tapecode', name: 'TapeCode.ai', symbol: '🤖', sub: 'AI 构建器', category: 'ai', radius: 60, desc: '官方 AI 应用构建器：一句话生成合约与前端，约 10 分钟上线；合约归你的电路容器所有。', links: [{ label: '官网', url: 'https://tapecode.ai/' }] },
-    { id: 'tapehub', name: 'TapeHub.ai', symbol: '🚀', sub: '发行台', category: 'launchpad', radius: 62, desc: '官方生态发射台：创建挖矿币项目并用它铸造晶体管；毕业后 99% 池币与 5000 万项目币配对并上 PancakeSwap，95% 代币用于挖矿。', links: [{ label: '官网', url: 'https://tapehub.ai/' }] },
-    { id: 'tapeoutx', name: 'TapeOut X', symbol: '𝕏', sub: '官方账号', category: 'community', radius: 46, desc: 'TapeOut 官方 X 账号：协议公告、产品更新与社区活动。', links: [{ label: 'X', url: 'https://x.com/TapeOutWorld' }] },
-    { id: 'telegram', name: 'Telegram', symbol: '✈️', sub: '官方社区', category: 'community', radius: 42, desc: 'TapeOut 官方 Telegram 社区：公告、进展与日常讨论。', links: [{ label: '加入', url: 'https://t.me/TapeOutnet' }] },
-    { id: 'news', name: 'News', symbol: '📰', sub: '官方资讯', category: 'official', radius: 44, desc: '官方每日资讯聚合：X 上 TapeOut 相关动态按事件合并，每日更新。', links: [{ label: '阅读', url: 'https://tapeout.link/news' }] },
-    { id: 'roadmap', name: 'Roadmap', symbol: '🗺️', sub: '路线图', category: 'official', radius: 42, desc: 'TapeOut 官方路线图：协议、生态与产品的阶段规划。', links: [{ label: '查看', url: 'https://tapeout.link/roadmap' }] },
-    { id: 'milestones', name: 'Milestones', symbol: '🏁', sub: '里程碑', category: 'official', radius: 40, desc: 'TapeOut 官方里程碑：协议与生态的关键进展记录。', links: [{ label: '查看', url: 'https://tapeout.link/milestones' }] },
-    { id: 'articles', name: 'Articles', symbol: '📚', sub: '精选文章', category: 'official', radius: 40, desc: '官方精选文章与深度解读。', links: [{ label: '阅读', url: 'https://tapeout.link/articles' }] },
+    { id: 'tapeout', name: 'TapeOut', symbol: '⊗', sub: '协议主站', category: 'protocol', radius: 84, desc: '官方链上流片协议：铸造 NAND / LATCH 元件，在画布上连线组成电路，再流片为电路 NFT。', links: [{ label: '官网', url: 'https://tapeout.net/' }] },
+    { id: 'blonskr', name: 'Blonskr', symbol: 'X', sub: '官方公告', category: 'official', radius: 62, desc: 'TapeOut 发起人的官方账号：协议公告、产品发布与重大决策的首要发布渠道。', links: [{ label: 'X', url: 'https://x.com/blonskr' }] },
+    { id: 'tapehub', name: 'TapeHub.ai', symbol: '🚀', sub: '发行台', category: 'launchpad', radius: 66, desc: '官方生态发射台：创建挖矿币项目（池币 BEM / BNB / USD1）并用它铸造晶体管；毕业后 99% 池币与 5000 万项目币配对并上 PancakeSwap，95% 代币用于挖矿。', links: [{ label: '官网', url: 'https://tapehub.ai/' }] },
+    { id: 'tapekit', name: 'TapeKit', symbol: '🌐', sub: 'tape:// 网关', category: 'infra', radius: 64, desc: 'tape:// 的官方公共网关：把链上电路容器里的网站用普通浏览器打开；按链上地址跳转子域名，内容哈希在浏览器端验证，无服务器、无 DNS。', links: [{ label: '官网', url: 'https://tapekit.org/' }] },
+    { id: 'tapecode', name: 'TapeCode.ai', symbol: '🤖', sub: 'AI 构建器', category: 'ai', radius: 64, desc: '官方 AI 应用构建器：一句话生成合约与前端，约 10 分钟上线；合约归你的电路容器所有，使用需要钱包登录与 BEM 余额。', links: [{ label: '官网', url: 'https://tapecode.ai/' }] },
+    { id: 'taperelay', name: 'TapeRelay', symbol: '📡', sub: '文件与消息', category: 'infra', radius: 68, desc: '官方 XIP 提案（与 X Layer）：客户端验证的去中心化文件与消息网络；1 MiB SHA-256 分块、零 gas 消息、5 个官方节点。', links: [{ label: '官网', url: 'https://taperelay.com/' }] },
   ]
 
   function hash32(text) {
@@ -251,31 +241,26 @@ TT.EcosystemUI = (function () {
           context.save()
           context.shadowColor = rgba(color, selected || hovered ? 0.85 : 0.55)
           context.shadowBlur = selected ? 34 : 20
-          // transparent coin body: no colored fill, just a faint dark glass wash
+          // dark coin face: a subtle maroon tint, not a saturated color fill
           const body = context.createRadialGradient(
-            bubble.x - radius * 0.18, bubble.y - radius * 0.22, radius * 0.1,
+            bubble.x - radius * 0.2, bubble.y - radius * 0.25, radius * 0.08,
             bubble.x, bubble.y, radius,
           )
-          body.addColorStop(0, 'rgba(18,10,14,0.34)')
-          body.addColorStop(0.7, 'rgba(12,7,10,0.24)')
-          body.addColorStop(1, 'rgba(8,4,7,0.1)')
+          body.addColorStop(0, 'rgba(42,22,28,0.88)')
+          body.addColorStop(0.55, 'rgba(26,13,18,0.78)')
+          body.addColorStop(0.88, rgba(color, 0.16))
+          body.addColorStop(1, 'rgba(10,5,8,0.72)')
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius, 0, Math.PI * 2)
           context.fillStyle = body
           context.fill()
           context.restore()
 
-          // colored glowing rim (the only color in the bubble)
+          // glowing rim
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius * 0.985, 0, Math.PI * 2)
-          context.lineWidth = selected ? 2.8 : 2
-          context.strokeStyle = rgba(color, selected ? 1 : 0.88)
-          context.stroke()
-          // faint inner highlight ring for a glass edge
-          context.beginPath()
-          context.arc(bubble.x, bubble.y, radius * 0.94, 0, Math.PI * 2)
-          context.lineWidth = 0.8
-          context.strokeStyle = 'rgba(255,255,255,.08)'
+          context.lineWidth = selected ? 3 : 2.1
+          context.strokeStyle = rgba(color, selected ? 1 : 0.92)
           context.stroke()
           if (selected) {
             context.beginPath()
