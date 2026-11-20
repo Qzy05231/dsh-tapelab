@@ -38,6 +38,7 @@ const SOURCES = [
   '47-achievements.js',
   '48-verilog.js',
   '49-daily.js',
+  '52-apps-sim.js',
   '51-ecosystem.js',
   '50-version.js',
   '40-ui.js',

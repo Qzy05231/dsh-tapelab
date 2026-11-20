@@ -178,6 +178,79 @@ TT.dict = {
     'panel.modeArcade': '游乐场',
     'panel.modeNews': '资讯',
     'panel.modeEco': '生态',
+    'sim.bonus': '扩展任务 · 应用模拟',
+    'sim.bonusHint': '点开体验，不计入 11 章通关',
+    'sim.bonusDone': '已完成 ✓',
+    'sim.common.finish': '完成模拟',
+    'sim.common.later': '以后再说',
+    'sim.toast.done': '模拟完成，扩展任务已记录 ✓',
+    'sim.deweb.title': 'DeWeb 发布',
+    'sim.deweb.sub': '把网页发布成可验证地址：内容哈希上链、文件走 relay、客户端逐块校验。',
+    'sim.deweb.step0': '第一步：选择要发布的内容。',
+    'sim.deweb.contentPage': '单页应用（8 KB）',
+    'sim.deweb.contentVideo': '2GB 视频',
+    'sim.deweb.step1': '第二步：选择上链策略——链上应该记录什么？',
+    'sim.deweb.onlyPointer': '只把指针 / 哈希上链',
+    'sim.deweb.wholeChain': '把整个文件上链',
+    'sim.deweb.address': '你的可验证地址：',
+    'sim.deweb.publish': '发布到 3 个 relay 节点',
+    'sim.deweb.step3': '第三步：验证。试着篡改一个节点，再打开网站。',
+    'sim.deweb.tamper': '篡改节点返回内容',
+    'sim.deweb.open': '打开 deweb:// 网站',
+    'sim.deweb.finish': '发布成功：访问者用哈希校验，链上只存身份与节点名单。',
+    'sim.deweb.log.content': '内容已分块并计算哈希。',
+    'sim.deweb.log.contentBig': '2GB 视频已切块：链上不放大文件。',
+    'sim.deweb.log.pointerOk': '正确：链上只存指针，大文件走 relay。',
+    'sim.deweb.log.pointerBad': '不行：把 2GB 塞进链上会拖垮共识层。',
+    'sim.deweb.log.published': '已发布：3 个 relay 节点各持一份。',
+    'sim.deweb.log.tamper': '客户端发现哈希不匹配，拒绝该节点返回的数据。',
+    'sim.deweb.log.open': '打开成功，内容哈希校验通过。',
+    'sim.relay.title': 'TapeRelay 存储与消息',
+    'sim.relay.sub': '1 MiB 分块、三副本、断点续传、链下消息零 gas。',
+    'sim.relay.step0': '第一步：上传视频，观察它被切成 1 MiB 分块。',
+    'sim.relay.split': '切成 4 个分块',
+    'sim.relay.step1': '第二步：把分块分发到 3 个独立 relay 节点。',
+    'sim.relay.replicate': '分发到 3 个节点',
+    'sim.relay.step2': '第三步：让节点 A 下线——任意两份副本应能恢复。',
+    'sim.relay.recover': '从 B / C 副本恢复',
+    'sim.relay.step3': '第四步：篡改分块 2，客户端能否发现？',
+    'sim.relay.tamper': '篡改分块 2',
+    'sim.relay.verify': '客户端逐块校验',
+    'sim.relay.step4': '第五步：给社区发一条消息——要付 gas 吗？',
+    'sim.relay.send': '发送零 gas 消息',
+    'sim.relay.finish': '完成：消息走链下签名、文件走 relay，链上只维护身份与结算。',
+    'sim.relay.log.split': '已切分为 4 × 1 MiB，每块有独立哈希。',
+    'sim.relay.log.replicated': '3 个节点各持 4 块，可容忍任意 1 个节点离线。',
+    'sim.relay.log.recovered': '从 2 份副本恢复成功。',
+    'sim.relay.log.tampered': '节点返回的分块哈希不匹配，客户端拒收。',
+    'sim.relay.log.verified': '逐块校验通过，内容完整。',
+    'sim.relay.log.sent': '消息已签名投递，gas = 0。',
+    'sim.container.title': '容器化部署',
+    'sim.container.sub': '把电路与应用打包成镜像，绑定 NFT 权限，用资源限额安全运行。',
+    'sim.container.step0': '第一步：选择基础镜像。',
+    'sim.container.baseMin': 'TapeOS 最小镜像',
+    'sim.container.baseBig': '通用 2GB 镜像',
+    'sim.container.step1': '第二步：把半加器电路 + DeWeb 站点打包成镜像。',
+    'sim.container.image': '镜像哈希：',
+    'sim.container.pack': '打包并计算哈希',
+    'sim.container.step2': '第三步：管理权限绑定给谁？',
+    'sim.container.authNft': '绑定电路 NFT 所有权',
+    'sim.container.authAccount': '绑定平台账号',
+    'sim.container.step3': '第四步：设置资源限额（0.5 CPU / 128 MB）。',
+    'sim.container.limit': '应用限额并启动',
+    'sim.container.step4': '第五步：运行健康检查。篡改镜像会怎样？',
+    'sim.container.tamper': '篡改镜像',
+    'sim.container.run': '启动容器并检查',
+    'sim.container.finish': '完成：镜像哈希、NFT 权限、资源限额与运行检查全部通过。',
+    'sim.container.log.baseOk': '选用最小镜像：攻击面更小、启动更快。',
+    'sim.container.log.baseBad': '镜像太大：资源预算超限，先精简。',
+    'sim.container.log.packed': '镜像已打包，哈希写入清单。',
+    'sim.container.log.authOk': '正确：权限跟随 NFT，转让即转移管理权。',
+    'sim.container.log.authBad': '不行：平台账号会把权限重新中心化。',
+    'sim.container.log.limited': '资源限额已生效，容器启动。',
+    'sim.container.log.tamper': '镜像哈希不匹配，启动被拒绝。',
+    'sim.container.log.running': '健康检查通过，容器正在运行。',
+
     'eco.badge': '生态版图',
     'eco.title': 'TapeOut 生态版图',
     'eco.sub': '每颗气泡是一个生态项目：随机漂移、可暂停，点开看简介与官方链接。',
@@ -1212,6 +1285,79 @@ TT.dict = {
     'panel.modeArcade': 'Playground',
     'panel.modeNews': 'News',
     'panel.modeEco': 'Ecosystem',
+    'sim.bonus': 'Bonus · app simulation',
+    'sim.bonusHint': 'Optional — does not count toward the 11 chapters',
+    'sim.bonusDone': 'completed ✓',
+    'sim.common.finish': 'Finish simulation',
+    'sim.common.later': 'Maybe later',
+    'sim.toast.done': 'Simulation complete — bonus task recorded ✓',
+    'sim.deweb.title': 'Publish on DeWeb',
+    'sim.deweb.sub': 'Publish a verifiable site: content hash on chain, files over relays, client-side chunk checks.',
+    'sim.deweb.step0': 'Step 1: choose what to publish.',
+    'sim.deweb.contentPage': 'Single-page app (8 KB)',
+    'sim.deweb.contentVideo': '2 GB video',
+    'sim.deweb.step1': 'Step 2: what should go on chain?',
+    'sim.deweb.onlyPointer': 'Only the pointer / hash',
+    'sim.deweb.wholeChain': 'The whole file',
+    'sim.deweb.address': 'Your verifiable address:',
+    'sim.deweb.publish': 'Publish to 3 relay nodes',
+    'sim.deweb.step3': 'Step 3: verify. Tamper with one node, then open the site.',
+    'sim.deweb.tamper': 'Tamper with a node',
+    'sim.deweb.open': 'Open the deweb:// site',
+    'sim.deweb.finish': 'Published: visitors verify hashes; the chain stores only identity and the node list.',
+    'sim.deweb.log.content': 'Content chunked and hashed.',
+    'sim.deweb.log.contentBig': '2 GB video chunked: big files never go on chain.',
+    'sim.deweb.log.pointerOk': 'Correct: only pointers on chain, files over relays.',
+    'sim.deweb.log.pointerBad': 'No: pushing 2 GB into consensus would collapse it.',
+    'sim.deweb.log.published': 'Published: 3 relays each hold a replica.',
+    'sim.deweb.log.tamper': 'Client rejects the node: chunk hash mismatch.',
+    'sim.deweb.log.open': 'Site opened; content hash verified.',
+    'sim.relay.title': 'TapeRelay storage & messaging',
+    'sim.relay.sub': '1 MiB chunks, three replicas, resumable uploads, zero-gas off-chain messages.',
+    'sim.relay.step0': 'Step 1: upload a video and watch it split into 1 MiB chunks.',
+    'sim.relay.split': 'Split into 4 chunks',
+    'sim.relay.step1': 'Step 2: distribute chunks to 3 independent relay nodes.',
+    'sim.relay.replicate': 'Distribute to 3 nodes',
+    'sim.relay.step2': 'Step 3: take node A offline — any two replicas should recover.',
+    'sim.relay.recover': 'Recover from B / C',
+    'sim.relay.step3': 'Step 4: tamper with chunk 2 — will the client notice?',
+    'sim.relay.tamper': 'Tamper chunk 2',
+    'sim.relay.verify': 'Verify every chunk',
+    'sim.relay.step4': 'Step 5: send a community message — any gas?',
+    'sim.relay.send': 'Send a zero-gas message',
+    'sim.relay.finish': 'Done: messages are signed off-chain, files travel over relays, the chain keeps identity and settlement.',
+    'sim.relay.log.split': 'Split into 4 × 1 MiB, each with its own hash.',
+    'sim.relay.log.replicated': '3 nodes × 4 chunks; any single node can fail.',
+    'sim.relay.log.recovered': 'Recovered from 2 replicas.',
+    'sim.relay.log.tampered': 'Chunk hash mismatch: the client refuses it.',
+    'sim.relay.log.verified': 'Every chunk verified; content intact.',
+    'sim.relay.log.sent': 'Message signed and delivered, gas = 0.',
+    'sim.container.title': 'Container deployment',
+    'sim.container.sub': 'Package circuit + app into an image, bind NFT ownership and run with resource limits.',
+    'sim.container.step0': 'Step 1: choose a base image.',
+    'sim.container.baseMin': 'Minimal TapeOS image',
+    'sim.container.baseBig': 'Generic 2 GB image',
+    'sim.container.step1': 'Step 2: pack the half adder + DeWeb site into an image.',
+    'sim.container.image': 'Image hash:',
+    'sim.container.pack': 'Pack and hash',
+    'sim.container.step2': 'Step 3: bind admin rights to what?',
+    'sim.container.authNft': 'Circuit NFT ownership',
+    'sim.container.authAccount': 'Platform account',
+    'sim.container.step3': 'Step 4: apply limits (0.5 CPU / 128 MB).',
+    'sim.container.limit': 'Apply limits and start',
+    'sim.container.step4': 'Step 5: run health checks. What if the image is tampered?',
+    'sim.container.tamper': 'Tamper with the image',
+    'sim.container.run': 'Start container and check',
+    'sim.container.finish': 'Done: image hash, NFT auth, limits and health checks all pass.',
+    'sim.container.log.baseOk': 'Minimal image: smaller attack surface and faster boot.',
+    'sim.container.log.baseBad': 'Too large: resource budget exceeded; trim it first.',
+    'sim.container.log.packed': 'Image packed; hash recorded in the manifest.',
+    'sim.container.log.authOk': 'Correct: rights follow the NFT, transferring ownership transfers admin.',
+    'sim.container.log.authBad': 'No: a platform account re-centralises control.',
+    'sim.container.log.limited': 'Limits applied; container started.',
+    'sim.container.log.tamper': 'Image hash mismatch: launch refused.',
+    'sim.container.log.running': 'Health checks passed; container is running.',
+
     'eco.badge': 'Ecosystem map',
     'eco.title': 'TapeOut ecosystem map',
     'eco.sub': 'Each bubble is an ecosystem project: drifting, pausable — click one for its intro and official links.',
@@ -2685,6 +2831,28 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-eco-detail p { margin:0 0 8px; font-size:11px; line-height:1.6; color:var(--tt-dim); }
 .tt-eco-links { display:flex; gap:6px; flex-wrap:wrap; }
 
+.tt-simbar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:4px 0; padding:4px 6px;
+  border-radius:8px; background:rgba(179,140,255,.06); border:1px dashed rgba(179,140,255,.3); }
+.tt-simcard { width:min(620px,94%); max-height:88vh; overflow:auto; }
+.tt-simsteps { display:flex; gap:6px; margin:8px 0; }
+.tt-simstep { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:10px; border:1px solid rgba(120,190,220,.3); color:var(--tt-dim); }
+.tt-simstep[data-active="true"] { border-color:var(--tt-mint); color:var(--tt-mint); box-shadow:0 0 10px rgba(43,230,194,.3); }
+.tt-simstep[data-done="true"] { background:var(--tt-mint); color:#08221c; border-color:var(--tt-mint); }
+.tt-simbody { min-height:84px; padding:6px 0; }
+.tt-simtext { margin:0 0 8px; font-size:11.5px; line-height:1.6; color:var(--tt-dim); }
+.tt-simlog { display:flex; flex-direction:column; gap:3px; max-height:110px; overflow:auto; padding:6px 8px;
+  border-radius:8px; background:rgba(4,12,20,.5); border:1px solid rgba(120,190,220,.12); }
+.tt-simlogline { font-size:10.5px; line-height:1.45; color:var(--tt-dim); }
+.tt-simlogline[data-tone="good"] { color:var(--tt-mint); }
+.tt-simlogline[data-tone="bad"] { color:var(--tt-red); }
+.tt-chunkrow, .tt-noderow { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
+.tt-chunk { display:flex; flex-direction:column; gap:2px; padding:6px 8px; border-radius:8px; font-size:10.5px;
+  background:rgba(86,225,255,.08); border:1px solid rgba(86,225,255,.25); color:var(--tt-ink); }
+.tt-chunk em, .tt-node em { font-style:normal; font-size:9px; color:var(--tt-faint); }
+.tt-node { display:flex; flex-direction:column; gap:2px; padding:6px 9px; border-radius:8px; font-size:10.5px;
+  background:rgba(43,230,194,.08); border:1px solid rgba(43,230,194,.3); color:var(--tt-ink); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -2823,6 +2991,24 @@ function TapeoutQuiz(props) {
   )
 }
 
+function ChapterSims(props) {
+  const { state, t, api } = props
+  if (!TT.AppSims) return null
+  const sim = TT.AppSims.simByChapter(state.chapter)
+  if (!sim) return null
+  const done = Boolean(state.sims && state.sims[sim.id])
+  return TT.h('div', { className: 'tt-simbar' },
+    TT.h('span', { className: 'tt-lablabel' }, `🧩 ${t('sim.bonus')}`),
+    TT.h('button', {
+      type: 'button',
+      className: 'tt-chip',
+      'data-active': done ? 'true' : 'false',
+      onClick: () => api.dispatch({ type: 'sims/open', id: sim.id }),
+    }, `${sim.icon} ${t(sim.titleKey)}${done ? ' ✓' : ''}`),
+    TT.h('span', { className: 'tt-lablabel', style: { fontSize: 9 } }, done ? t('sim.bonusDone') : t('sim.bonusHint')),
+  )
+}
+
 TT.UI.Panel = function Panel(props) {
   const store = props.store
   const api = props.api
@@ -2881,7 +3067,8 @@ TT.UI.Panel = function Panel(props) {
       // the first render's state would never see the arcade mode or the current chapter.
       const current = stateRef.current
       if (event.key === 'Escape') {
-        if (current.updateOpen) api.dispatch({ type: 'update/close' })
+        if (current.simOpen) api.dispatch({ type: 'sims/close' })
+        else if (current.updateOpen) api.dispatch({ type: 'update/close' })
         else if (current.welcome) api.dispatch({ type: 'welcome/close' })
         else if (current.codex) api.dispatch({ type: 'codex/close' })
         else if (current.intro) api.dispatch({ type: 'intro/close' })
@@ -3046,6 +3233,7 @@ TT.UI.Panel = function Panel(props) {
   ) : null
 
   const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
+  const simModal = state.simOpen && TT.AppSimsUI ? TT.h(TT.AppSimsUI.Page, { sim: state.simOpen, state, t, api }) : null
 
   return TT.h('div', {
     className: 'tt-lab',
@@ -3236,6 +3424,7 @@ TT.UI.Panel = function Panel(props) {
             narrow ? null : TT.h('div', { className: 'tt-msub' }, resolve(chapter.subtitleKey)),
             TT.h(ChallengeBar, { state, t, api }),
             TT.h(TapeoutQuiz, { state, t, api }),
+            TT.h(ChapterSims, { state, t, api }),
             TT.h('ul', { className: 'tt-goals' }, goals.map((goal, index) =>
               TT.h('li', { key: index, className: 'tt-goal', 'data-done': goal.done ? 'true' : 'false' },
                 TT.h('span', { className: 'tt-check' }, '✓'),
@@ -3291,6 +3480,7 @@ TT.UI.Panel = function Panel(props) {
       welcome,
       achievements,
       versionModal,
+      simModal,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),

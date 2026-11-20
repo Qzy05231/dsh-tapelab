@@ -572,6 +572,8 @@ TT.Missions = (function () {
       welcome: true,
       achvOpen: false,
       updateOpen: false,
+      sims: { deweb: false, relay: false, container: false },
+      simOpen: null,
       unlocked: [],
       stats: { snakeBest: 0, snakeBySpeed: {}, snakeScores: [], debugSolved: 0, guessBest: null, guessScoreBest: 0, lockWins: 0, lockBestAttempts: null, synth: 0, imports: 0, receipts: 0, daily: {}, challenge: {} },
       challenge: { active: false, chapter: 0, startedAt: 0, hadCompleted: false, actions: 0, mistakes: 0, lastResult: null },
@@ -1233,6 +1235,17 @@ TT.Missions = (function () {
   function reduceInner(state, action) {
     if (!action || !action.type) return state
     switch (action.type) {
+      case 'sims/open': {
+        const id = ['deweb', 'relay', 'container'].indexOf(action.id) >= 0 ? action.id : null
+        return id ? { ...state, simOpen: id } : state
+      }
+      case 'sims/close':
+        return { ...state, simOpen: null }
+      case 'sims/complete': {
+        const id = ['deweb', 'relay', 'container'].indexOf(action.id) >= 0 ? action.id : null
+        if (!id) return state
+        return pushToast({ ...state, sims: { ...state.sims, [id]: true } }, 'sim.toast.done', {}, 'good')
+      }
       case 'update/open':
         return { ...state, updateOpen: true }
       case 'update/close':

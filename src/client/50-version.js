@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.2.0'
+  const VERSION = '1.3.0'
   const BUILT_AT = '2026-11-20'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.3.0',
+      date: '2026-11-20',
+      items: [
+        '章节扩展任务：DeWeb 发布、TapeRelay 存储/消息、容器化部署模拟',
+        '30 秒级分步互动：分块、三副本、篡改校验、NFT 权限与资源限额',
+      ],
+    },
     {
       version: '1.2.0',
       date: '2026-11-20',
