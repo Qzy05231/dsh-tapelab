@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.4.0'
+  const VERSION = '1.5.0'
   const BUILT_AT = '2026-11-20'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.5.0',
+      date: '2026-11-20',
+      items: [
+        '应用三章加深：DeWeb/ TapeRelay/ 容器从 3 步扩展到 5–7 步',
+        '加入策略选择、副本数量、节点下线恢复、篡改校验与资源限额等失败分支',
+      ],
+    },
     {
       version: '1.4.0',
       date: '2026-11-20',
