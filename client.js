@@ -8861,6 +8861,14 @@ TT.Arcade = (function () {
     return Math.max(PIANO_MIN, Math.min(PIANO_MAX, 12 * ((Number(octave) || 4) + 1) + offset))
   }
 
+  // Perceptual loudness compensation: low notes need a little more gain to be
+  // heard on small speakers, high notes a little less so the keyboard feels even.
+  function pianoGain(midi) {
+    const value = Math.max(PIANO_MIN, Math.min(PIANO_MAX, Number(midi) || 60))
+    const norm = (value - PIANO_MIN) / (PIANO_MAX - PIANO_MIN)
+    return 0.52 - 0.22 * norm
+  }
+
   // keep the old helper names working for any callers
   function pianoFreq(semitone, octave) {
     return midiFreq(12 * ((Number(octave) || 4) + 1) + (Number(semitone) || 0))
@@ -9094,6 +9102,7 @@ TT.Arcade = (function () {
     midiName,
     midiFreq,
     keyToMidi,
+    pianoGain,
     pianoFreq,
     pianoName,
     PATTERNS: PATTERN_KEYS,
@@ -18256,9 +18265,10 @@ dispatch({ type: 'cinema/set', active: false })
       if (action.type === 'music/key' && TT.Audio && TT.Arcade) {
         const midi = Number(action.midi !== undefined ? action.midi : action.key) || 60
         const freq = TT.Arcade.midiFreq(midi)
-        TT.Audio.note(freq, 0.55, 'triangle', 0.5)
-        // laptop speakers barely reproduce A0–B2; add a quiet octave-up partial
-        if (midi < 48) TT.Audio.note(freq * 2, 0.5, 'sine', 0.18)
+        const gain = TT.Arcade.pianoGain(midi)
+        TT.Audio.note(freq, 0.55, 'triangle', gain)
+        // only the deepest octave needs help on laptop speakers; keep it quiet
+        if (midi < 36) TT.Audio.note(freq * 2, 0.5, 'sine', gain * 0.22)
       }
       manageArcadeTimers(after)
       return after
