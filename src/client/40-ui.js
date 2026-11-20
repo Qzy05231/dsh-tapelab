@@ -3069,11 +3069,13 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-node { display:flex; flex-direction:column; gap:2px; padding:6px 9px; border-radius:8px; font-size:10.5px;
   background:rgba(43,230,194,.08); border:1px solid rgba(43,230,194,.3); color:var(--tt-ink); }
 
-.tt-foldtext { align-self:flex-start; margin:2px 0 3px; padding:2px 9px; border-radius:6px;
-  border:1px solid rgba(120,190,220,.22); background:rgba(86,225,255,.05); color:var(--tt-dim);
-  font-size:10.5px; line-height:1.4; cursor:pointer; letter-spacing:.04em; }
-.tt-foldtext:hover { color:var(--tt-ink); border-color:rgba(86,225,255,.45); background:rgba(86,225,255,.1); }
-.tt-foldtext:focus-visible { outline:1px solid var(--tt-mint); outline-offset:1px; }
+.tt-foldtext { align-self:flex-start; margin:3px 0 6px; padding:4px 13px; border-radius:7px;
+  border:1px solid rgba(43,230,194,.45); background:rgba(43,230,194,.12); color:var(--tt-mint);
+  font-size:11.5px; font-weight:600; line-height:1.35; cursor:pointer; letter-spacing:.06em;
+  box-shadow:0 0 10px rgba(43,230,194,.12); transition:background .15s ease, color .15s ease, box-shadow .15s ease; }
+.tt-foldtext:hover { color:#e8f6ff; background:rgba(43,230,194,.24); border-color:var(--tt-mint);
+  box-shadow:0 0 14px rgba(43,230,194,.3); }
+.tt-foldtext:focus-visible { outline:2px solid var(--tt-mint); outline-offset:2px; }
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
@@ -3640,7 +3642,7 @@ TT.UI.Panel = function Panel(props) {
               title: cardOpen ? t('panel.foldCard') : t('panel.unfoldCard'),
               'aria-expanded': cardOpen ? 'true' : 'false',
               onClick: () => setCardOpen((open) => !open),
-            }, cardOpen ? t('panel.fold') : t('panel.unfold')),
+            }, cardOpen ? `${t('panel.fold')} ⌃` : `${t('panel.unfold')} ⌄`),
             TT.h('h3', { className: 'tt-mtitle' }, resolve(chapter.titleKey)),
             narrow ? null : TT.h('div', { className: 'tt-msub' }, resolve(chapter.subtitleKey)),
             TT.h(ChallengeBar, { state, t, api }),
