@@ -13169,26 +13169,33 @@ TT.EcosystemUI = (function () {
           const color = category.color
           const rgba = TT.Ecosystem.hexToRgba
 
-          // outer glow ring
-          context.save()
-          context.shadowColor = rgba(color, selected || hovered ? 0.85 : 0.55)
-          context.shadowBlur = selected ? 34 : 20
-          // dark coin face: a subtle maroon tint, not a saturated color fill
+          // outer glow only: draw an annulus outside the coin, never behind it,
+          // so the semi-transparent face cannot reveal a fuzzy glow inside.
+          const glowSpread = selected ? radius * 0.34 : radius * 0.24
+          const glow = context.createRadialGradient(bubble.x, bubble.y, radius * 0.99, bubble.x, bubble.y, radius + glowSpread)
+          glow.addColorStop(0, rgba(color, selected || hovered ? 0.55 : 0.38))
+          glow.addColorStop(0.5, rgba(color, 0.16))
+          glow.addColorStop(1, rgba(color, 0))
+          context.beginPath()
+          context.arc(bubble.x, bubble.y, radius + glowSpread, 0, Math.PI * 2)
+          context.arc(bubble.x, bubble.y, radius * 0.99, 0, Math.PI * 2, true)
+          context.fillStyle = glow
+          context.fill()
+
+          // clean dark coin face (no colored band, no shadow leaking under it)
           const body = context.createRadialGradient(
             bubble.x - radius * 0.2, bubble.y - radius * 0.25, radius * 0.08,
             bubble.x, bubble.y, radius,
           )
-          body.addColorStop(0, 'rgba(42,22,28,0.88)')
-          body.addColorStop(0.55, 'rgba(26,13,18,0.78)')
-          body.addColorStop(0.88, rgba(color, 0.16))
-          body.addColorStop(1, 'rgba(10,5,8,0.72)')
+          body.addColorStop(0, 'rgba(40,22,27,0.94)')
+          body.addColorStop(0.6, 'rgba(24,12,17,0.92)')
+          body.addColorStop(1, 'rgba(12,6,9,0.96)')
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius, 0, Math.PI * 2)
           context.fillStyle = body
           context.fill()
-          context.restore()
 
-          // glowing rim
+          // crisp glowing rim
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius * 0.985, 0, Math.PI * 2)
           context.lineWidth = selected ? 3 : 2.1
@@ -13213,8 +13220,8 @@ TT.EcosystemUI = (function () {
           const nameSize = Math.max(9, Math.min(15, radius * 0.17))
           context.fillStyle = '#f4edf1'
           context.font = `700 ${nameSize}px ui-sans-serif, -apple-system, sans-serif`
-          context.shadowColor = 'rgba(0,0,0,.65)'
-          context.shadowBlur = 4
+          context.shadowColor = 'transparent'
+          context.shadowBlur = 0
           const words = String(project.name).split(' ')
           if (words.length > 1 && radius < 58) {
             context.fillText(words[0], bubble.x, bubble.y + radius * 0.12)
@@ -13228,7 +13235,7 @@ TT.EcosystemUI = (function () {
             const subSize = Math.max(8, Math.min(12, radius * 0.11))
             context.fillStyle = rgba(color, 0.95)
             context.font = `600 ${subSize}px ui-sans-serif, -apple-system, sans-serif`
-            context.shadowBlur = 3
+            context.shadowBlur = 0
             context.fillText(project.sub || '', bubble.x, bubble.y + radius * 0.44)
           }
           context.shadowColor = 'transparent'
