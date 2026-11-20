@@ -3104,16 +3104,16 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-piano-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
   box-shadow:0 0 14px rgba(255,195,92,.55); color:#1a1206; }
 
-.tt-piano-scroll { overflow-x:auto; padding:6px 6px 8px; margin:4px 0 8px; border-radius:10px;
+.tt-piano-scroll { overflow:hidden; padding:6px 6px 8px; margin:4px 0 8px; border-radius:10px;
   background:rgba(4,12,20,.55); border:1px solid rgba(86,225,255,.14); }
-.tt-piano-full { position:relative; display:flex; align-items:flex-start; height:112px; }
-.tt-piano-white { flex:0 0 28px; width:28px; height:112px; display:flex; align-items:flex-end; justify-content:center;
-  padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 5px 5px; cursor:pointer;
-  background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:8px; user-select:none; }
+.tt-piano-full { position:relative; display:flex; align-items:flex-start; width:100%; height:112px; }
+.tt-piano-white { flex:1 1 0; min-width:0; width:auto; height:112px; display:flex; align-items:flex-end; justify-content:center;
+  padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 4px 4px; cursor:pointer;
+  background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:7px; user-select:none; overflow:hidden; }
 .tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
 .tt-piano-white[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
   box-shadow:inset 0 0 18px rgba(255,195,92,.6); }
-.tt-piano-black-key { position:absolute; top:0; width:18px; height:66px; z-index:2; cursor:pointer;
+.tt-piano-black-key { position:absolute; top:0; height:64px; z-index:2; cursor:pointer;
   border-radius:0 0 4px 4px; border:1px solid rgba(86,225,255,.3);
   background:linear-gradient(180deg,#22303c,#070d13); user-select:none; }
 .tt-piano-black-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
