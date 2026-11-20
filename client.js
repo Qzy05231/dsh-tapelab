@@ -9130,12 +9130,25 @@ TT.ArcadeUI = (function () {
             'data-active': active ? 'true' : 'false',
             'data-rest': step < 0 ? 'true' : 'false',
             style: { height: `${28 + TT.Arcade.stepAmplitude(step, music.scale) * 60}px` },
+            title: t('arcade.music.preview'),
+            onClick: () => {
+              if (step >= 0 && TT.Audio) TT.Audio.note(TT.Arcade.freq(step, music.scale), 0.18, 'triangle', 0.22)
+            },
           }, h('span', null, TT.Arcade.noteName(step, music.scale)))
         })),
         h('div', { className: 'tt-labrow' },
+          h('button', {
+            type: 'button',
+            className: 'tt-chip',
+            onClick: () => {
+              const step = tune.steps[music.step % tune.steps.length]
+              if (step >= 0 && TT.Audio) TT.Audio.note(TT.Arcade.freq(step, music.scale), 0.18, 'triangle', 0.22)
+              api.dispatch({ type: 'music/step' })
+            },
+          }, `⏭ ${t('arcade.music.next')}`),
           h('span', { className: 'tt-lablabel' }, t('arcade.music.now')),
           h('b', { style: { color: 'var(--tt-amber)', fontVariantNumeric: 'tabular-nums' } },
-            `${TT.Arcade.noteName(tune.steps[music.step % tune.steps.length], music.scale)} @ ${music.tempo}ms`),
+            `${TT.Arcade.noteName(tune.steps[music.step % tune.steps.length], music.scale)} · ${music.tempo}ms · ${Math.round(60000 / music.tempo)} BPM`),
         ),
       ),
       h(Card, { title: t('arcade.music.how'), hint: '' },
@@ -13897,6 +13910,8 @@ TT.dict = {
     'arcade.music.scale': '音阶',
     'arcade.music.tune': '曲目',
     'arcade.music.now': '当前音',
+    'arcade.music.next': '下一音',
+    'arcade.music.preview': '点击试听这个音',
     'arcade.music.how': '它在门级上是什么',
     'arcade.music.howBody': '真实实现会用一个 4 位计数器（4 个锁存器 + 15 个与非门）驱动音阶表：每个出块计数器加一，取出的值选中一个频率，再由蜂鸣器发声。这就是「用链上出块做音乐」。',
     'arcade.music.scales': '音阶',
@@ -15115,6 +15130,8 @@ TT.dict = {
     'arcade.music.scale': 'Scale',
     'arcade.music.tune': 'Tune',
     'arcade.music.now': 'Now',
+    'arcade.music.next': 'Next note',
+    'arcade.music.preview': 'Click to audition this note',
     'arcade.music.how': 'What it is at gate level',
     'arcade.music.howBody': 'A real build uses a 4-bit counter (4 latches + 15 NAND gates) to drive a note table: every block increments the counter, selects a frequency and beeps. That is music driven by chain blocks.',
     'arcade.music.scales': 'Scales',
@@ -17884,10 +17901,15 @@ dispatch({ type: 'cinema/set', active: false })
           if (step >= 0 && TT.Audio) {
             TT.Audio.note(TT.Arcade.freq(step, music.scale), Math.max(0.07, (music.tempo - 60) / 1000), 'triangle', 0.2)
           }
+          // Schedule the next tick *before* dispatching. dispatch() synchronously runs
+          // manageArcadeTimers, which would otherwise start a second timer because
+          // musicTimer is null here — causing doubled notes and drifting tempo.
+          musicTimer = setTimeout(tick, music.tempo)
           dispatch({ type: 'music/step' })
           const after = get()
-          if (after.mode === 'arcade' && after.arcade.music.playing) {
-            musicTimer = setTimeout(tick, after.arcade.music.tempo)
+          if (!(after.mode === 'arcade' && after.arcade.game === 'music' && after.arcade.music.playing)) {
+            clearTimeout(musicTimer)
+            musicTimer = null
           }
         }
         musicTimer = setTimeout(tick, 120)
