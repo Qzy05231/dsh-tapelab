@@ -159,6 +159,9 @@ TT.dict = {
     'panel.modeArcade': '游乐场',
     'panel.modeNews': '资讯',
     'news.badge': '每日资讯',
+    'news.auto': '每日 06:00 自动抓取',
+    'news.autoNext': '下次自动抓取',
+
     'news.refresh': '刷新资讯',
     'news.refreshing': '抓取中…',
     'news.refreshed': '已更新，显示最新抓取',
@@ -1155,6 +1158,9 @@ TT.dict = {
     'panel.modeArcade': 'Playground',
     'panel.modeNews': 'News',
     'news.badge': 'Daily news',
+    'news.auto': 'Daily 06:00 auto-fetch',
+    'news.autoNext': 'Next auto-fetch',
+
     'news.refresh': 'Refresh',
     'news.refreshing': 'Fetching…',
     'news.refreshed': 'Updated with the latest crawl',

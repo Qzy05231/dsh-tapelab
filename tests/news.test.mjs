@@ -55,3 +55,26 @@ test('real feed snapshot and markdown parser work', () => {
   assert.equal(parsed[0].time, '21:53')
   assert.ok(parsed[0].summary.includes('TapeRelay'))
 })
+
+
+test('the 6am scheduler only runs once per day and respects backoff', () => {
+  const day = new Date('2026-11-20T05:00:00')
+  const before = day.getTime()
+  const after = new Date('2026-11-20T06:01:00').getTime()
+  const yesterday = new Date('2026-11-19T06:30:00').getTime()
+  // before 6:00 -> no
+  assert.equal(TT.News.shouldAutoFetch({ enabled: true, lastAuto: 0 }, before), false)
+  // after 6:00, never fetched today -> yes
+  assert.equal(TT.News.shouldAutoFetch({ enabled: true, lastAuto: 0 }, after), true)
+  // fetched earlier today -> no
+  assert.equal(TT.News.shouldAutoFetch({ enabled: true, lastAuto: new Date('2026-11-20T06:02:00').getTime() }, after), false)
+  // fetched yesterday -> yes again
+  assert.equal(TT.News.shouldAutoFetch({ enabled: true, lastAuto: yesterday }, after), true)
+  // disabled -> no
+  assert.equal(TT.News.shouldAutoFetch({ enabled: false, lastAuto: 0 }, after), false)
+  // failed a moment ago -> backoff
+  assert.equal(TT.News.shouldAutoFetch({ enabled: true, lastAuto: 0, lastAttempt: after - 60000 }, after), false)
+  // next run calculation
+  assert.equal(new Date(TT.News.nextAutoAt(before)).getHours(), 6)
+  assert.equal(new Date(TT.News.nextAutoAt(after)).getDate(), new Date(after).getDate() + 1)
+})

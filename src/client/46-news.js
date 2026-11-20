@@ -132,6 +132,63 @@ TT.News.snapshot = function snapshot() {
 
 const NEWS_READER = 'https://r.jina.ai/https://tapeout.link/news'
 const NEWS_CACHE = 'dsh-tapelab-lab:news:v1'
+const NEWS_AUTO_KEY = 'dsh-tapelab-lab:news:auto:v1'
+const AUTO_HOUR = 6
+const RETRY_MS = 30 * 60 * 1000
+
+function readAuto() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(NEWS_AUTO_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed && typeof parsed === 'object') return { enabled: parsed.enabled !== false, lastAuto: Number(parsed.lastAuto) || 0, lastAttempt: Number(parsed.lastAttempt) || 0 }
+      }
+    }
+  } catch (error) {
+    /* default below */
+  }
+  return { enabled: true, lastAuto: 0, lastAttempt: 0 }
+}
+
+function writeAuto(info) {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(NEWS_AUTO_KEY, JSON.stringify(info))
+  } catch (error) {
+    /* cache is optional */
+  }
+}
+
+function todaySix(now) {
+  const date = new Date(Number(now) || Date.now())
+  date.setHours(AUTO_HOUR, 0, 0, 0)
+  return date.getTime()
+}
+
+function shouldAutoFetch(info, now) {
+  const stamp = Number(now) || Date.now()
+  const six = todaySix(stamp)
+  if (!info || info.enabled === false) return false
+  if (stamp < six) return false
+  if (Number(info.lastAuto) >= six) return false
+  if (Number(info.lastAttempt) && stamp - Number(info.lastAttempt) < RETRY_MS) return false
+  return true
+}
+
+function nextAutoAt(now) {
+  const stamp = Number(now) || Date.now()
+  const six = todaySix(stamp)
+  const date = new Date(stamp)
+  if (stamp < six) return six
+  date.setDate(date.getDate() + 1)
+  date.setHours(AUTO_HOUR, 0, 0, 0)
+  return date.getTime()
+}
+
+TT.News.todaySix = todaySix
+TT.News.shouldAutoFetch = shouldAutoFetch
+TT.News.nextAutoAt = nextAutoAt
+TT.News.readAuto = readAuto
 
 TT.NewsUI = (function () {
   const h = TT.h
@@ -156,16 +213,20 @@ TT.NewsUI = (function () {
     const brief = TT.News.briefing()
     const [feed, setFeed] = React.useState(loadFeed)
     const [status, setStatus] = React.useState('idle')
+    const [auto, setAuto] = React.useState(readAuto)
     const [picked, setPicked] = React.useState(null)
     const [revealed, setRevealed] = React.useState(false)
     const correct = picked === brief.quiz.answer
 
-    async function refresh() {
+    async function doRefresh(automatic) {
       if (typeof fetch !== 'function') {
         setStatus('fail')
         return
       }
-      setStatus('loading')
+      if (!automatic) setStatus('loading')
+      const attempt = readAuto()
+      writeAuto({ ...attempt, lastAttempt: Date.now() })
+      setAuto(readAuto())
       try {
         const response = await fetch(NEWS_READER, { headers: { accept: 'text/plain' } })
         if (!response.ok) throw new Error('HTTP ' + response.status)
@@ -178,12 +239,29 @@ TT.NewsUI = (function () {
         } catch (error) {
           /* cache is optional */
         }
+        const now = Date.now()
+        writeAuto({ ...readAuto(), lastAuto: now, lastAttempt: now })
+        setAuto(readAuto())
         setFeed(next)
         setStatus('ok')
       } catch (error) {
         setStatus('fail')
       }
     }
+
+    React.useEffect(() => {
+      let cancelled = false
+      const tick = () => {
+        if (cancelled) return
+        if (TT.News.shouldAutoFetch(readAuto(), Date.now())) doRefresh(true)
+      }
+      tick()
+      const timer = setInterval(tick, 5 * 60 * 1000)
+      return () => {
+        cancelled = true
+        clearInterval(timer)
+      }
+    }, [])
 
     const crawled = feed.crawledAt ? new Date(feed.crawledAt).toLocaleString() : ''
     return h('div', { className: 'tt-labview tt-newsview' },
@@ -193,7 +271,17 @@ TT.NewsUI = (function () {
           h('h2', null, t('news.title')),
           h('p', null, t('news.sub')),
           h('div', { className: 'tt-labpaths' },
-            h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', disabled: status === 'loading', onClick: refresh }, status === 'loading' ? t('news.refreshing') : `🔄 ${t('news.refresh')}`),
+            h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', disabled: status === 'loading', onClick: () => doRefresh(false) }, status === 'loading' ? t('news.refreshing') : `🔄 ${t('news.refresh')}`),
+            h('button', {
+              type: 'button',
+              className: 'tt-chip',
+              'data-active': auto.enabled ? 'true' : 'false',
+              onClick: () => {
+                const next = { ...readAuto(), enabled: !readAuto().enabled }
+                writeAuto(next)
+                setAuto(readAuto())
+              },
+            }, `${t('news.auto')} ${auto.enabled ? '06:00 ✓' : 'OFF'}`),
             h('span', { className: 'tt-lablabel' }, status === 'fail' ? t('news.refreshFail') : status === 'ok' ? t('news.refreshed') : feed.crawledAt ? `${t('news.crawled')} ${crawled}` : t('news.noFeed')),
             feed.source ? h('a', { className: 'tt-chip', href: feed.source, target: '_blank', rel: 'noreferrer noopener' }, t('news.source')) : null,
           ),
@@ -216,7 +304,8 @@ TT.NewsUI = (function () {
                 h('a', { className: 'tt-feedsource', href: item.url, target: '_blank', rel: 'noreferrer noopener' }, 'tapeout.link ↗'),
               )))
           : h('p', { className: 'tt-labempty' }, t('news.noFeed')),
-        h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t('news.crawlNote')),
+        h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } },
+          `${auto.enabled ? `${t('news.autoNext')} ${new Date(TT.News.nextAutoAt(Date.now())).toLocaleString()} · ` : `${t('news.auto')} OFF · `}${t('news.crawlNote')}`),
       ),
       h('section', { className: 'tt-labcard' },
         h('div', { className: 'tt-labcardhead' },
