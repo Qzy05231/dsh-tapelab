@@ -6784,6 +6784,14 @@ TT.Missions = (function () {
         const step = ((state.arcade.music.step || 0) + 1) % tune.notes.length
         return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, step } } }
       }
+      case 'music/key': {
+        const key = Math.max(0, Math.min(24, Number(action.key) || 0))
+        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, lastKey: key, lastKeyAt: Date.now() } } }
+      }
+      case 'music/octave': {
+        const octave = Math.max(-1, Math.min(2, (state.arcade.music.octave || 0) + (Number(action.delta) || 0)))
+        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, octave } } }
+      }
       case 'music/tempo':
         return {
           ...state,
@@ -8808,6 +8816,22 @@ TT.Arcade = (function () {
     return tune.notes.reduce((sum, note) => sum + note.beats, 0)
   }
 
+  // Piano keyboard: chromatic C4..C5, piano-style two rows.
+  const PIANO_KEYS = {
+    a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12,
+  }
+  const PIANO_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
+  const PIANO_BLACK = [1, 3, 6, 8, 10]
+
+  function pianoFreq(semitone, octave) {
+    const shift = (Number(octave) || 0) * 12
+    return NOTE_BASE * Math.pow(2, (Number(semitone) + shift) / 12)
+  }
+  function pianoName(semitone, octave) {
+    const value = Math.max(0, Number(semitone) || 0)
+    return PIANO_NAMES[value % 12] + (4 + (Number(octave) || 0) + Math.floor(value / 12))
+  }
+
   const NOTE_BASE = 261.63 // C4
 
   function freq(step, scaleIndex) {
@@ -9041,6 +9065,10 @@ TT.Arcade = (function () {
     TUNES,
     noteAt,
     tuneBeats,
+    PIANO_KEYS,
+    PIANO_BLACK,
+    pianoFreq,
+    pianoName,
     PATTERNS: PATTERN_KEYS,
     freq,
     noteName,
@@ -9181,6 +9209,38 @@ TT.ArcadeUI = (function () {
             },
           }, h('span', null, TT.Arcade.noteName(note.deg, music.scale)))
         })),
+        h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('arcade.music.piano')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: -1 }) }, '−'),
+          h('span', { className: 'tt-lablabel', style: { fontVariantNumeric: 'tabular-nums' } }, `OCT ${music.octave || 0}`),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: 1 }) }, '+'),
+          h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('arcade.music.pianoHint')),
+        ),
+        h('div', { className: 'tt-piano' },
+          h('div', { className: 'tt-piano-row tt-piano-black' }, TT.Arcade.PIANO_BLACK.map((semitone) => {
+            const letter = Object.keys(TT.Arcade.PIANO_KEYS).find((key) => TT.Arcade.PIANO_KEYS[key] === semitone)
+            return h('button', {
+              key: semitone,
+              type: 'button',
+              className: 'tt-piano-key',
+              'data-black': 'true',
+              'data-active': music.lastKey === semitone ? 'true' : 'false',
+              title: `${TT.Arcade.pianoName(semitone, music.octave || 0)} · ${letter.toUpperCase()}`,
+              onClick: () => api.dispatch({ type: 'music/key', key: semitone }),
+            }, h('span', null, TT.Arcade.pianoName(semitone, music.octave || 0)), h('kbd', null, letter.toUpperCase()))
+          })),
+          h('div', { className: 'tt-piano-row' }, [0, 2, 4, 5, 7, 9, 11, 12].map((semitone) => {
+            const letter = Object.keys(TT.Arcade.PIANO_KEYS).find((key) => TT.Arcade.PIANO_KEYS[key] === semitone)
+            return h('button', {
+              key: semitone,
+              type: 'button',
+              className: 'tt-piano-key',
+              'data-active': music.lastKey === semitone ? 'true' : 'false',
+              title: `${TT.Arcade.pianoName(semitone, music.octave || 0)} · ${letter.toUpperCase()}`,
+              onClick: () => api.dispatch({ type: 'music/key', key: semitone }),
+            }, h('span', null, TT.Arcade.pianoName(semitone, music.octave || 0)), h('kbd', null, letter.toUpperCase()))
+          })),
+        ),
         h('div', { className: 'tt-labrow' },
           h('button', {
             type: 'button',
@@ -13956,6 +14016,8 @@ TT.dict = {
     'arcade.music.tune': '曲目',
     'arcade.music.now': '当前音',
     'arcade.music.next': '下一音',
+    'arcade.music.piano': '键盘钢琴',
+    'arcade.music.pianoHint': 'A/W/S/E/D/F/T/G/Y/H/U/J/K 弹奏，Z/X 切换八度',
     'arcade.music.preview': '点击试听这个音',
     'arcade.music.how': '它在门级上是什么',
     'arcade.music.howBody': '真实实现会用一个 4 位计数器（4 个锁存器 + 15 个与非门）驱动音阶表：每个出块计数器加一，取出的值选中一个频率，再由蜂鸣器发声。这就是「用链上出块做音乐」。',
@@ -15176,6 +15238,8 @@ TT.dict = {
     'arcade.music.tune': 'Tune',
     'arcade.music.now': 'Now',
     'arcade.music.next': 'Next note',
+    'arcade.music.piano': 'Keyboard piano',
+    'arcade.music.pianoHint': 'Play A/W/S/E/D/F/T/G/Y/H/U/J/K, Z/X to change octave',
     'arcade.music.preview': 'Click to audition this note',
     'arcade.music.how': 'What it is at gate level',
     'arcade.music.howBody': 'A real build uses a 4-bit counter (4 latches + 15 NAND gates) to drive a note table: every block increments the counter, selects a frequency and beeps. That is music driven by chain blocks.',
@@ -16672,6 +16736,19 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   box-shadow:0 0 14px rgba(43,230,194,.3); }
 .tt-foldtext:focus-visible { outline:2px solid var(--tt-mint); outline-offset:2px; }
 
+.tt-piano { display:flex; flex-direction:column; gap:4px; margin:4px 0 8px; padding:6px; border-radius:10px;
+  background:rgba(4,12,20,.55); border:1px solid rgba(86,225,255,.14); }
+.tt-piano-row { display:flex; gap:4px; }
+.tt-piano-black { padding:0 22px; }
+.tt-piano-key { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+  gap:1px; height:52px; border-radius:6px; border:1px solid rgba(86,225,255,.25);
+  background:linear-gradient(180deg,#e8f6ff,#b9d9e8); color:#0b1a24; cursor:pointer; font-size:9px; }
+.tt-piano-key[data-black="true"] { height:38px; background:linear-gradient(180deg,#22303c,#0b151d); color:var(--tt-ink);
+  border-color:rgba(86,225,255,.3); }
+.tt-piano-key kbd { font-size:8px; opacity:.6; }
+.tt-piano-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
+  box-shadow:0 0 14px rgba(255,195,92,.55); color:#1a1206; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -16893,6 +16970,21 @@ TT.UI.Panel = function Panel(props) {
         else if (current.intro) api.dispatch({ type: 'intro/close' })
         else if (!current.finaleDismissed && TT.Missions.allDone(current)) api.dispatch({ type: 'finale/close' })
         return
+      }
+      if (current.mode === 'arcade' && current.arcade.game === 'music' && TT.Arcade) {
+        const pianoKey = (event.key || '').toLowerCase()
+        const semitone = TT.Arcade.PIANO_KEYS[pianoKey]
+        if (semitone !== undefined) {
+          event.preventDefault()
+          event.stopPropagation()
+          api.dispatch({ type: 'music/key', key: semitone })
+          return
+        }
+        if (pianoKey === 'z' || pianoKey === 'x') {
+          event.preventDefault()
+          api.dispatch({ type: 'music/octave', delta: pianoKey === 'z' ? -1 : 1 })
+          return
+        }
       }
       if (current.mode === 'arcade' && current.arcade.game === 'snake') {
         const dirs = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', a: 'left', s: 'down', d: 'right' }
@@ -18087,6 +18179,10 @@ dispatch({ type: 'cinema/set', active: false })
         }
       }
       if (after !== before) playSounds(before, after, action)
+      if (action.type === 'music/key' && TT.Audio && TT.Arcade) {
+        const semitone = Number(action.key) || 0
+        TT.Audio.note(TT.Arcade.pianoFreq(semitone, after.arcade.music.octave || 0), 0.42, 'triangle', 0.24)
+      }
       manageArcadeTimers(after)
       return after
     }

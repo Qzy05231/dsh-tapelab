@@ -33,6 +33,24 @@ test('music helpers map scale steps to notes and frequencies', () => {
   assert.deepEqual(A.TUNES.find((tune) => tune.id === 'ode').notes.slice(0, 7).map(semitone), [4, 4, 5, 7, 7, 5, 4])
 })
 
+test('keyboard piano maps chromatic keys and supports octaves', () => {
+  assert.equal(A.PIANO_KEYS.a, 0)
+  assert.equal(A.PIANO_KEYS.k, 12)
+  assert.equal(Object.keys(A.PIANO_KEYS).length, 13)
+  assert.equal(A.pianoName(0, 0), 'C4')
+  assert.equal(A.pianoName(12, 0), 'C5')
+  assert.equal(A.pianoName(0, 1), 'C5')
+  assert.ok(A.pianoFreq(0, 0) > 200 && A.pianoFreq(0, 0) < 300)
+  assert.ok(A.pianoFreq(12, 0) > A.pianoFreq(0, 0) * 1.9)
+  let state = TT.Missions.initial()
+  state = TT.Missions.reduce(state, { type: 'music/key', key: 7 })
+  assert.equal(state.arcade.music.lastKey, 7)
+  state = TT.Missions.reduce(state, { type: 'music/octave', delta: 1 })
+  assert.equal(state.arcade.music.octave, 1)
+  state = TT.Missions.reduce(state, { type: 'music/octave', delta: -1 })
+  assert.equal(state.arcade.music.octave, 0)
+})
+
 test('pixel helpers keep the 8×8 shape and shift columns', () => {
   const heart = A.pattern('heart')
   assert.equal(heart.length, 64)

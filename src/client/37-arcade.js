@@ -58,6 +58,22 @@ TT.Arcade = (function () {
     return tune.notes.reduce((sum, note) => sum + note.beats, 0)
   }
 
+  // Piano keyboard: chromatic C4..C5, piano-style two rows.
+  const PIANO_KEYS = {
+    a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12,
+  }
+  const PIANO_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
+  const PIANO_BLACK = [1, 3, 6, 8, 10]
+
+  function pianoFreq(semitone, octave) {
+    const shift = (Number(octave) || 0) * 12
+    return NOTE_BASE * Math.pow(2, (Number(semitone) + shift) / 12)
+  }
+  function pianoName(semitone, octave) {
+    const value = Math.max(0, Number(semitone) || 0)
+    return PIANO_NAMES[value % 12] + (4 + (Number(octave) || 0) + Math.floor(value / 12))
+  }
+
   const NOTE_BASE = 261.63 // C4
 
   function freq(step, scaleIndex) {
@@ -291,6 +307,10 @@ TT.Arcade = (function () {
     TUNES,
     noteAt,
     tuneBeats,
+    PIANO_KEYS,
+    PIANO_BLACK,
+    pianoFreq,
+    pianoName,
     PATTERNS: PATTERN_KEYS,
     freq,
     noteName,
@@ -431,6 +451,38 @@ TT.ArcadeUI = (function () {
             },
           }, h('span', null, TT.Arcade.noteName(note.deg, music.scale)))
         })),
+        h('div', { className: 'tt-labrow' },
+          h('span', { className: 'tt-lablabel' }, t('arcade.music.piano')),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: -1 }) }, '−'),
+          h('span', { className: 'tt-lablabel', style: { fontVariantNumeric: 'tabular-nums' } }, `OCT ${music.octave || 0}`),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'music/octave', delta: 1 }) }, '+'),
+          h('span', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('arcade.music.pianoHint')),
+        ),
+        h('div', { className: 'tt-piano' },
+          h('div', { className: 'tt-piano-row tt-piano-black' }, TT.Arcade.PIANO_BLACK.map((semitone) => {
+            const letter = Object.keys(TT.Arcade.PIANO_KEYS).find((key) => TT.Arcade.PIANO_KEYS[key] === semitone)
+            return h('button', {
+              key: semitone,
+              type: 'button',
+              className: 'tt-piano-key',
+              'data-black': 'true',
+              'data-active': music.lastKey === semitone ? 'true' : 'false',
+              title: `${TT.Arcade.pianoName(semitone, music.octave || 0)} · ${letter.toUpperCase()}`,
+              onClick: () => api.dispatch({ type: 'music/key', key: semitone }),
+            }, h('span', null, TT.Arcade.pianoName(semitone, music.octave || 0)), h('kbd', null, letter.toUpperCase()))
+          })),
+          h('div', { className: 'tt-piano-row' }, [0, 2, 4, 5, 7, 9, 11, 12].map((semitone) => {
+            const letter = Object.keys(TT.Arcade.PIANO_KEYS).find((key) => TT.Arcade.PIANO_KEYS[key] === semitone)
+            return h('button', {
+              key: semitone,
+              type: 'button',
+              className: 'tt-piano-key',
+              'data-active': music.lastKey === semitone ? 'true' : 'false',
+              title: `${TT.Arcade.pianoName(semitone, music.octave || 0)} · ${letter.toUpperCase()}`,
+              onClick: () => api.dispatch({ type: 'music/key', key: semitone }),
+            }, h('span', null, TT.Arcade.pianoName(semitone, music.octave || 0)), h('kbd', null, letter.toUpperCase()))
+          })),
+        ),
         h('div', { className: 'tt-labrow' },
           h('button', {
             type: 'button',

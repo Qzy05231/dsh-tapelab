@@ -371,6 +371,8 @@ TT.dict = {
     'arcade.music.tune': '曲目',
     'arcade.music.now': '当前音',
     'arcade.music.next': '下一音',
+    'arcade.music.piano': '键盘钢琴',
+    'arcade.music.pianoHint': 'A/W/S/E/D/F/T/G/Y/H/U/J/K 弹奏，Z/X 切换八度',
     'arcade.music.preview': '点击试听这个音',
     'arcade.music.how': '它在门级上是什么',
     'arcade.music.howBody': '真实实现会用一个 4 位计数器（4 个锁存器 + 15 个与非门）驱动音阶表：每个出块计数器加一，取出的值选中一个频率，再由蜂鸣器发声。这就是「用链上出块做音乐」。',
@@ -1591,6 +1593,8 @@ TT.dict = {
     'arcade.music.tune': 'Tune',
     'arcade.music.now': 'Now',
     'arcade.music.next': 'Next note',
+    'arcade.music.piano': 'Keyboard piano',
+    'arcade.music.pianoHint': 'Play A/W/S/E/D/F/T/G/Y/H/U/J/K, Z/X to change octave',
     'arcade.music.preview': 'Click to audition this note',
     'arcade.music.how': 'What it is at gate level',
     'arcade.music.howBody': 'A real build uses a 4-bit counter (4 latches + 15 NAND gates) to drive a note table: every block increments the counter, selects a frequency and beeps. That is music driven by chain blocks.',
@@ -3087,6 +3091,19 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   box-shadow:0 0 14px rgba(43,230,194,.3); }
 .tt-foldtext:focus-visible { outline:2px solid var(--tt-mint); outline-offset:2px; }
 
+.tt-piano { display:flex; flex-direction:column; gap:4px; margin:4px 0 8px; padding:6px; border-radius:10px;
+  background:rgba(4,12,20,.55); border:1px solid rgba(86,225,255,.14); }
+.tt-piano-row { display:flex; gap:4px; }
+.tt-piano-black { padding:0 22px; }
+.tt-piano-key { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+  gap:1px; height:52px; border-radius:6px; border:1px solid rgba(86,225,255,.25);
+  background:linear-gradient(180deg,#e8f6ff,#b9d9e8); color:#0b1a24; cursor:pointer; font-size:9px; }
+.tt-piano-key[data-black="true"] { height:38px; background:linear-gradient(180deg,#22303c,#0b151d); color:var(--tt-ink);
+  border-color:rgba(86,225,255,.3); }
+.tt-piano-key kbd { font-size:8px; opacity:.6; }
+.tt-piano-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
+  box-shadow:0 0 14px rgba(255,195,92,.55); color:#1a1206; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -3308,6 +3325,21 @@ TT.UI.Panel = function Panel(props) {
         else if (current.intro) api.dispatch({ type: 'intro/close' })
         else if (!current.finaleDismissed && TT.Missions.allDone(current)) api.dispatch({ type: 'finale/close' })
         return
+      }
+      if (current.mode === 'arcade' && current.arcade.game === 'music' && TT.Arcade) {
+        const pianoKey = (event.key || '').toLowerCase()
+        const semitone = TT.Arcade.PIANO_KEYS[pianoKey]
+        if (semitone !== undefined) {
+          event.preventDefault()
+          event.stopPropagation()
+          api.dispatch({ type: 'music/key', key: semitone })
+          return
+        }
+        if (pianoKey === 'z' || pianoKey === 'x') {
+          event.preventDefault()
+          api.dispatch({ type: 'music/octave', delta: pianoKey === 'z' ? -1 : 1 })
+          return
+        }
       }
       if (current.mode === 'arcade' && current.arcade.game === 'snake') {
         const dirs = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', a: 'left', s: 'down', d: 'right' }

@@ -1789,6 +1789,14 @@ TT.Missions = (function () {
         const step = ((state.arcade.music.step || 0) + 1) % tune.notes.length
         return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, step } } }
       }
+      case 'music/key': {
+        const key = Math.max(0, Math.min(24, Number(action.key) || 0))
+        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, lastKey: key, lastKeyAt: Date.now() } } }
+      }
+      case 'music/octave': {
+        const octave = Math.max(-1, Math.min(2, (state.arcade.music.octave || 0) + (Number(action.delta) || 0)))
+        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, octave } } }
+      }
       case 'music/tempo':
         return {
           ...state,
