@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.1'
+  const VERSION = '1.6.2'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.2',
+      date: '2026-11-21',
+      items: [
+        '官方生态改为币圈气泡视觉：深色币面、彩色发光圆环、图标 + 名称 + 彩色副标题',
+        '补充官方入口：官网、指南、Dashboard、TapeOut Linux、Relay Nodes、资讯/路线图/里程碑/文章/官方账号，共 16 颗气泡',
+      ],
+    },
     {
       version: '1.6.1',
       date: '2026-11-21',

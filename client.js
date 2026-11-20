@@ -12938,21 +12938,32 @@ TT.AppSimsUI = (function () {
 
 TT.Ecosystem = (function () {
   const CATEGORIES = {
-    protocol: { key: 'eco.cat.protocol', color: '#b38cff', light: '#f1e8ff' },
-    official: { key: 'eco.cat.official', color: '#ffc35c', light: '#fff4d6' },
-    launchpad: { key: 'eco.cat.launchpad', color: '#ff8fd0', light: '#ffe3f4' },
-    infra: { key: 'eco.cat.infra', color: '#56e1ff', light: '#e2f9ff' },
-    ai: { key: 'eco.cat.ai', color: '#2be6c2', light: '#ddfff8' },
+    protocol: { key: 'eco.cat.protocol', color: '#b38cff' },
+    official: { key: 'eco.cat.official', color: '#ffc35c' },
+    infra: { key: 'eco.cat.infra', color: '#56e1ff' },
+    ai: { key: 'eco.cat.ai', color: '#2be6c2' },
+    launchpad: { key: 'eco.cat.launchpad', color: '#ff8fd0' },
+    community: { key: 'eco.cat.community', color: '#ff8f9a' },
   }
 
-  // Only the Official category of the TapeOut ecosystem hub (tapeout.link).
+  // TapeOut official entry points (Official category) plus the official protocol site.
   const PROJECTS = [
-    { id: 'tapeout', name: 'TapeOut', category: 'protocol', radius: 62, desc: '官方链上流片协议：铸造 NAND / LATCH 元件，在画布上连线组成电路，再流片为电路 NFT。', links: [{ label: '官网', url: 'https://tapeout.net/' }] },
-    { id: 'blonskr', name: 'Blonskr · X', category: 'official', radius: 54, desc: 'TapeOut 发起人的官方账号：协议公告、产品发布与重大决策的首要发布渠道。', links: [{ label: 'X', url: 'https://x.com/blonskr' }] },
-    { id: 'tapehub', name: 'TapeHub.ai', category: 'launchpad', radius: 56, desc: '官方生态发射台：创建挖矿币项目（池币 BEM / BNB / USD1）并用它铸造晶体管；毕业后 99% 池币与 5000 万项目币配对并上 PancakeSwap，95% 代币用于挖矿。', links: [{ label: '官网', url: 'https://tapehub.ai/' }] },
-    { id: 'tapekit', name: 'TapeKit', category: 'infra', radius: 55, desc: 'tape:// 的官方公共网关：把链上电路容器里的网站用普通浏览器打开；按链上地址跳转子域名，内容哈希在浏览器端验证，无服务器、无 DNS。', links: [{ label: '官网', url: 'https://tapekit.org/' }] },
-    { id: 'tapecode', name: 'TapeCode.ai', category: 'ai', radius: 78, desc: '官方 AI 应用构建器：一句话生成合约与前端，约 10 分钟上线；合约归你的电路容器所有，使用需要钱包登录与 BEM 余额。', links: [{ label: '官网', url: 'https://tapecode.ai/' }] },
-    { id: 'taperelay', name: 'TapeRelay', category: 'infra', radius: 58, desc: '官方 XIP 提案（与 X Layer）：客户端验证的去中心化文件与消息网络；1 MiB SHA-256 分块、零 gas 消息、5 个官方节点，每个电路每个节点 5 GiB 免费额度。', links: [{ label: '官网', url: 'https://taperelay.com/' }] },
+    { id: 'tapeout', name: 'TapeOut', symbol: '⊗', sub: '协议主站', category: 'protocol', radius: 78, desc: '官方链上流片协议：铸造 NAND / LATCH 元件，在画布上连线组成电路，再流片为电路 NFT。', links: [{ label: '官网', url: 'https://tapeout.net/' }] },
+    { id: 'linux', name: 'TapeOut Linux', symbol: '🐧', sub: '链上 Linux', category: 'official', radius: 52, desc: '官方展示：第一条原生运行在 L1 主网上的 Linux，每条 RISC-V 指令由真实的 BNB Chain 交易执行。', links: [{ label: '体验', url: 'https://tapeout.net/linux.html' }] },
+    { id: 'dashboard', name: 'Dashboard', symbol: '📊', sub: '官方数据', category: 'official', radius: 46, desc: 'TapeOut 官方数据面板：处理器与电路数量、铸造进度、BEM 交易、空投领取与活动热力图。', links: [{ label: '打开', url: 'https://tapeout.link/dashboard' }] },
+    { id: 'guide', name: 'Beginner Guide', symbol: '📖', sub: '新手指南', category: 'official', radius: 44, desc: '官方新手指南：从 NAND 元件、画布连线到流片、挖矿与电路 NFT 的完整入门路径。', links: [{ label: '阅读', url: 'https://tapeout.link/guide' }] },
+    { id: 'blonskr', name: 'Blonskr', symbol: 'X', sub: '官方公告', category: 'official', radius: 52, desc: 'TapeOut 发起人的官方账号：协议公告、产品发布与重大决策的首要发布渠道。', links: [{ label: 'X', url: 'https://x.com/blonskr' }] },
+    { id: 'taperelay', name: 'TapeRelay', symbol: '📡', sub: '文件与消息', category: 'infra', radius: 66, desc: '官方 XIP 提案（与 X Layer）：客户端验证的去中心化文件与消息网络；1 MiB SHA-256 分块、零 gas 消息、5 个官方节点。', links: [{ label: '官网', url: 'https://taperelay.com/' }] },
+    { id: 'relay', name: 'Relay Nodes', symbol: '🛰️', sub: '官方节点', category: 'infra', radius: 48, desc: 'TapeRelay 官方节点入口：relay1–relay5 五个官方节点，每电路每节点 5 GiB 免费额度。', links: [{ label: '节点页', url: 'https://tapeout.link/relay' }] },
+    { id: 'tapekit', name: 'TapeKit', symbol: '🌐', sub: 'tape:// 网关', category: 'infra', radius: 60, desc: 'tape:// 的官方公共网关：把链上电路容器里的网站用普通浏览器打开；按链上地址跳转，内容哈希在浏览器端验证。', links: [{ label: '官网', url: 'https://tapekit.org/' }] },
+    { id: 'tapecode', name: 'TapeCode.ai', symbol: '🤖', sub: 'AI 构建器', category: 'ai', radius: 60, desc: '官方 AI 应用构建器：一句话生成合约与前端，约 10 分钟上线；合约归你的电路容器所有。', links: [{ label: '官网', url: 'https://tapecode.ai/' }] },
+    { id: 'tapehub', name: 'TapeHub.ai', symbol: '🚀', sub: '发行台', category: 'launchpad', radius: 62, desc: '官方生态发射台：创建挖矿币项目并用它铸造晶体管；毕业后 99% 池币与 5000 万项目币配对并上 PancakeSwap，95% 代币用于挖矿。', links: [{ label: '官网', url: 'https://tapehub.ai/' }] },
+    { id: 'tapeoutx', name: 'TapeOut X', symbol: '𝕏', sub: '官方账号', category: 'community', radius: 46, desc: 'TapeOut 官方 X 账号：协议公告、产品更新与社区活动。', links: [{ label: 'X', url: 'https://x.com/TapeOutWorld' }] },
+    { id: 'telegram', name: 'Telegram', symbol: '✈️', sub: '官方社区', category: 'community', radius: 42, desc: 'TapeOut 官方 Telegram 社区：公告、进展与日常讨论。', links: [{ label: '加入', url: 'https://t.me/TapeOutnet' }] },
+    { id: 'news', name: 'News', symbol: '📰', sub: '官方资讯', category: 'official', radius: 44, desc: '官方每日资讯聚合：X 上 TapeOut 相关动态按事件合并，每日更新。', links: [{ label: '阅读', url: 'https://tapeout.link/news' }] },
+    { id: 'roadmap', name: 'Roadmap', symbol: '🗺️', sub: '路线图', category: 'official', radius: 42, desc: 'TapeOut 官方路线图：协议、生态与产品的阶段规划。', links: [{ label: '查看', url: 'https://tapeout.link/roadmap' }] },
+    { id: 'milestones', name: 'Milestones', symbol: '🏁', sub: '里程碑', category: 'official', radius: 40, desc: 'TapeOut 官方里程碑：协议与生态的关键进展记录。', links: [{ label: '查看', url: 'https://tapeout.link/milestones' }] },
+    { id: 'articles', name: 'Articles', symbol: '📚', sub: '精选文章', category: 'official', radius: 40, desc: '官方精选文章与深度解读。', links: [{ label: '阅读', url: 'https://tapeout.link/articles' }] },
   ]
 
   function hash32(text) {
@@ -13139,103 +13150,97 @@ TT.EcosystemUI = (function () {
         const height = sizeRef.current.h
         if (runningRef.current) TT.Ecosystem.step(bubblesRef.current, width, height, dt)
         context.clearRect(0, 0, width, height)
-        const bg = context.createLinearGradient(0, 0, width, height)
-        bg.addColorStop(0, '#050b14')
-        bg.addColorStop(0.55, '#071b2a')
-        bg.addColorStop(1, '#0d1f33')
-        context.fillStyle = bg
+        // dark crypto-board background with colored nebulas
+        context.fillStyle = '#070406'
         context.fillRect(0, 0, width, height)
-        // faint grid
-        context.strokeStyle = 'rgba(86,225,255,.05)'
-        context.lineWidth = 1
-        for (let x = 0; x < width; x += 64) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke() }
-        for (let y = 0; y < height; y += 64) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke() }
+        const nebula = (cx, cy, radius, color) => {
+          const g = context.createRadialGradient(cx, cy, 0, cx, cy, radius)
+          g.addColorStop(0, color)
+          g.addColorStop(1, 'rgba(0,0,0,0)')
+          context.fillStyle = g
+          context.fillRect(0, 0, width, height)
+        }
+        nebula(width * 0.22, height * 0.18, Math.max(width, height) * 0.55, 'rgba(255,70,95,.10)')
+        nebula(width * 0.82, height * 0.75, Math.max(width, height) * 0.5, 'rgba(140,80,255,.09)')
+        // faint halo behind the whole cluster
+        const cluster = context.createRadialGradient(width / 2, height / 2, 40, width / 2, height / 2, Math.max(width, height) * 0.65)
+        cluster.addColorStop(0, 'rgba(255,255,255,.025)')
+        cluster.addColorStop(1, 'rgba(0,0,0,0)')
+        context.fillStyle = cluster
+        context.fillRect(0, 0, width, height)
+
         for (const bubble of bubblesRef.current) {
           const project = TT.Ecosystem.byId(bubble.id)
           const category = TT.Ecosystem.CATEGORIES[project.category]
           const selected = selectedRef.current === bubble.id
           const hovered = hoverRef.current === bubble.id
-          const pulse = 1 + Math.sin(bubble.phase) * 0.02
-          const radius = bubble.r * (selected ? 1.09 : hovered ? 1.05 : pulse)
-          const rgba = TT.Ecosystem.hexToRgba
+          const pulse = 1 + Math.sin(bubble.phase) * 0.015
+          const radius = bubble.r * (selected ? 1.08 : hovered ? 1.04 : pulse)
           const color = category.color
-          const light = category.light || '#ffffff'
-          const gx = bubble.x - radius * 0.34
-          const gy = bubble.y - radius * 0.42
+          const rgba = TT.Ecosystem.hexToRgba
 
-          const halo = context.createRadialGradient(bubble.x, bubble.y, radius * 0.62, bubble.x, bubble.y, radius * 1.5)
-          halo.addColorStop(0, rgba(color, selected || hovered ? 0.18 : 0.12))
-          halo.addColorStop(0.55, rgba(color, 0.045))
-          halo.addColorStop(1, rgba(color, 0))
-          context.beginPath()
-          context.arc(bubble.x, bubble.y, radius * 1.5, 0, Math.PI * 2)
-          context.fillStyle = halo
-          context.fill()
-
+          // outer glow ring
           context.save()
-          context.shadowColor = 'rgba(0,0,0,.55)'
-          context.shadowBlur = radius * 0.55
-          context.shadowOffsetY = radius * 0.18
-          const body = context.createRadialGradient(gx, gy, radius * 0.05, bubble.x, bubble.y, radius)
-          body.addColorStop(0, rgba(light, 0.72))
-          body.addColorStop(0.28, rgba(color, 0.62))
-          body.addColorStop(0.7, rgba(color, 0.36))
-          body.addColorStop(1, rgba(color, 0.12))
+          context.shadowColor = rgba(color, selected || hovered ? 0.85 : 0.55)
+          context.shadowBlur = selected ? 34 : 20
+          // dark coin body with a tinted edge
+          const body = context.createRadialGradient(
+            bubble.x - radius * 0.22, bubble.y - radius * 0.28, radius * 0.08,
+            bubble.x, bubble.y, radius,
+          )
+          body.addColorStop(0, '#241820')
+          body.addColorStop(0.55, '#150d13')
+          body.addColorStop(0.85, rgba(color, 0.14))
+          body.addColorStop(1, '#0a0609')
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius, 0, Math.PI * 2)
           context.fillStyle = body
           context.fill()
           context.restore()
 
-          const shade = context.createRadialGradient(bubble.x + radius * 0.18, bubble.y + radius * 0.4, radius * 0.08, bubble.x, bubble.y, radius)
-          shade.addColorStop(0, 'rgba(0,16,24,0)')
-          shade.addColorStop(0.72, 'rgba(0,16,24,0.04)')
-          shade.addColorStop(1, 'rgba(0,16,24,0.26)')
+          // rim
           context.beginPath()
-          context.arc(bubble.x, bubble.y, radius, 0, Math.PI * 2)
-          context.fillStyle = shade
-          context.fill()
-
-          context.beginPath()
-          context.arc(bubble.x, bubble.y, radius * 0.995, 0, Math.PI * 2)
-          context.lineWidth = selected ? 2.6 : 1.4
-          context.strokeStyle = selected ? 'rgba(255,255,255,.85)' : rgba(light, 0.32)
+          context.arc(bubble.x, bubble.y, radius * 0.98, 0, Math.PI * 2)
+          context.lineWidth = selected ? 2.6 : 1.8
+          context.strokeStyle = rgba(color, selected ? 1 : 0.72)
           context.stroke()
+          if (selected) {
+            context.beginPath()
+            context.arc(bubble.x, bubble.y, radius + 5, 0, Math.PI * 2)
+            context.lineWidth = 1
+            context.strokeStyle = 'rgba(255,255,255,.6)'
+            context.stroke()
+          }
 
-          context.save()
-          context.translate(gx, gy)
-          context.rotate(-0.55)
-          const spec = context.createRadialGradient(0, 0, 1, 0, 0, radius * 0.44)
-          spec.addColorStop(0, 'rgba(255,255,255,.78)')
-          spec.addColorStop(0.45, 'rgba(255,255,255,.2)')
-          spec.addColorStop(1, 'rgba(255,255,255,0)')
-          context.beginPath()
-          context.ellipse(0, 0, radius * 0.36, radius * 0.2, 0, 0, Math.PI * 2)
-          context.fillStyle = spec
-          context.fill()
-          context.restore()
-
-          context.beginPath()
-          context.arc(bubble.x + radius * 0.26, bubble.y + radius * 0.38, radius * 0.1, 0, Math.PI * 2)
-          context.fillStyle = 'rgba(255,255,255,.12)'
-          context.fill()
-          context.beginPath()
-          context.arc(gx + radius * 0.06, gy + radius * 0.04, radius * 0.045, 0, Math.PI * 2)
-          context.fillStyle = 'rgba(255,255,255,.72)'
-          context.fill()
-
-          const label = project.name
-          context.fillStyle = 'rgba(8,16,28,.86)'
-          context.font = `700 ${Math.max(10, radius * 0.19)}px ui-sans-serif, -apple-system, sans-serif`
+          // icon
           context.textAlign = 'center'
           context.textBaseline = 'middle'
-          context.shadowColor = 'rgba(255,255,255,.55)'
-          context.shadowBlur = 6
-          const lines = label.length > 13 ? label.split(' / ') : [label]
-          const lineHeight = Math.max(11, radius * 0.22)
-          lines.slice(0, 2).forEach((line, index) => {
-            context.fillText(line, bubble.x, bubble.y + (index - (lines.length - 1) / 2) * lineHeight)
-          })
+          context.fillStyle = '#f6eef2'
+          context.font = `700 ${Math.max(16, radius * 0.4)}px ui-sans-serif, -apple-system, sans-serif`
+          context.fillText(project.symbol || project.name.slice(0, 2), bubble.x, bubble.y - radius * 0.2)
+
+          // name
+          const nameSize = Math.max(9, Math.min(15, radius * 0.17))
+          context.fillStyle = '#f4edf1'
+          context.font = `700 ${nameSize}px ui-sans-serif, -apple-system, sans-serif`
+          context.shadowColor = 'rgba(0,0,0,.65)'
+          context.shadowBlur = 4
+          const words = String(project.name).split(' ')
+          if (words.length > 1 && radius < 58) {
+            context.fillText(words[0], bubble.x, bubble.y + radius * 0.12)
+            context.fillText(words.slice(1).join(' '), bubble.x, bubble.y + radius * 0.12 + nameSize + 1)
+          } else {
+            context.fillText(project.name, bubble.x, bubble.y + radius * 0.14)
+          }
+
+          // colored sub label (like a percentage line)
+          if (radius >= 48) {
+            const subSize = Math.max(8, Math.min(12, radius * 0.11))
+            context.fillStyle = rgba(color, 0.95)
+            context.font = `600 ${subSize}px ui-sans-serif, -apple-system, sans-serif`
+            context.shadowBlur = 3
+            context.fillText(project.sub || '', bubble.x, bubble.y + radius * 0.44)
+          }
           context.shadowColor = 'transparent'
           context.shadowBlur = 0
         }
@@ -13327,12 +13332,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.1'
+  const VERSION = '1.6.2'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.2',
+      date: '2026-11-21',
+      items: [
+        '官方生态改为币圈气泡视觉：深色币面、彩色发光圆环、图标 + 名称 + 彩色副标题',
+        '补充官方入口：官网、指南、Dashboard、TapeOut Linux、Relay Nodes、资讯/路线图/里程碑/文章/官方账号，共 16 颗气泡',
+      ],
+    },
     {
       version: '1.6.1',
       date: '2026-11-21',
@@ -13771,12 +13784,12 @@ TT.dict = {
 
     'eco.badge': 'TapeOut 官方生态',
     'eco.title': '官方生态',
-    'eco.sub': '仅收录 TapeOut 官网 Official 分类的官方项目：气泡像葡萄一样晶莹漂移，点开看简介与官方链接。',
+    'eco.sub': '仅收录 TapeOut 官方入口：6 个 Official 项目 + 官网/指南/数据/Linux/节点/资讯/路线图/里程碑/文章/官方账号；币圈气泡风格，点开看简介与官方链接。',
     'eco.pause': '暂停',
     'eco.play': '继续',
     'eco.shuffle': '重排',
     'eco.projects': '个项目',
-    'eco.disclaimer': '仅收录 TapeOut 生态导航（tapeout.link）Official 分类的 6 个官方入口；简介为本地整理，官网与账号以项目方公布为准。',
+    'eco.disclaimer': '收录 TapeOut 生态导航（tapeout.link）Official 分类及官方入口；简介为本地整理，官网与账号以项目方公布为准。',
     'eco.cat.protocol': '协议',
     'eco.cat.official': '官方入口',
     'eco.cat.launchpad': '发射台',
@@ -14989,12 +15002,12 @@ TT.dict = {
 
     'eco.badge': 'TapeOut Official Ecosystem',
     'eco.title': 'Official ecosystem',
-    'eco.sub': 'Only the Official projects from TapeOut’s ecosystem hub: glossy grape-like bubbles drifting — click one for its intro and official links.',
+    'eco.sub': 'Only TapeOut official entry points: six Official projects plus site, guide, dashboard, Linux and relay nodes; crypto-style bubbles — click one for intro and links.',
     'eco.pause': 'Pause',
     'eco.play': 'Resume',
     'eco.shuffle': 'Shuffle',
     'eco.projects': 'projects',
-    'eco.disclaimer': 'Contains only the six Official entries from the TapeOut ecosystem hub (tapeout.link); descriptions are local summaries, official sites and accounts are authoritative.',
+    'eco.disclaimer': 'Contains the Official category and official entry points from the TapeOut ecosystem hub (tapeout.link); descriptions are local summaries.',
     'eco.cat.protocol': 'Protocol',
     'eco.cat.official': 'Official',
     'eco.cat.launchpad': 'Launchpad',
