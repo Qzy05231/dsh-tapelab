@@ -1786,7 +1786,7 @@ TT.Missions = (function () {
         }
       case 'music/step': {
         const tune = TT.Arcade.TUNES[state.arcade.music.tune % TT.Arcade.TUNES.length]
-        const step = ((state.arcade.music.step || 0) + 1) % tune.steps.length
+        const step = ((state.arcade.music.step || 0) + 1) % tune.notes.length
         return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, step } } }
       }
       case 'music/tempo':

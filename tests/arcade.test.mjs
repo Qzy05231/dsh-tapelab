@@ -23,7 +23,14 @@ test('music helpers map scale steps to notes and frequencies', () => {
   assert.ok(A.freq(4, 0) > A.freq(0, 0))
   assert.equal(A.noteName(-1, 0), '·')
   assert.ok(A.TUNES.length >= 3)
-  for (const tune of A.TUNES) assert.ok(tune.steps.length >= 16)
+  for (const tune of A.TUNES) {
+    assert.ok(tune.notes.length >= 13)
+    assert.ok(A.tuneBeats(tune) > 4)
+    for (const note of tune.notes) assert.ok(note.beats > 0)
+  }
+  const semitone = (note) => (note.deg < 0 ? null : A.SCALES[0].steps[note.deg])
+  assert.deepEqual(A.TUNES.find((tune) => tune.id === 'twinkle').notes.slice(0, 7).map(semitone), [0, 0, 7, 7, 9, 9, 7])
+  assert.deepEqual(A.TUNES.find((tune) => tune.id === 'ode').notes.slice(0, 7).map(semitone), [4, 4, 5, 7, 7, 5, 4])
 })
 
 test('pixel helpers keep the 8×8 shape and shift columns', () => {

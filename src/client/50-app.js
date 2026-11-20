@@ -231,14 +231,15 @@ dispatch({ type: 'cinema/set', active: false })
           if (current.mode !== 'arcade' || current.arcade.game !== 'music' || !current.arcade.music.playing) return
           const music = current.arcade.music
           const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
-          const step = tune.steps[music.step % tune.steps.length]
-          if (step >= 0 && TT.Audio) {
-            TT.Audio.note(TT.Arcade.freq(step, music.scale), Math.max(0.07, (music.tempo - 60) / 1000), 'triangle', 0.2)
+          const note = TT.Arcade.noteAt(tune, music.step)
+          const noteMs = Math.max(80, music.tempo * note.beats)
+          if (note.deg >= 0 && TT.Audio) {
+            TT.Audio.note(TT.Arcade.freq(note.deg, music.scale), Math.max(0.08, (noteMs / 1000) * 0.85), 'triangle', 0.2)
           }
           // Schedule the next tick *before* dispatching. dispatch() synchronously runs
           // manageArcadeTimers, which would otherwise start a second timer because
           // musicTimer is null here — causing doubled notes and drifting tempo.
-          musicTimer = setTimeout(tick, music.tempo)
+          musicTimer = setTimeout(tick, noteMs)
           dispatch({ type: 'music/step' })
           const after = get()
           if (!(after.mode === 'arcade' && after.arcade.game === 'music' && after.arcade.music.playing)) {

@@ -13,11 +13,51 @@ TT.Arcade = (function () {
     { id: 'minor', nameKey: 'arcade.scale.minor', steps: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15, 17, 19, 20, 22, 24] },
   ]
   const TUNES = [
-    { id: 'scale', nameKey: 'arcade.tune.scale', steps: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, -1, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1] },
-    { id: 'twinkle', nameKey: 'arcade.tune.twinkle', steps: [0, 0, 4, 4, 5, 5, 4, -1, 3, 3, 2, 2, 1, 1, 0, -1, 4, 4, 3, 3, 2, 2, 1, -1, 4, 4, 3, 3, 2, 2, 1, -1, 0, 0, 4, 4, 5, 5, 4, -1, 3, 3, 2, 2, 1, 1, 0, -1] },
-    { id: 'beep', nameKey: 'arcade.tune.beep', steps: [0, 2, 4, 7, 9, 7, 4, 2, 0, 4, 9, 12, 9, 4, 0, -1] },
-    { id: 'ode', nameKey: 'arcade.tune.ode', steps: [4, 4, 5, 7, 7, 5, 4, 2, 0, 0, 2, 4, 4, 2, 2, -1, 4, 4, 5, 7, 7, 5, 4, 2, 0, 0, 2, 4, 2, 0, 0, -1] },
+    {
+      id: 'scale',
+      nameKey: 'arcade.tune.scale',
+      notes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 7, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+        .map((deg) => ({ deg, beats: 0.5 })),
+    },
+    {
+      id: 'twinkle',
+      nameKey: 'arcade.tune.twinkle',
+      notes: [
+        { deg: 0, beats: 1 }, { deg: 0, beats: 1 }, { deg: 4, beats: 1 }, { deg: 4, beats: 1 }, { deg: 5, beats: 1 }, { deg: 5, beats: 1 }, { deg: 4, beats: 2 },
+        { deg: 3, beats: 1 }, { deg: 3, beats: 1 }, { deg: 2, beats: 1 }, { deg: 2, beats: 1 }, { deg: 1, beats: 1 }, { deg: 1, beats: 1 }, { deg: 0, beats: 2 },
+        { deg: 4, beats: 1 }, { deg: 4, beats: 1 }, { deg: 3, beats: 1 }, { deg: 3, beats: 1 }, { deg: 2, beats: 1 }, { deg: 2, beats: 1 }, { deg: 1, beats: 2 },
+        { deg: 4, beats: 1 }, { deg: 4, beats: 1 }, { deg: 3, beats: 1 }, { deg: 3, beats: 1 }, { deg: 2, beats: 1 }, { deg: 2, beats: 1 }, { deg: 1, beats: 2 },
+        { deg: 0, beats: 1 }, { deg: 0, beats: 1 }, { deg: 4, beats: 1 }, { deg: 4, beats: 1 }, { deg: 5, beats: 1 }, { deg: 5, beats: 1 }, { deg: 4, beats: 2 },
+        { deg: 3, beats: 1 }, { deg: 3, beats: 1 }, { deg: 2, beats: 1 }, { deg: 2, beats: 1 }, { deg: 1, beats: 1 }, { deg: 1, beats: 1 }, { deg: 0, beats: 2 },
+      ],
+    },
+    {
+      id: 'beep',
+      nameKey: 'arcade.tune.beep',
+      notes: [
+        { deg: 0, beats: 0.5 }, { deg: 2, beats: 0.5 }, { deg: 4, beats: 0.5 }, { deg: 7, beats: 0.5 },
+        { deg: 4, beats: 0.5 }, { deg: 2, beats: 0.5 }, { deg: 0, beats: 1 },
+        { deg: 4, beats: 0.5 }, { deg: 7, beats: 0.5 }, { deg: 9, beats: 0.5 }, { deg: 7, beats: 1 }, { deg: 4, beats: 0.5 }, { deg: 0, beats: 1 },
+      ],
+    },
+    {
+      id: 'ode',
+      nameKey: 'arcade.tune.ode',
+      notes: [
+        { deg: 2, beats: 1 }, { deg: 2, beats: 1 }, { deg: 3, beats: 1 }, { deg: 4, beats: 1 }, { deg: 4, beats: 1 }, { deg: 3, beats: 1 }, { deg: 2, beats: 1 }, { deg: 1, beats: 1 }, { deg: 0, beats: 1 }, { deg: 0, beats: 1 }, { deg: 1, beats: 1 }, { deg: 2, beats: 1 }, { deg: 2, beats: 1.5 }, { deg: 1, beats: 0.5 }, { deg: 1, beats: 2 },
+        { deg: 2, beats: 1 }, { deg: 2, beats: 1 }, { deg: 3, beats: 1 }, { deg: 4, beats: 1 }, { deg: 4, beats: 1 }, { deg: 3, beats: 1 }, { deg: 2, beats: 1 }, { deg: 1, beats: 1 }, { deg: 0, beats: 1 }, { deg: 0, beats: 1 }, { deg: 1, beats: 1 }, { deg: 2, beats: 1 }, { deg: 1, beats: 1.5 }, { deg: 0, beats: 0.5 }, { deg: 0, beats: 2 },
+      ],
+    },
   ]
+
+  function noteAt(tune, index) {
+    const notes = tune.notes
+    return notes[(Number(index) || 0) % notes.length]
+  }
+  function tuneBeats(tune) {
+    return tune.notes.reduce((sum, note) => sum + note.beats, 0)
+  }
+
   const NOTE_BASE = 261.63 // C4
 
   function freq(step, scaleIndex) {
@@ -249,6 +289,8 @@ TT.Arcade = (function () {
     snakeTurn,
     SCALES,
     TUNES,
+    noteAt,
+    tuneBeats,
     PATTERNS: PATTERN_KEYS,
     freq,
     noteName,
@@ -328,8 +370,8 @@ TT.ArcadeUI = (function () {
     const { arcade, t, api } = props
     const music = arcade.music
     const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
-    const windowStart = Math.max(0, Math.min(tune.steps.length - 16, (music.step | 0) - 7))
-    const steps = tune.steps.slice(windowStart, windowStart + 16)
+    const windowStart = Math.max(0, Math.min(tune.notes.length - 16, (music.step | 0) - 7))
+    const notes = tune.notes.slice(windowStart, windowStart + 16)
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
         h('div', { className: 'tt-labrow' },
@@ -371,34 +413,37 @@ TT.ArcadeUI = (function () {
               onClick: () => api.dispatch({ type: 'music/tune', index }),
             }, t(item.nameKey))),
         ),
-        h('div', { className: 'tt-musicsteps' }, steps.map((step, index) => {
+        h('div', { className: 'tt-musicsteps' }, notes.map((note, index) => {
           const absolute = windowStart + index
-          const active = music.playing && absolute === music.step % tune.steps.length
+          const active = music.playing && absolute === music.step % tune.notes.length
           return h('div', {
             key: index,
             className: 'tt-musicstep',
             'data-active': active ? 'true' : 'false',
-            'data-rest': step < 0 ? 'true' : 'false',
-            style: { height: `${28 + TT.Arcade.stepAmplitude(step, music.scale) * 60}px` },
+            'data-rest': note.deg < 0 ? 'true' : 'false',
+            style: {
+              flexGrow: note.beats,
+              height: `${28 + TT.Arcade.stepAmplitude(note.deg, music.scale) * 60}px`,
+            },
             title: t('arcade.music.preview'),
             onClick: () => {
-              if (step >= 0 && TT.Audio) TT.Audio.note(TT.Arcade.freq(step, music.scale), 0.18, 'triangle', 0.22)
+              if (note.deg >= 0 && TT.Audio) TT.Audio.note(TT.Arcade.freq(note.deg, music.scale), Math.max(0.1, (music.tempo * note.beats) / 1000 * 0.8), 'triangle', 0.22)
             },
-          }, h('span', null, TT.Arcade.noteName(step, music.scale)))
+          }, h('span', null, TT.Arcade.noteName(note.deg, music.scale)))
         })),
         h('div', { className: 'tt-labrow' },
           h('button', {
             type: 'button',
             className: 'tt-chip',
             onClick: () => {
-              const step = tune.steps[music.step % tune.steps.length]
-              if (step >= 0 && TT.Audio) TT.Audio.note(TT.Arcade.freq(step, music.scale), 0.18, 'triangle', 0.22)
+              const note = TT.Arcade.noteAt(tune, music.step)
+              if (note.deg >= 0 && TT.Audio) TT.Audio.note(TT.Arcade.freq(note.deg, music.scale), Math.max(0.1, (music.tempo * note.beats) / 1000 * 0.8), 'triangle', 0.22)
               api.dispatch({ type: 'music/step' })
             },
           }, `⏭ ${t('arcade.music.next')}`),
           h('span', { className: 'tt-lablabel' }, t('arcade.music.now')),
           h('b', { style: { color: 'var(--tt-amber)', fontVariantNumeric: 'tabular-nums' } },
-            `${TT.Arcade.noteName(tune.steps[music.step % tune.steps.length], music.scale)} · ${music.tempo}ms · ${Math.round(60000 / music.tempo)} BPM`),
+            `${TT.Arcade.noteName(TT.Arcade.noteAt(tune, music.step).deg, music.scale)} · ${music.tempo}ms · ${Math.round(60000 / music.tempo)} BPM`),
         ),
       ),
       h(Card, { title: t('arcade.music.how'), hint: '' },
