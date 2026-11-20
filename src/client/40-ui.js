@@ -175,6 +175,8 @@ TT.dict = {
     'panel.introCodex': '先看协议档案',
     'panel.verifying': '穷举验证中…',
     'panel.foldCard': '收起任务卡',
+    'panel.fold': '收起',
+    'panel.unfold': '展开',
     'panel.unfoldCard': '展开任务卡',
     'panel.controls': '拖动旋转镜头 · 滚轮缩放 · 点击端口连线 · 点空白取消 · 1–9 跳章 · [ ] 前后章 · H 提示',
     'panel.modeArcade': '游乐场',
@@ -1388,6 +1390,8 @@ TT.dict = {
     'panel.introCodex': 'Read the codex',
     'panel.verifying': 'Exhaustively verifying…',
     'panel.foldCard': 'Collapse mission card',
+    'panel.fold': 'Collapse',
+    'panel.unfold': 'Expand',
     'panel.unfoldCard': 'Expand mission card',
     'panel.controls': 'Drag to orbit · wheel to zoom · click pins to wire · click empty space to cancel · 1–9 chapters · [ ] step · H hint',
     'panel.modeArcade': 'Playground',
@@ -3065,6 +3069,12 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-node { display:flex; flex-direction:column; gap:2px; padding:6px 9px; border-radius:8px; font-size:10.5px;
   background:rgba(43,230,194,.08); border:1px solid rgba(43,230,194,.3); color:var(--tt-ink); }
 
+.tt-foldtext { align-self:flex-start; margin:2px 0 3px; padding:2px 9px; border-radius:6px;
+  border:1px solid rgba(120,190,220,.22); background:rgba(86,225,255,.05); color:var(--tt-dim);
+  font-size:10.5px; line-height:1.4; cursor:pointer; letter-spacing:.04em; }
+.tt-foldtext:hover { color:var(--tt-ink); border-color:rgba(86,225,255,.45); background:rgba(86,225,255,.1); }
+.tt-foldtext:focus-visible { outline:1px solid var(--tt-mint); outline-offset:1px; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -3623,14 +3633,14 @@ TT.UI.Panel = function Panel(props) {
             TT.h('div', { className: 'tt-mtag' },
               TT.h('span', { className: 'tt-pip' }),
               TT.h('span', { className: 'tt-mtagtext' }, `${resolve(chapter.tagKey)}${narrow ? '' : ` · ${doneCount}/${goals.length}`}`),
-              TT.h('button', {
-                type: 'button',
-                className: 'tt-cardfold',
-                title: cardOpen ? t('panel.foldCard') : t('panel.unfoldCard'),
-                'aria-expanded': cardOpen ? 'true' : 'false',
-                onClick: () => setCardOpen((open) => !open),
-              }, cardOpen ? '⌃' : '⌄'),
             ),
+            TT.h('button', {
+              type: 'button',
+              className: 'tt-foldtext',
+              title: cardOpen ? t('panel.foldCard') : t('panel.unfoldCard'),
+              'aria-expanded': cardOpen ? 'true' : 'false',
+              onClick: () => setCardOpen((open) => !open),
+            }, cardOpen ? t('panel.fold') : t('panel.unfold')),
             TT.h('h3', { className: 'tt-mtitle' }, resolve(chapter.titleKey)),
             narrow ? null : TT.h('div', { className: 'tt-msub' }, resolve(chapter.subtitleKey)),
             TT.h(ChallengeBar, { state, t, api }),
