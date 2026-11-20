@@ -237,45 +237,40 @@ TT.EcosystemUI = (function () {
           const color = category.color
           const rgba = TT.Ecosystem.hexToRgba
 
-          // outer glow only: draw an annulus outside the coin, never behind it,
-          // so the semi-transparent face cannot reveal a fuzzy glow inside.
-          const glowSpread = selected ? radius * 0.34 : radius * 0.24
-          const glow = context.createRadialGradient(bubble.x, bubble.y, radius * 0.99, bubble.x, bubble.y, radius + glowSpread)
-          glow.addColorStop(0, rgba(color, selected || hovered ? 0.55 : 0.38))
-          glow.addColorStop(0.5, rgba(color, 0.16))
-          glow.addColorStop(1, rgba(color, 0))
-          context.beginPath()
-          context.arc(bubble.x, bubble.y, radius + glowSpread, 0, Math.PI * 2)
-          context.arc(bubble.x, bubble.y, radius * 0.99, 0, Math.PI * 2, true)
-          context.fillStyle = glow
-          context.fill()
-
-          // clean dark coin face (no colored band, no shadow leaking under it)
+          // clean dark coin face (no outer glow)
           const body = context.createRadialGradient(
-            bubble.x - radius * 0.2, bubble.y - radius * 0.25, radius * 0.08,
+            bubble.x - radius * 0.18, bubble.y - radius * 0.22, radius * 0.08,
             bubble.x, bubble.y, radius,
           )
-          body.addColorStop(0, 'rgba(40,22,27,0.94)')
-          body.addColorStop(0.6, 'rgba(24,12,17,0.92)')
-          body.addColorStop(1, 'rgba(12,6,9,0.96)')
+          body.addColorStop(0, 'rgba(36,19,24,0.97)')
+          body.addColorStop(0.62, 'rgba(22,11,16,0.97)')
+          body.addColorStop(1, 'rgba(10,5,8,0.98)')
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius, 0, Math.PI * 2)
           context.fillStyle = body
           context.fill()
 
-          // crisp glowing rim
+          // soft colored light *inside* the rim, fading toward the center
+          context.save()
+          context.beginPath()
+          context.arc(bubble.x, bubble.y, radius * 0.995, 0, Math.PI * 2)
+          context.clip()
+          const inner = context.createRadialGradient(bubble.x, bubble.y, radius * 0.3, bubble.x, bubble.y, radius)
+          inner.addColorStop(0, rgba(color, 0))
+          inner.addColorStop(0.58, rgba(color, 0.015))
+          inner.addColorStop(0.8, rgba(color, selected || hovered ? 0.2 : 0.13))
+          inner.addColorStop(0.94, rgba(color, selected || hovered ? 0.44 : 0.3))
+          inner.addColorStop(1, rgba(color, selected || hovered ? 0.62 : 0.44))
+          context.fillStyle = inner
+          context.fillRect(bubble.x - radius, bubble.y - radius, radius * 2, radius * 2)
+          context.restore()
+
+          // crisp rim, matching the reference's thin bright edge
           context.beginPath()
           context.arc(bubble.x, bubble.y, radius * 0.985, 0, Math.PI * 2)
-          context.lineWidth = selected ? 3 : 2.1
-          context.strokeStyle = rgba(color, selected ? 1 : 0.92)
+          context.lineWidth = selected ? 2.6 : 2
+          context.strokeStyle = rgba(color, selected ? 1 : 0.9)
           context.stroke()
-          if (selected) {
-            context.beginPath()
-            context.arc(bubble.x, bubble.y, radius + 5, 0, Math.PI * 2)
-            context.lineWidth = 1
-            context.strokeStyle = 'rgba(255,255,255,.6)'
-            context.stroke()
-          }
 
           // icon
           context.textAlign = 'center'
