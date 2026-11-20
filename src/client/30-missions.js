@@ -571,6 +571,7 @@ TT.Missions = (function () {
       intro: false,
       welcome: true,
       achvOpen: false,
+      updateOpen: false,
       unlocked: [],
       stats: { snakeBest: 0, snakeBySpeed: {}, snakeScores: [], debugSolved: 0, guessBest: null, guessScoreBest: 0, lockWins: 0, lockBestAttempts: null, synth: 0, imports: 0, receipts: 0, daily: {}, challenge: {} },
       challenge: { active: false, chapter: 0, startedAt: 0, hadCompleted: false, actions: 0, mistakes: 0, lastResult: null },
@@ -1232,6 +1233,10 @@ TT.Missions = (function () {
   function reduceInner(state, action) {
     if (!action || !action.type) return state
     switch (action.type) {
+      case 'update/open':
+        return { ...state, updateOpen: true }
+      case 'update/close':
+        return { ...state, updateOpen: false }
       case 'achv/open':
         return { ...state, achvOpen: true }
       case 'achv/close':
@@ -1248,6 +1253,10 @@ TT.Missions = (function () {
         return { ...state, welcome: true }
       case 'welcome/close':
         return { ...state, welcome: false }
+      case 'eco/open':
+        return { ...state, mode: 'eco' }
+      case 'eco/close':
+        return { ...state, mode: 'missions' }
       case 'news/open':
         return { ...state, mode: 'news' }
       case 'news/close':

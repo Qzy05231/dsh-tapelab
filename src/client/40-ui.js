@@ -27,6 +27,25 @@ TT.dict = {
     'panel.introStart': '开始任务',
     'panel.intro': '章节说明',
     'panel.guide': '新手引导',
+    'panel.version': '版本与更新',
+    'version.title': '版本与更新',
+    'version.sub': '查看当前版本、更新日志，并检查 GitHub 上是否有新提交。',
+    'version.current': '当前版本',
+    'version.built': '构建日期',
+    'version.check': '检查更新',
+    'version.checking': '检查中…',
+    'version.github': '打开 GitHub 仓库',
+    'version.fail': '检查失败：当前网络无法访问 GitHub API，稍后再试。',
+    'version.hasNew': '发现新提交：可以按下面的步骤更新',
+    'version.latest': '已是最新版本',
+    'version.how': '如何更新',
+    'version.howBody': '在插件目录拉取最新代码并重新构建，然后在 Harness 里重载插件（Plugins 开关）或重启应用。',
+    'version.copy': '复制命令',
+    'version.copied': '更新命令已复制',
+    'version.copyFail': '复制失败，请手动选择命令',
+    'version.note': '浏览器插件不能静默替换自己；当前是本地安装，更新后需要重新构建并重载。',
+    'version.changelog': '更新日志',
+
     'arcade.records.title': '本机记录',
     'arcade.records.snake': '贪吃蛇',
     'arcade.records.guess': '猜数最少',
@@ -158,6 +177,22 @@ TT.dict = {
     'panel.controls': '拖动旋转镜头 · 滚轮缩放 · 点击端口连线 · 点空白取消 · 1–9 跳章 · [ ] 前后章 · H 提示',
     'panel.modeArcade': '游乐场',
     'panel.modeNews': '资讯',
+    'panel.modeEco': '生态',
+    'eco.badge': '生态版图',
+    'eco.title': 'TapeOut 生态版图',
+    'eco.sub': '每颗气泡是一个生态项目：随机漂移、可暂停，点开看简介与官方链接。',
+    'eco.pause': '暂停',
+    'eco.play': '继续',
+    'eco.shuffle': '重排',
+    'eco.projects': '个项目',
+    'eco.disclaimer': '项目与链接整理自 TapeOut 官方/社区资讯，仅作生态导航；官网与账号以项目方公布为准。',
+    'eco.cat.protocol': '协议',
+    'eco.cat.infra': '基础设施',
+    'eco.cat.ai': 'AI / Agent',
+    'eco.cat.game': '游戏',
+    'eco.cat.tool': '工具 / 市场',
+    'eco.cat.community': '社区',
+
     'news.badge': '每日资讯',
     'news.auto': '每日 06:00 自动抓取',
     'news.autoNext': '下次自动抓取',
@@ -1026,6 +1061,25 @@ TT.dict = {
     'panel.introStart': 'Start mission',
     'panel.intro': 'Chapter brief',
     'panel.guide': 'Getting started',
+    'panel.version': 'Version & updates',
+    'version.title': 'Version & updates',
+    'version.sub': 'See the current version, changelog and check GitHub for new commits.',
+    'version.current': 'Current version',
+    'version.built': 'Built',
+    'version.check': 'Check for updates',
+    'version.checking': 'Checking…',
+    'version.github': 'Open GitHub repo',
+    'version.fail': 'Check failed: GitHub API is unreachable right now, try again later.',
+    'version.hasNew': 'New commits found — follow the steps below to update',
+    'version.latest': 'You are on the latest version',
+    'version.how': 'How to update',
+    'version.howBody': 'Pull the latest code in the plugin directory and rebuild, then reload the plugin in Harness (Plugins toggle) or restart the app.',
+    'version.copy': 'Copy command',
+    'version.copied': 'Update command copied',
+    'version.copyFail': 'Copy failed — select the command manually',
+    'version.note': 'A browser plugin cannot silently replace itself; this is a local install, so rebuild and reload after updating.',
+    'version.changelog': 'Changelog',
+
     'arcade.records.title': 'Local records',
     'arcade.records.snake': 'Snake',
     'arcade.records.guess': 'Best tries',
@@ -1157,6 +1211,22 @@ TT.dict = {
     'panel.controls': 'Drag to orbit · wheel to zoom · click pins to wire · click empty space to cancel · 1–9 chapters · [ ] step · H hint',
     'panel.modeArcade': 'Playground',
     'panel.modeNews': 'News',
+    'panel.modeEco': 'Ecosystem',
+    'eco.badge': 'Ecosystem map',
+    'eco.title': 'TapeOut ecosystem map',
+    'eco.sub': 'Each bubble is an ecosystem project: drifting, pausable — click one for its intro and official links.',
+    'eco.pause': 'Pause',
+    'eco.play': 'Resume',
+    'eco.shuffle': 'Shuffle',
+    'eco.projects': 'projects',
+    'eco.disclaimer': 'Projects and links are curated from TapeOut official/community news for navigation only; official sites and accounts are authoritative.',
+    'eco.cat.protocol': 'Protocol',
+    'eco.cat.infra': 'Infrastructure',
+    'eco.cat.ai': 'AI / Agent',
+    'eco.cat.game': 'Games',
+    'eco.cat.tool': 'Tools / Market',
+    'eco.cat.community': 'Community',
+
     'news.badge': 'Daily news',
     'news.auto': 'Daily 06:00 auto-fetch',
     'news.autoNext': 'Next auto-fetch',
@@ -2316,6 +2386,12 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-lab[data-mode="lab"] .tt-stamp,
 .tt-lab[data-mode="lab"] .tt-fade,
 .tt-lab[data-mode="lab"] .tt-tooltip,
+.tt-lab[data-mode="eco"] .tt-canvas,
+.tt-lab[data-mode="eco"] .tt-scrim,
+.tt-lab[data-mode="eco"] .tt-hud,
+.tt-lab[data-mode="eco"] .tt-stamp,
+.tt-lab[data-mode="eco"] .tt-fade,
+.tt-lab[data-mode="eco"] .tt-tooltip,
 .tt-lab[data-mode="news"] .tt-canvas,
 .tt-lab[data-mode="news"] .tt-scrim,
 .tt-lab[data-mode="news"] .tt-hud,
@@ -2576,6 +2652,39 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-feedsource { font-size:9.5px; color:var(--tt-faint); text-decoration:none; }
 .tt-feedsource:hover { color:var(--tt-mint); }
 
+.tt-versioncard { width:min(640px,94%); max-height:88vh; overflow:auto; }
+.tt-versionrow { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin:6px 0; font-size:12px; color:var(--tt-dim); }
+.tt-versionrow b { color:var(--tt-mint); font-size:15px; }
+.tt-versionsteps { margin:8px 0; padding:8px 10px; border-radius:10px; background:rgba(86,225,255,.05); border:1px solid rgba(86,225,255,.14); }
+.tt-versionsteps b { font-size:12px; color:var(--tt-ink); }
+.tt-versionsteps p { margin:4px 0; font-size:10.5px; line-height:1.55; color:var(--tt-dim); }
+.tt-versioncmd { display:flex; align-items:center; gap:6px; margin:6px 0; }
+.tt-versioncmd code { flex:1; font-size:10.5px; color:var(--tt-mint); background:rgba(4,12,20,.6); border:1px solid rgba(86,225,255,.2);
+  border-radius:7px; padding:5px 8px; overflow:auto; white-space:nowrap; }
+.tt-changelog { max-height:30vh; overflow:auto; }
+.tt-changelogentry { padding:6px 0; border-bottom:1px solid rgba(86,225,255,.08); }
+.tt-changelogentry b { font-size:11px; color:var(--tt-amber); }
+.tt-changelogentry ul { margin:4px 0 0; padding-left:16px; }
+.tt-changelogentry li { font-size:10.5px; line-height:1.5; color:var(--tt-dim); }
+
+.tt-ecoview { display:flex; flex-direction:column; gap:10px; }
+.tt-eco-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+.tt-eco-title h2 { margin:0 0 4px; font-size:22px; }
+.tt-eco-title p { margin:0; font-size:12px; color:var(--tt-dim); }
+.tt-eco-controls { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.tt-eco-legendrow { display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:10.5px; color:var(--tt-dim); }
+.tt-eco-legend { display:inline-flex; align-items:center; gap:5px; }
+.tt-eco-legend i { width:8px; height:8px; border-radius:50%; display:inline-block; }
+.tt-eco-canvaswrap { position:relative; flex:1 1 auto; min-height:420px; border-radius:16px; overflow:hidden;
+  border:1px solid rgba(86,225,255,.18); box-shadow:inset 0 0 80px rgba(0,0,0,.5); }
+.tt-eco-canvas { display:block; width:100%; height:100%; touch-action:none; }
+.tt-eco-detail { position:absolute; right:14px; bottom:14px; width:min(340px,86%); padding:12px 14px; border-radius:14px;
+  background:rgba(5,13,22,.92); border:1px solid rgba(86,225,255,.3); box-shadow:0 18px 50px rgba(0,0,0,.6);
+  pointer-events:auto; }
+.tt-eco-detail h3 { margin:4px 0 6px; font-size:16px; color:var(--tt-ink); }
+.tt-eco-detail p { margin:0 0 8px; font-size:11px; line-height:1.6; color:var(--tt-dim); }
+.tt-eco-links { display:flex; gap:6px; flex-wrap:wrap; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -2737,6 +2846,7 @@ TT.UI.Panel = function Panel(props) {
   const inLab = state.mode === 'lab'
   const inArcade = state.mode === 'arcade'
   const inNews = state.mode === 'news'
+  const inEco = state.mode === 'eco'
 
   React.useEffect(() => {
     const canvas = canvasRef.current
@@ -2751,7 +2861,7 @@ TT.UI.Panel = function Panel(props) {
   }, [canvasRef, store, api, t])
 
   React.useEffect(() => {
-    if (api.setWorldActive) api.setWorldActive(!inLab && !inArcade && !inNews)
+    if (api.setWorldActive) api.setWorldActive(!inLab && !inArcade && !inNews && !inEco)
   }, [inLab, inArcade, api])
 
   React.useEffect(() => {
@@ -2771,7 +2881,8 @@ TT.UI.Panel = function Panel(props) {
       // the first render's state would never see the arcade mode or the current chapter.
       const current = stateRef.current
       if (event.key === 'Escape') {
-        if (current.welcome) api.dispatch({ type: 'welcome/close' })
+        if (current.updateOpen) api.dispatch({ type: 'update/close' })
+        else if (current.welcome) api.dispatch({ type: 'welcome/close' })
         else if (current.codex) api.dispatch({ type: 'codex/close' })
         else if (current.intro) api.dispatch({ type: 'intro/close' })
         else if (!current.finaleDismissed && TT.Missions.allDone(current)) api.dispatch({ type: 'finale/close' })
@@ -2934,6 +3045,8 @@ TT.UI.Panel = function Panel(props) {
     ),
   ) : null
 
+  const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
+
   return TT.h('div', {
     className: 'tt-lab',
     ref: rootRef,
@@ -3023,7 +3136,20 @@ TT.UI.Panel = function Panel(props) {
             'data-active': inNews ? 'true' : 'false',
             onClick: () => api.dispatch({ type: 'news/open' }),
           }, t('panel.modeNews')),
+          TT.h('button', {
+            type: 'button',
+            className: 'tt-modebtn',
+            'data-active': inEco ? 'true' : 'false',
+            onClick: () => api.dispatch({ type: 'eco/open' }),
+          }, t('panel.modeEco')),
         ),
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-tool',
+          title: `${t('panel.version')} v${TT.Version ? TT.Version.VERSION : '1.1.0'}`,
+          'data-active': state.updateOpen ? 'true' : 'false',
+          onClick: () => api.dispatch({ type: state.updateOpen ? 'update/close' : 'update/open' }),
+        }, '🔄'),
         TT.h('button', {
           type: 'button',
           className: 'tt-tool',
@@ -3160,9 +3286,11 @@ TT.UI.Panel = function Panel(props) {
       inLab && TT.LabUI ? TT.LabUI.Lab({ state, t, resolve, api }) : null,
       inArcade && TT.ArcadeUI ? TT.ArcadeUI.Page({ state, t, resolve, api }) : null,
       inNews && TT.NewsUI ? TT.h(TT.NewsUI.Page, { state, t, resolve, api }) : null,
+      inEco && TT.EcosystemUI ? TT.h(TT.EcosystemUI.Page, { state, t, resolve, api }) : null,
       intro,
       welcome,
       achievements,
+      versionModal,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),

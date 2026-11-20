@@ -5563,6 +5563,7 @@ TT.Missions = (function () {
       intro: false,
       welcome: true,
       achvOpen: false,
+      updateOpen: false,
       unlocked: [],
       stats: { snakeBest: 0, snakeBySpeed: {}, snakeScores: [], debugSolved: 0, guessBest: null, guessScoreBest: 0, lockWins: 0, lockBestAttempts: null, synth: 0, imports: 0, receipts: 0, daily: {}, challenge: {} },
       challenge: { active: false, chapter: 0, startedAt: 0, hadCompleted: false, actions: 0, mistakes: 0, lastResult: null },
@@ -6224,6 +6225,10 @@ TT.Missions = (function () {
   function reduceInner(state, action) {
     if (!action || !action.type) return state
     switch (action.type) {
+      case 'update/open':
+        return { ...state, updateOpen: true }
+      case 'update/close':
+        return { ...state, updateOpen: false }
       case 'achv/open':
         return { ...state, achvOpen: true }
       case 'achv/close':
@@ -6240,6 +6245,10 @@ TT.Missions = (function () {
         return { ...state, welcome: true }
       case 'welcome/close':
         return { ...state, welcome: false }
+      case 'eco/open':
+        return { ...state, mode: 'eco' }
+      case 'eco/close':
+        return { ...state, mode: 'missions' }
       case 'news/open':
         return { ...state, mode: 'news' }
       case 'news/close':
@@ -12444,6 +12453,494 @@ TT.DailyUI = (function () {
   return { Page }
 })()
 
+// ---- 51-ecosystem.js ----
+/**
+ * 51-ecosystem — the TapeOut ecosystem map: drifting, colorful project bubbles.
+ * Canvas 2D physics (no WebGL), click a bubble for its intro and official links.
+ * Project data is a community-curated snapshot from TapeOut official/news channels.
+ */
+
+TT.Ecosystem = (function () {
+  const CATEGORIES = {
+    protocol: { key: 'eco.cat.protocol', color: '#2be6c2', glow: 'rgba(43,230,194,.55)' },
+    infra: { key: 'eco.cat.infra', color: '#56e1ff', glow: 'rgba(86,225,255,.55)' },
+    ai: { key: 'eco.cat.ai', color: '#b38cff', glow: 'rgba(179,140,255,.55)' },
+    game: { key: 'eco.cat.game', color: '#ff6ad5', glow: 'rgba(255,106,213,.55)' },
+    tool: { key: 'eco.cat.tool', color: '#ffc35c', glow: 'rgba(255,195,92,.55)' },
+    community: { key: 'eco.cat.community', color: '#ff8f9a', glow: 'rgba(255,143,154,.55)' },
+  }
+
+  const PROJECTS = [
+    { id: 'tapeout', name: 'TapeOut', category: 'protocol', radius: 62, desc: '底层协议：把与非门做成 ERC-1155 Token，把电路做成 ERC-721 NFT，用出块当 CPU 时钟。', links: [{ label: '官网', url: 'https://tapeout.link' }, { label: 'X', url: 'https://x.com/TapeOutWorld' }] },
+    { id: 'taperelay', name: 'TapeRelay', category: 'infra', radius: 58, desc: '去中心化存储/通讯层：1 MiB 分块、三副本、链下消息零 gas，文件走 relay、链上只记身份。', links: [{ label: '官方详解', url: 'https://tapeout.link/news/2123414239326970035' }] },
+    { id: 'tapeai', name: 'TapeAI', category: 'ai', radius: 52, desc: 'Agent 生态与激励层（TAI）：检察官质押、任务激励，探索 Agent 与 TapeOut 电路结合。', links: [{ label: 'X', url: 'https://x.com/TapeAIAgent' }] },
+    { id: 'tapefly', name: 'TapeFly', category: 'game', radius: 54, desc: '消费级入口游戏：搭一只果蝇、接上电路大脑，通关获得 Genesis Passport。', links: [{ label: 'X', url: 'https://x.com/fruitfly_world' }] },
+    { id: 'tapecircle', name: 'TapeCircle', category: 'community', radius: 50, desc: '社区入口：基于 TapeRelay 的 Chat、红包与 NFT 交易分享卡，目标成为社区协作空间。', links: [{ label: '相关资讯', url: 'https://tapeout.link/news/2123270100350538022' }] },
+    { id: 'tapemine', name: 'TapeMine', category: 'infra', radius: 50, desc: '矿机与官方最优矿池：Behemoth 二期集结 NAND，按电路设计与贡献分配算力。', links: [{ label: 'X', url: 'https://x.com/tapemineworld' }] },
+    { id: 'behemoth', name: 'Behemoth', category: 'infra', radius: 48, desc: '官方最优矿池与链上 CPU 叙事：按 4004 规格打造的巨兽，矿池二期持续集结。', links: [{ label: '矿池资讯', url: 'https://tapeout.link/news/2123115377332781272' }] },
+    { id: 'owlgate', name: 'OwlGate', category: 'tool', radius: 44, desc: '矿机二级市场行情：公平价看板、地板价、24h/7d 成交与折价提醒。', links: [{ label: 'X', url: 'https://x.com/owlgatecli' }] },
+    { id: 'market', name: 'TapeOut Market', category: 'tool', radius: 44, desc: '市场与回购燃烧：手续费按承诺回购 BEM 并打入黑洞，同时做画布/链上指针科普。', links: [{ label: 'X', url: 'https://x.com/tapeoutmarket_x' }] },
+    { id: 'tapemonkey', name: 'TAPEMONKEY', category: 'game', radius: 46, desc: '游戏化叙事：LATCH 家族角色、一比特记忆撑桥原型与概念短片。', links: [{ label: 'X', url: 'https://x.com/Tapemonkeworld' }] },
+    { id: 'ember', name: 'Ember World', category: 'game', radius: 46, desc: '余烬世界：链上游戏经济，铜币流水/销毁与 20 卡收益测算常被社区讨论。', links: [{ label: 'Demo Day', url: 'https://tapeout.link/news/2119045725229380035' }] },
+    { id: 'laika', name: 'Laika', category: 'game', radius: 42, desc: 'X Layer × TapeOut 首期 Demo Day 亮相项目之一。', links: [{ label: 'Demo Day', url: 'https://tapeout.link/news/2119045725229380035' }] },
+    { id: 'tapelaunch', name: 'TapeLaunch', category: 'tool', radius: 42, desc: 'Demo Day 亮相的发射/应用项目，围绕 TapeOut 资产与社区分发。', links: [{ label: 'Demo Day', url: 'https://tapeout.link/news/2119045725229380035' }] },
+    { id: 'fusebox', name: 'Fusebox', category: 'tool', radius: 44, desc: '可验证支付守卫：AI Agent 付款先经已流片电路检查（名单、额度、冻结开关）再放行。', links: [{ label: '应用构想', url: 'https://tapeout.link/news/2123239326687617076' }] },
+    { id: 'deweb', name: 'DeWEB / TapeSend / TapeCode', category: 'infra', radius: 48, desc: '去中心化 Web 组件：可验证网站发布、无 gas 消息与大文件传输，围绕 TapeRelay 扩展。', links: [{ label: '相关资讯', url: 'https://tapeout.link/news/2123337199848714626' }] },
+  ]
+
+  function hash32(text) {
+    let hash = 0x811c9dc5
+    const string = String(text)
+    for (let i = 0; i < string.length; i += 1) {
+      hash ^= string.charCodeAt(i)
+      hash = Math.imul(hash, 0x01000193) >>> 0
+    }
+    return hash >>> 0
+  }
+
+  function rng(seed) {
+    let value = seed >>> 0 || 1
+    return () => {
+      value ^= value << 13
+      value ^= value >>> 17
+      value ^= value << 5
+      value >>>= 0
+      return value / 4294967296
+    }
+  }
+
+  function makeBubbles(width, height) {
+    const random = rng(20261120)
+    return PROJECTS.map((project) => {
+      const radius = Math.max(30, project.radius * Math.min(1, width / 900))
+      return {
+        id: project.id,
+        x: radius + random() * Math.max(1, width - radius * 2),
+        y: radius + random() * Math.max(1, height - radius * 2),
+        vx: (random() - 0.5) * 0.35,
+        vy: (random() - 0.5) * 0.35,
+        r: radius,
+        phase: random() * Math.PI * 2,
+      }
+    })
+  }
+
+  function hitTest(bubbles, x, y) {
+    for (let index = bubbles.length - 1; index >= 0; index -= 1) {
+      const bubble = bubbles[index]
+      const dx = x - bubble.x
+      const dy = y - bubble.y
+      if (dx * dx + dy * dy <= (bubble.r + 4) * (bubble.r + 4)) return bubble.id
+    }
+    return null
+  }
+
+  function step(bubbles, width, height, dt) {
+    const time = dt || 1
+    for (const bubble of bubbles) {
+      // gentle random wander
+      bubble.vx += (Math.random() - 0.5) * 0.02 * time
+      bubble.vy += (Math.random() - 0.5) * 0.02 * time
+      const speed = Math.hypot(bubble.vx, bubble.vy)
+      const cap = 0.55
+      if (speed > cap) {
+        bubble.vx = (bubble.vx / speed) * cap
+        bubble.vy = (bubble.vy / speed) * cap
+      }
+      bubble.x += bubble.vx * time
+      bubble.y += bubble.vy * time
+      if (bubble.x - bubble.r < 0) { bubble.x = bubble.r; bubble.vx = Math.abs(bubble.vx) }
+      if (bubble.x + bubble.r > width) { bubble.x = width - bubble.r; bubble.vx = -Math.abs(bubble.vx) }
+      if (bubble.y - bubble.r < 0) { bubble.y = bubble.r; bubble.vy = Math.abs(bubble.vy) }
+      if (bubble.y + bubble.r > height) { bubble.y = height - bubble.r; bubble.vy = -Math.abs(bubble.vy) }
+      bubble.phase += 0.01 * time
+    }
+    // soft circle collisions
+    for (let i = 0; i < bubbles.length; i += 1) {
+      for (let j = i + 1; j < bubbles.length; j += 1) {
+        const a = bubbles[i]
+        const b = bubbles[j]
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const distance = Math.hypot(dx, dy) || 0.001
+        const min = a.r + b.r + 2
+        if (distance < min) {
+          const push = (min - distance) / 2
+          const nx = dx / distance
+          const ny = dy / distance
+          a.x -= nx * push
+          a.y -= ny * push
+          b.x += nx * push
+          b.y += ny * push
+          const dvx = b.vx - a.vx
+          const dvy = b.vy - a.vy
+          const dot = dvx * nx + dvy * ny
+          if (dot < 0) {
+            a.vx += nx * dot
+            a.vy += ny * dot
+            b.vx -= nx * dot
+            b.vy -= ny * dot
+          }
+        }
+      }
+    }
+    return bubbles
+  }
+
+  function byId(id) {
+    return PROJECTS.find((project) => project.id === id) || null
+  }
+
+  return { CATEGORIES, PROJECTS, hash32, makeBubbles, hitTest, step, byId }
+})()
+
+// --------------------------------------------------------------------------- UI
+
+TT.EcosystemUI = (function () {
+  const h = TT.h
+
+  function Page(props) {
+    const { state, t, api } = props
+    const canvasRef = React.useRef(null)
+    const wrapRef = React.useRef(null)
+    const bubblesRef = React.useRef([])
+    const sizeRef = React.useRef({ w: 900, h: 600 })
+    const runningRef = React.useRef(true)
+    const hoverRef = React.useRef(null)
+    const selectedRef = React.useRef(null)
+    const [running, setRunning] = React.useState(true)
+    const [selectedId, setSelectedId] = React.useState(null)
+    const [hoverId, setHoverId] = React.useState(null)
+
+    React.useEffect(() => {
+      runningRef.current = running
+    }, [running])
+    React.useEffect(() => {
+      hoverRef.current = hoverId
+      if (canvasRef.current) canvasRef.current.style.cursor = hoverId ? 'pointer' : 'grab'
+    }, [hoverId])
+    React.useEffect(() => {
+      selectedRef.current = selectedId
+    }, [selectedId])
+
+    React.useEffect(() => {
+      const canvas = canvasRef.current
+      const wrap = wrapRef.current
+      if (!canvas || !wrap) return undefined
+      const context = canvas.getContext('2d')
+      if (!context) return undefined
+
+      const resize = () => {
+        const rect = wrap.getBoundingClientRect()
+        const width = Math.max(320, rect.width)
+        const height = Math.max(260, rect.height)
+        const ratio = Math.min(2, window.devicePixelRatio || 1)
+        canvas.width = Math.floor(width * ratio)
+        canvas.height = Math.floor(height * ratio)
+        canvas.style.width = `${width}px`
+        canvas.style.height = `${height}px`
+        const previous = sizeRef.current
+        if (bubblesRef.current.length === 0) {
+          bubblesRef.current = TT.Ecosystem.makeBubbles(width, height)
+        } else if (previous.w && previous.h) {
+          for (const bubble of bubblesRef.current) {
+            bubble.x = (bubble.x / previous.w) * width
+            bubble.y = (bubble.y / previous.h) * height
+          }
+        }
+        sizeRef.current = { w: width, h: height }
+        context.setTransform(ratio, 0, 0, ratio, 0, 0)
+      }
+      resize()
+      window.addEventListener('resize', resize)
+
+      let frame = 0
+      let last = performance.now()
+      const draw = (now) => {
+        const dt = Math.min(2, (now - last) / 16.7)
+        last = now
+        const width = sizeRef.current.w
+        const height = sizeRef.current.h
+        if (runningRef.current) TT.Ecosystem.step(bubblesRef.current, width, height, dt)
+        context.clearRect(0, 0, width, height)
+        const bg = context.createLinearGradient(0, 0, width, height)
+        bg.addColorStop(0, '#050b14')
+        bg.addColorStop(0.55, '#071b2a')
+        bg.addColorStop(1, '#0d1f33')
+        context.fillStyle = bg
+        context.fillRect(0, 0, width, height)
+        // faint grid
+        context.strokeStyle = 'rgba(86,225,255,.05)'
+        context.lineWidth = 1
+        for (let x = 0; x < width; x += 64) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke() }
+        for (let y = 0; y < height; y += 64) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke() }
+        for (const bubble of bubblesRef.current) {
+          const project = TT.Ecosystem.byId(bubble.id)
+          const category = TT.Ecosystem.CATEGORIES[project.category]
+          const selected = selectedRef.current === bubble.id
+          const hovered = hoverRef.current === bubble.id
+          const pulse = 1 + Math.sin(bubble.phase) * 0.02
+          const radius = bubble.r * (selected ? 1.08 : hovered ? 1.04 : pulse)
+          const gradient = context.createRadialGradient(
+            bubble.x - radius * 0.35, bubble.y - radius * 0.4, radius * 0.1,
+            bubble.x, bubble.y, radius,
+          )
+          gradient.addColorStop(0, category.color + 'ee')
+          gradient.addColorStop(0.55, category.color + '99')
+          gradient.addColorStop(1, category.color + '22')
+          context.save()
+          context.shadowColor = category.glow
+          context.shadowBlur = selected || hovered ? 28 : 14
+          context.beginPath()
+          context.arc(bubble.x, bubble.y, radius, 0, Math.PI * 2)
+          context.fillStyle = gradient
+          context.fill()
+          context.lineWidth = selected ? 2.4 : 1.2
+          context.strokeStyle = selected ? '#e8f6ff' : category.color + 'cc'
+          context.stroke()
+          context.restore()
+          // label
+          const label = project.name
+          context.fillStyle = 'rgba(4,12,20,.85)'
+          context.font = `600 ${Math.max(10, radius * 0.22)}px ui-sans-serif, -apple-system, sans-serif`
+          context.textAlign = 'center'
+          context.textBaseline = 'middle'
+          const lines = label.length > 13 ? label.split(' / ') : [label]
+          const lineHeight = Math.max(11, radius * 0.26)
+          lines.slice(0, 2).forEach((line, index) => {
+            context.fillText(line, bubble.x, bubble.y + (index - (lines.length - 1) / 2) * lineHeight)
+          })
+        }
+        frame = requestAnimationFrame(draw)
+      }
+      frame = requestAnimationFrame(draw)
+      return () => {
+        cancelAnimationFrame(frame)
+        window.removeEventListener('resize', resize)
+      }
+    }, [])
+
+    function coords(event) {
+      const canvas = canvasRef.current
+      if (!canvas) return { x: 0, y: 0 }
+      const rect = canvas.getBoundingClientRect()
+      return { x: event.clientX - rect.left, y: event.clientY - rect.top }
+    }
+
+    function onMove(event) {
+      const position = coords(event)
+      setHoverId(TT.Ecosystem.hitTest(bubblesRef.current, position.x, position.y))
+    }
+
+    function onClick(event) {
+      const position = coords(event)
+      const id = TT.Ecosystem.hitTest(bubblesRef.current, position.x, position.y)
+      setSelectedId(id)
+    }
+
+    function randomize() {
+      bubblesRef.current = TT.Ecosystem.makeBubbles(sizeRef.current.w, sizeRef.current.h)
+      setSelectedId(null)
+    }
+
+    const project = selectedId ? TT.Ecosystem.byId(selectedId) : null
+    const legend = Object.keys(TT.Ecosystem.CATEGORIES).map((key) => {
+      const category = TT.Ecosystem.CATEGORIES[key]
+      return h('span', { key, className: 'tt-eco-legend' },
+        h('i', { style: { background: category.color } }), t(category.key))
+    })
+
+    return h('div', { className: 'tt-labview tt-ecoview' },
+      h('div', { className: 'tt-eco-head' },
+        h('div', { className: 'tt-eco-title' },
+          h('div', { className: 'tt-labadge' }, t('eco.badge')),
+          h('h2', null, t('eco.title')),
+          h('p', null, t('eco.sub')),
+        ),
+        h('div', { className: 'tt-eco-controls' },
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => setRunning((value) => !value) }, running ? `⏸ ${t('eco.pause')}` : `▶ ${t('eco.play')}`),
+          h('button', { type: 'button', className: 'tt-chip', onClick: randomize }, `🎲 ${t('eco.shuffle')}`),
+          h('span', { className: 'tt-lablabel' }, `${TT.Ecosystem.PROJECTS.length} ${t('eco.projects')}`),
+        ),
+      ),
+      h('div', { className: 'tt-eco-legendrow' }, legend),
+      h('div', { className: 'tt-eco-canvaswrap', ref: wrapRef },
+        h('canvas', {
+          ref: canvasRef,
+          className: 'tt-eco-canvas',
+          onPointerMove: onMove,
+          onPointerLeave: () => setHoverId(null),
+          onClick,
+        }),
+        project
+          ? h('aside', { className: 'tt-eco-detail' },
+              h('button', { type: 'button', className: 'tt-achvclose', onClick: () => setSelectedId(null) }, '✕'),
+              h('span', { className: 'tt-newstag' }, t(TT.Ecosystem.CATEGORIES[project.category].key)),
+              h('h3', null, project.name),
+              h('p', null, project.desc),
+              h('div', { className: 'tt-eco-links' }, project.links.map((link) =>
+                h('a', { key: link.url, className: 'tt-chip', href: link.url, target: '_blank', rel: 'noreferrer noopener' }, `${link.label} ↗`))),
+            )
+          : null,
+      ),
+      h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t('eco.disclaimer')),
+    )
+  }
+
+  return { Page }
+})()
+
+// ---- 50-version.js ----
+/**
+ * 50-version — version badge, changelog and a GitHub update check.
+ * A browser plugin cannot silently replace itself, so the panel reports the latest
+ * commit and gives the exact update steps/command instead.
+ */
+
+TT.Version = (function () {
+  const VERSION = '1.2.0'
+  const BUILT_AT = '2026-11-20'
+  const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
+  const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
+  const COMMAND = 'git pull && node scripts/build.mjs'
+  const CHANGELOG = [
+    {
+      version: '1.2.0',
+      date: '2026-11-20',
+      items: [
+        'TapeOut 生态版图：漂移气泡、点击查看项目简介与官网/X',
+        '顶层资讯板块：真实抓取 tapeout.link，每日 06:00 自动抓取',
+        '版本与更新按钮：检查 GitHub 最新提交、更新日志与更新命令',
+      ],
+    },
+    {
+      version: '1.1.0',
+      date: '2026-11-20',
+      items: [
+        '每日资讯顶层板块：tapeout.link 真实抓取 + 每日 06:00 自动抓取',
+        '章节挑战模式：正常/挑战切换、计时、操作预算、失误、三星与变体挑战',
+        '每日挑战、成就墙（18 枚）与 PNG 分享卡',
+        'Verilog 导入与 nand-cli（synth / import / eval / verify / disasm）',
+        '可验证门禁、抽奖、传感器、DeFi 守卫应用集',
+        '街机难度与记录：贪吃蛇三档速度、排行榜、猜数计分、密码锁限次',
+      ],
+    },
+    {
+      version: '1.0.0',
+      date: '2026-11-19',
+      items: [
+        '11 章主线：铸币 → 与非门 → 半加器 → 流片 → 锁存器 → 乐高 → 巨兽 → 七段 → 计数器 → 小计算机 → 安全电路',
+        '实验室、游乐场、协议档案、音效与电影模式',
+        '真实 TapeRover 安全网表与 64 项单测',
+      ],
+    },
+  ]
+
+  function isNewer(remoteIso) {
+    const remote = Date.parse(remoteIso)
+    const built = Date.parse(BUILT_AT + 'T23:59:59+08:00')
+    return Number.isFinite(remote) && Number.isFinite(built) && remote > built
+  }
+
+  return { VERSION, BUILT_AT, REPO, API, COMMAND, CHANGELOG, isNewer }
+})()
+
+// --------------------------------------------------------------------------- UI
+
+TT.VersionUI = (function () {
+  const h = TT.h
+
+  function Page(props) {
+    const { t, api } = props
+    const [status, setStatus] = React.useState('idle')
+    const [commit, setCommit] = React.useState(null)
+    const [newer, setNewer] = React.useState(false)
+
+    async function check() {
+      if (typeof fetch !== 'function') {
+        setStatus('fail')
+        return
+      }
+      setStatus('loading')
+      try {
+        const response = await fetch(TT.Version.API, { headers: { accept: 'application/vnd.github+json' } })
+        if (!response.ok) throw new Error('HTTP ' + response.status)
+        const data = await response.json()
+        const info = {
+          sha: String(data.sha || '').slice(0, 7),
+          date: data.commit && data.commit.author ? data.commit.author.date : '',
+          message: data.commit && data.commit.message ? data.commit.message.split('\n')[0] : '',
+          url: data.html_url || TT.Version.REPO,
+        }
+        setCommit(info)
+        setNewer(TT.Version.isNewer(info.date))
+        setStatus('done')
+      } catch (error) {
+        setStatus('fail')
+      }
+    }
+
+    function copyCommand() {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(TT.Version.COMMAND).then(
+            () => api.dispatch({ type: 'toast/show', key: 'version.copied', tone: 'good' }),
+            () => api.dispatch({ type: 'toast/show', key: 'version.copyFail', tone: 'warn' }),
+          )
+          return
+        }
+      } catch (error) {
+        /* fall through */
+      }
+      api.dispatch({ type: 'toast/show', key: 'version.copied', tone: 'good' })
+    }
+
+    return h('div', { className: 'tt-welcome' },
+      h('div', { className: 'tt-welcomecard tt-versioncard' },
+        h('div', { className: 'tt-achvhead' },
+          h('h2', { className: 'tt-introtitle' }, `🔄 ${t('version.title')}`),
+          h('button', { type: 'button', className: 'tt-achvclose', onClick: () => api.dispatch({ type: 'update/close' }) }, '✕'),
+        ),
+        h('p', { className: 'tt-introbody' }, t('version.sub')),
+        h('div', { className: 'tt-versionrow' },
+          h('span', null, t('version.current')),
+          h('b', null, `v${TT.Version.VERSION}`),
+          h('span', null, `${t('version.built')} ${TT.Version.BUILT_AT}`),
+        ),
+        h('div', { className: 'tt-labrow' },
+          h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', disabled: status === 'loading', onClick: check },
+            status === 'loading' ? t('version.checking') : t('version.check')),
+          h('a', { className: 'tt-chip', href: TT.Version.REPO, target: '_blank', rel: 'noreferrer noopener' }, t('version.github')),
+        ),
+        status === 'fail' ? h('p', { className: 'tt-finalenote', style: { borderLeftColor: 'var(--tt-red)' } }, t('version.fail')) : null,
+        commit
+          ? h('div', { className: 'tt-finalenote', style: { borderLeftColor: newer ? 'var(--tt-amber)' : 'var(--tt-mint)' } },
+              h('div', null, `${newer ? t('version.hasNew') : t('version.latest')} · ${commit.sha}`),
+              h('div', { style: { color: 'var(--tt-dim)', fontSize: 10.5 } }, `${commit.date ? new Date(commit.date).toLocaleString() : ''} · ${commit.message}`),
+            )
+          : null,
+        h('div', { className: 'tt-versionsteps' },
+          h('b', null, t('version.how')),
+          h('p', null, t('version.howBody')),
+          h('div', { className: 'tt-versioncmd' },
+            h('code', null, TT.Version.COMMAND),
+            h('button', { type: 'button', className: 'tt-chip', onClick: copyCommand }, t('version.copy')),
+          ),
+          h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t('version.note')),
+        ),
+        h('h4', { className: 'tt-newshead' }, t('version.changelog')),
+        h('div', { className: 'tt-changelog' }, TT.Version.CHANGELOG.map((entry) =>
+          h('div', { key: entry.version, className: 'tt-changelogentry' },
+            h('b', null, `v${entry.version} · ${entry.date}`),
+            h('ul', null, entry.items.map((item) => h('li', { key: item }, item))),
+          ))),
+      ),
+    )
+  }
+
+  return { Page }
+})()
+
 // ---- 40-ui.js ----
 /**
  * 40-ui — locale dictionaries, panel chrome, HUD, codex.
@@ -12474,6 +12971,25 @@ TT.dict = {
     'panel.introStart': '开始任务',
     'panel.intro': '章节说明',
     'panel.guide': '新手引导',
+    'panel.version': '版本与更新',
+    'version.title': '版本与更新',
+    'version.sub': '查看当前版本、更新日志，并检查 GitHub 上是否有新提交。',
+    'version.current': '当前版本',
+    'version.built': '构建日期',
+    'version.check': '检查更新',
+    'version.checking': '检查中…',
+    'version.github': '打开 GitHub 仓库',
+    'version.fail': '检查失败：当前网络无法访问 GitHub API，稍后再试。',
+    'version.hasNew': '发现新提交：可以按下面的步骤更新',
+    'version.latest': '已是最新版本',
+    'version.how': '如何更新',
+    'version.howBody': '在插件目录拉取最新代码并重新构建，然后在 Harness 里重载插件（Plugins 开关）或重启应用。',
+    'version.copy': '复制命令',
+    'version.copied': '更新命令已复制',
+    'version.copyFail': '复制失败，请手动选择命令',
+    'version.note': '浏览器插件不能静默替换自己；当前是本地安装，更新后需要重新构建并重载。',
+    'version.changelog': '更新日志',
+
     'arcade.records.title': '本机记录',
     'arcade.records.snake': '贪吃蛇',
     'arcade.records.guess': '猜数最少',
@@ -12605,6 +13121,22 @@ TT.dict = {
     'panel.controls': '拖动旋转镜头 · 滚轮缩放 · 点击端口连线 · 点空白取消 · 1–9 跳章 · [ ] 前后章 · H 提示',
     'panel.modeArcade': '游乐场',
     'panel.modeNews': '资讯',
+    'panel.modeEco': '生态',
+    'eco.badge': '生态版图',
+    'eco.title': 'TapeOut 生态版图',
+    'eco.sub': '每颗气泡是一个生态项目：随机漂移、可暂停，点开看简介与官方链接。',
+    'eco.pause': '暂停',
+    'eco.play': '继续',
+    'eco.shuffle': '重排',
+    'eco.projects': '个项目',
+    'eco.disclaimer': '项目与链接整理自 TapeOut 官方/社区资讯，仅作生态导航；官网与账号以项目方公布为准。',
+    'eco.cat.protocol': '协议',
+    'eco.cat.infra': '基础设施',
+    'eco.cat.ai': 'AI / Agent',
+    'eco.cat.game': '游戏',
+    'eco.cat.tool': '工具 / 市场',
+    'eco.cat.community': '社区',
+
     'news.badge': '每日资讯',
     'news.auto': '每日 06:00 自动抓取',
     'news.autoNext': '下次自动抓取',
@@ -13473,6 +14005,25 @@ TT.dict = {
     'panel.introStart': 'Start mission',
     'panel.intro': 'Chapter brief',
     'panel.guide': 'Getting started',
+    'panel.version': 'Version & updates',
+    'version.title': 'Version & updates',
+    'version.sub': 'See the current version, changelog and check GitHub for new commits.',
+    'version.current': 'Current version',
+    'version.built': 'Built',
+    'version.check': 'Check for updates',
+    'version.checking': 'Checking…',
+    'version.github': 'Open GitHub repo',
+    'version.fail': 'Check failed: GitHub API is unreachable right now, try again later.',
+    'version.hasNew': 'New commits found — follow the steps below to update',
+    'version.latest': 'You are on the latest version',
+    'version.how': 'How to update',
+    'version.howBody': 'Pull the latest code in the plugin directory and rebuild, then reload the plugin in Harness (Plugins toggle) or restart the app.',
+    'version.copy': 'Copy command',
+    'version.copied': 'Update command copied',
+    'version.copyFail': 'Copy failed — select the command manually',
+    'version.note': 'A browser plugin cannot silently replace itself; this is a local install, so rebuild and reload after updating.',
+    'version.changelog': 'Changelog',
+
     'arcade.records.title': 'Local records',
     'arcade.records.snake': 'Snake',
     'arcade.records.guess': 'Best tries',
@@ -13604,6 +14155,22 @@ TT.dict = {
     'panel.controls': 'Drag to orbit · wheel to zoom · click pins to wire · click empty space to cancel · 1–9 chapters · [ ] step · H hint',
     'panel.modeArcade': 'Playground',
     'panel.modeNews': 'News',
+    'panel.modeEco': 'Ecosystem',
+    'eco.badge': 'Ecosystem map',
+    'eco.title': 'TapeOut ecosystem map',
+    'eco.sub': 'Each bubble is an ecosystem project: drifting, pausable — click one for its intro and official links.',
+    'eco.pause': 'Pause',
+    'eco.play': 'Resume',
+    'eco.shuffle': 'Shuffle',
+    'eco.projects': 'projects',
+    'eco.disclaimer': 'Projects and links are curated from TapeOut official/community news for navigation only; official sites and accounts are authoritative.',
+    'eco.cat.protocol': 'Protocol',
+    'eco.cat.infra': 'Infrastructure',
+    'eco.cat.ai': 'AI / Agent',
+    'eco.cat.game': 'Games',
+    'eco.cat.tool': 'Tools / Market',
+    'eco.cat.community': 'Community',
+
     'news.badge': 'Daily news',
     'news.auto': 'Daily 06:00 auto-fetch',
     'news.autoNext': 'Next auto-fetch',
@@ -14763,6 +15330,12 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-lab[data-mode="lab"] .tt-stamp,
 .tt-lab[data-mode="lab"] .tt-fade,
 .tt-lab[data-mode="lab"] .tt-tooltip,
+.tt-lab[data-mode="eco"] .tt-canvas,
+.tt-lab[data-mode="eco"] .tt-scrim,
+.tt-lab[data-mode="eco"] .tt-hud,
+.tt-lab[data-mode="eco"] .tt-stamp,
+.tt-lab[data-mode="eco"] .tt-fade,
+.tt-lab[data-mode="eco"] .tt-tooltip,
 .tt-lab[data-mode="news"] .tt-canvas,
 .tt-lab[data-mode="news"] .tt-scrim,
 .tt-lab[data-mode="news"] .tt-hud,
@@ -15023,6 +15596,39 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-feedsource { font-size:9.5px; color:var(--tt-faint); text-decoration:none; }
 .tt-feedsource:hover { color:var(--tt-mint); }
 
+.tt-versioncard { width:min(640px,94%); max-height:88vh; overflow:auto; }
+.tt-versionrow { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin:6px 0; font-size:12px; color:var(--tt-dim); }
+.tt-versionrow b { color:var(--tt-mint); font-size:15px; }
+.tt-versionsteps { margin:8px 0; padding:8px 10px; border-radius:10px; background:rgba(86,225,255,.05); border:1px solid rgba(86,225,255,.14); }
+.tt-versionsteps b { font-size:12px; color:var(--tt-ink); }
+.tt-versionsteps p { margin:4px 0; font-size:10.5px; line-height:1.55; color:var(--tt-dim); }
+.tt-versioncmd { display:flex; align-items:center; gap:6px; margin:6px 0; }
+.tt-versioncmd code { flex:1; font-size:10.5px; color:var(--tt-mint); background:rgba(4,12,20,.6); border:1px solid rgba(86,225,255,.2);
+  border-radius:7px; padding:5px 8px; overflow:auto; white-space:nowrap; }
+.tt-changelog { max-height:30vh; overflow:auto; }
+.tt-changelogentry { padding:6px 0; border-bottom:1px solid rgba(86,225,255,.08); }
+.tt-changelogentry b { font-size:11px; color:var(--tt-amber); }
+.tt-changelogentry ul { margin:4px 0 0; padding-left:16px; }
+.tt-changelogentry li { font-size:10.5px; line-height:1.5; color:var(--tt-dim); }
+
+.tt-ecoview { display:flex; flex-direction:column; gap:10px; }
+.tt-eco-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+.tt-eco-title h2 { margin:0 0 4px; font-size:22px; }
+.tt-eco-title p { margin:0; font-size:12px; color:var(--tt-dim); }
+.tt-eco-controls { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.tt-eco-legendrow { display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:10.5px; color:var(--tt-dim); }
+.tt-eco-legend { display:inline-flex; align-items:center; gap:5px; }
+.tt-eco-legend i { width:8px; height:8px; border-radius:50%; display:inline-block; }
+.tt-eco-canvaswrap { position:relative; flex:1 1 auto; min-height:420px; border-radius:16px; overflow:hidden;
+  border:1px solid rgba(86,225,255,.18); box-shadow:inset 0 0 80px rgba(0,0,0,.5); }
+.tt-eco-canvas { display:block; width:100%; height:100%; touch-action:none; }
+.tt-eco-detail { position:absolute; right:14px; bottom:14px; width:min(340px,86%); padding:12px 14px; border-radius:14px;
+  background:rgba(5,13,22,.92); border:1px solid rgba(86,225,255,.3); box-shadow:0 18px 50px rgba(0,0,0,.6);
+  pointer-events:auto; }
+.tt-eco-detail h3 { margin:4px 0 6px; font-size:16px; color:var(--tt-ink); }
+.tt-eco-detail p { margin:0 0 8px; font-size:11px; line-height:1.6; color:var(--tt-dim); }
+.tt-eco-links { display:flex; gap:6px; flex-wrap:wrap; }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -15184,6 +15790,7 @@ TT.UI.Panel = function Panel(props) {
   const inLab = state.mode === 'lab'
   const inArcade = state.mode === 'arcade'
   const inNews = state.mode === 'news'
+  const inEco = state.mode === 'eco'
 
   React.useEffect(() => {
     const canvas = canvasRef.current
@@ -15198,7 +15805,7 @@ TT.UI.Panel = function Panel(props) {
   }, [canvasRef, store, api, t])
 
   React.useEffect(() => {
-    if (api.setWorldActive) api.setWorldActive(!inLab && !inArcade && !inNews)
+    if (api.setWorldActive) api.setWorldActive(!inLab && !inArcade && !inNews && !inEco)
   }, [inLab, inArcade, api])
 
   React.useEffect(() => {
@@ -15218,7 +15825,8 @@ TT.UI.Panel = function Panel(props) {
       // the first render's state would never see the arcade mode or the current chapter.
       const current = stateRef.current
       if (event.key === 'Escape') {
-        if (current.welcome) api.dispatch({ type: 'welcome/close' })
+        if (current.updateOpen) api.dispatch({ type: 'update/close' })
+        else if (current.welcome) api.dispatch({ type: 'welcome/close' })
         else if (current.codex) api.dispatch({ type: 'codex/close' })
         else if (current.intro) api.dispatch({ type: 'intro/close' })
         else if (!current.finaleDismissed && TT.Missions.allDone(current)) api.dispatch({ type: 'finale/close' })
@@ -15381,6 +15989,8 @@ TT.UI.Panel = function Panel(props) {
     ),
   ) : null
 
+  const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
+
   return TT.h('div', {
     className: 'tt-lab',
     ref: rootRef,
@@ -15470,7 +16080,20 @@ TT.UI.Panel = function Panel(props) {
             'data-active': inNews ? 'true' : 'false',
             onClick: () => api.dispatch({ type: 'news/open' }),
           }, t('panel.modeNews')),
+          TT.h('button', {
+            type: 'button',
+            className: 'tt-modebtn',
+            'data-active': inEco ? 'true' : 'false',
+            onClick: () => api.dispatch({ type: 'eco/open' }),
+          }, t('panel.modeEco')),
         ),
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-tool',
+          title: `${t('panel.version')} v${TT.Version ? TT.Version.VERSION : '1.1.0'}`,
+          'data-active': state.updateOpen ? 'true' : 'false',
+          onClick: () => api.dispatch({ type: state.updateOpen ? 'update/close' : 'update/open' }),
+        }, '🔄'),
         TT.h('button', {
           type: 'button',
           className: 'tt-tool',
@@ -15607,9 +16230,11 @@ TT.UI.Panel = function Panel(props) {
       inLab && TT.LabUI ? TT.LabUI.Lab({ state, t, resolve, api }) : null,
       inArcade && TT.ArcadeUI ? TT.ArcadeUI.Page({ state, t, resolve, api }) : null,
       inNews && TT.NewsUI ? TT.h(TT.NewsUI.Page, { state, t, resolve, api }) : null,
+      inEco && TT.EcosystemUI ? TT.h(TT.EcosystemUI.Page, { state, t, resolve, api }) : null,
       intro,
       welcome,
       achievements,
+      versionModal,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),
