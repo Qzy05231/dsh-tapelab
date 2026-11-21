@@ -28,6 +28,13 @@ TT.dict = {
     'panel.intro': '章节说明',
     'panel.guide': '新手引导',
     'netgrid.title': '安全电路网表',
+    'netgrid.latchTitle': 'SR 锁存器网表',
+    'netgrid.counterTitle': '4 位计数器网表',
+    'netgrid.latchHint': '每来一个区块自动推进一拍；高亮的门表示这一拍状态翻转',
+    'netgrid.counterHint': '点「下一拍」推进时钟，蓝色高亮为刚刚变化的门',
+    'netgrid.nextBeat': '下一拍',
+    'netgrid.beatHint': '每拍对比上一拍，发生变化的门会闪亮',
+
     'netgrid.open': '网表视图',
     'netgrid.openHint': '16 输入 · 80 个 NAND · 4 输出，按 32 层逻辑深度排布',
     'netgrid.hint': '点击任意门查看它的 a/b/y；点击输入拨动 0/1；高亮信号路径',
@@ -1259,6 +1266,13 @@ TT.dict = {
     'panel.intro': 'Chapter brief',
     'panel.guide': 'Getting started',
     'netgrid.title': 'Safety netlist',
+    'netgrid.latchTitle': 'SR latch netlist',
+    'netgrid.counterTitle': '4-bit counter netlist',
+    'netgrid.latchHint': 'Advances one beat per block; highlighted gates changed this beat',
+    'netgrid.counterHint': 'Press “next beat” to clock it; blue highlights mark changed gates',
+    'netgrid.nextBeat': 'Next beat',
+    'netgrid.beatHint': 'Each beat is diffed against the previous one; changed gates glow',
+
     'netgrid.open': 'Netlist view',
     'netgrid.openHint': '16 inputs · 80 NAND gates · 4 outputs, laid out over 32 logic levels',
     'netgrid.hint': 'Click a gate for its a/b/y; toggle inputs; highlighted signal paths',
@@ -3180,6 +3194,12 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-netgrid-detail span { font-family:var(--dsh-font-family-mono, monospace); }
 .tt-netgrid-hint { justify-content:space-between; }
 
+.tt-netgrid-gate[data-changed="true"] { border-color:#56e1ff; box-shadow:0 0 12px rgba(86,225,255,.65); }
+.tt-netgrid-state { position:absolute; display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px;
+  font-family:var(--dsh-font-family-mono, monospace); font-size:9px; color:var(--tt-dim);
+  background:rgba(10,22,36,.9); border:1px solid rgba(86,225,255,.25); pointer-events:none; }
+.tt-netgrid-state[data-on="true"] { color:var(--tt-amber); border-color:rgba(255,195,92,.6); }
+
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
 }
@@ -3583,21 +3603,61 @@ TT.UI.Panel = function Panel(props) {
   ) : null
 
   const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
-  const netgrid = state.gridOpen && TT.NetlistGridUI ? TT.h('div', { className: 'tt-welcome' },
+  let gridConfig = null
+  if (state.gridOpen) {
+    if (state.gridKind === 'latch' && TT.Circuit) {
+      gridConfig = {
+        netlist: (state.play && state.play.latch) || TT.Circuit.canonical.srLatch(),
+        bits: ((state.play && state.play.S) || 0) | (((state.play && state.play.R) || 0) << 1),
+        stateBits: (state.play && state.play.stateBits) || 0,
+        inputLabels: ['S', 'R'],
+        outputLabels: ['Q', 'Q̄'],
+        titleKey: 'netgrid.latchTitle',
+        stepLabel: null,
+      }
+    } else if (state.gridKind === 'counter' && TT.Circuit) {
+      gridConfig = {
+        netlist: (state.play && state.play.netlist) || TT.Circuit.canonical.counter4(),
+        bits: 0,
+        stateBits: (state.play && state.play.stateBits) || 0,
+        inputLabels: [],
+        outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
+        titleKey: 'netgrid.counterTitle',
+        stepLabel: 'netgrid.nextBeat',
+        stepAction: { type: 'counter/step' },
+      }
+    } else if (TT.Safety) {
+      gridConfig = {
+        netlist: TT.Safety.netlist(),
+        bits: (state.play && state.play.bits) || 0,
+        stateBits: 0,
+        inputLabels: TT.Safety.KEYS,
+        outputLabels: TT.Safety.OUTPUT_LABELS,
+        titleKey: 'netgrid.title',
+        stepLabel: null,
+      }
+    }
+  }
+  const netgrid = gridConfig && TT.NetlistGridUI ? TT.h('div', { className: 'tt-welcome' },
     TT.h('div', { className: 'tt-welcomecard tt-netgridcard' },
       TT.h('div', { className: 'tt-achvhead' },
-        TT.h('h2', { className: 'tt-introtitle' }, `🧮 ${t('netgrid.title')}`),
+        TT.h('h2', { className: 'tt-introtitle' }, `🧮 ${t(gridConfig.titleKey)}`),
         TT.h('button', { type: 'button', className: 'tt-achvclose', onClick: () => api.dispatch({ type: 'grid/close' }) }, '✕'),
       ),
       TT.h(TT.NetlistGridUI.Grid, {
-        netlist: TT.Safety.netlist(),
-        bits: (state.play && state.play.bits) || 0,
-        onToggle: (index) => api.dispatch({ type: 'safety/toggle', index }),
+        netlist: gridConfig.netlist,
+        bits: gridConfig.bits,
+        stateBits: gridConfig.stateBits,
+        onToggle: state.gridKind === 'safety' ? (index) => api.dispatch({ type: 'safety/toggle', index }) : (gridConfig.inputLabels.length ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' }) : undefined),
         t,
-        inputLabels: TT.Safety.KEYS,
-        outputLabels: TT.Safety.OUTPUT_LABELS,
+        inputLabels: gridConfig.inputLabels,
+        outputLabels: gridConfig.outputLabels,
         compact: true,
       }),
+      gridConfig.stepLabel ? TT.h('div', { className: 'tt-labrow', style: { justifyContent: 'center' } },
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', onClick: () => api.dispatch(gridConfig.stepAction) }, `⏭ ${t(gridConfig.stepLabel)}`),
+        TT.h('span', { className: 'tt-lablabel' }, t('netgrid.beatHint')),
+      ) : TT.h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t('netgrid.latchHint')),
     ),
   ) : null
 
@@ -3790,9 +3850,14 @@ TT.UI.Panel = function Panel(props) {
             narrow ? null : TT.h('div', { className: 'tt-msub' }, resolve(chapter.subtitleKey)),
             TT.h(ChallengeBar, { state, t, api }),
             TT.h(TapeoutQuiz, { state, t, api }),
-            state.chapter === 10 ? TT.h('div', { className: 'tt-labrow' },
-              TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary', onClick: () => api.dispatch({ type: 'grid/open' }) }, `🧮 ${t('netgrid.open')}`),
-              TT.h('span', { className: 'tt-lablabel' }, t('netgrid.openHint')),
+            [4, 8, 10].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-labrow' },
+              TT.h('button', {
+                type: 'button',
+                className: 'tt-btn',
+                'data-kind': 'secondary',
+                onClick: () => api.dispatch({ type: 'grid/open', kind: state.chapter === 4 ? 'latch' : state.chapter === 8 ? 'counter' : 'safety' }),
+              }, `🧮 ${t('netgrid.open')}`),
+              TT.h('span', { className: 'tt-lablabel' }, t(state.chapter === 4 ? 'netgrid.latchHint' : state.chapter === 8 ? 'netgrid.counterHint' : 'netgrid.openHint')),
             ) : null,
             TT.h('ul', { className: 'tt-goals' }, goals.map((goal, index) =>
               TT.h('li', { key: index, className: 'tt-goal', 'data-done': goal.done ? 'true' : 'false' },

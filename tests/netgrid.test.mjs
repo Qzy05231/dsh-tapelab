@@ -54,3 +54,27 @@ test('the grid overlay opens and closes', () => {
   state = TT.Missions.reduce(state, { type: 'grid/close' })
   assert.equal(state.gridOpen, false)
 })
+
+
+test('sequential netlists evaluate with state bits', () => {
+  const counter = TT.Circuit.canonical.counter4()
+  const values0 = G.values(counter, 0, 0)
+  assert.equal(values0.length, 2 + (counter.nIn || 0) + (counter.nState || 0) + counter.gates.length)
+  const step1 = TT.Circuit.step(counter, 0, 0)
+  assert.equal(step1.stateBits, 1)
+  const plan = G.layout(counter)
+  assert.ok(plan.gateCards.length === counter.gates.length)
+  const latch = TT.Circuit.canonical.srLatch()
+  assert.ok(latch.nState >= 1)
+  const signals = G.values(latch, 1, 0)
+  assert.equal(signals.length, 2 + latch.nIn + latch.nState + latch.gates.length)
+})
+
+test('grid overlay remembers which kind was opened', () => {
+  let state = TT.Missions.initial()
+  state = TT.Missions.reduce(state, { type: 'grid/open', kind: 'counter' })
+  assert.equal(state.gridOpen, true)
+  assert.equal(state.gridKind, 'counter')
+  state = TT.Missions.reduce(state, { type: 'grid/close' })
+  assert.equal(state.gridOpen, false)
+})

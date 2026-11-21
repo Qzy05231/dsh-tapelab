@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.7'
+  const VERSION = '1.6.8'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.8',
+      date: '2026-11-21',
+      items: [
+        '锁存器与计数器也支持网表视图，每拍对比上一拍并高亮变化的门',
+        '时序网表显示状态位 Q0…，计数器可点「下一拍」推进',
+      ],
+    },
     {
       version: '1.6.7',
       date: '2026-11-21',

@@ -90,8 +90,8 @@ TT.NetlistGrid = (function () {
     return Math.max(0.12, Math.min(1, Math.min(viewWidth / plan.width, viewHeight / plan.height) * 0.98))
   }
 
-  function values(netlist, bits) {
-    return TT.Circuit.evaluate(netlist, Number(bits) || 0).signals
+  function values(netlist, bits, stateBits) {
+    return TT.Circuit.evaluate(netlist, Number(bits) || 0, { stateBits: Number(stateBits) || 0 }).signals
   }
 
   function inputLabel(labels, index) {
@@ -111,10 +111,20 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, onToggle, t, inputLabels, outputLabels, compact } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, compact } = props
     const [selected, setSelected] = React.useState(null)
     const plan = TT.NetlistGrid.layout(netlist)
-    const signals = TT.NetlistGrid.values(netlist, bits)
+    const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
+    const previousRef = React.useRef(null)
+    const changed = new Set()
+    if (previousRef.current && previousRef.current.length === signals.length) {
+      for (let index = 0; index < signals.length; index += 1) {
+        if (previousRef.current[index] !== signals[index]) changed.add(index)
+      }
+    }
+    React.useEffect(() => {
+      previousRef.current = signals
+    })
     const node = (id) => plan.nodes[id]
     const selectedCard = selected !== null ? plan.gateCards[selected] : null
 
@@ -198,6 +208,16 @@ TT.NetlistGridUI = (function () {
             onClick: () => onToggle && onToggle(index),
           }, h('span', null, ((Number(bits) || 0) >> index) & 1 ? '1' : '0'), h('b', null, TT.NetlistGrid.inputLabel(inputLabels, index)))
         }) : null,
+        // state bits strip (sequential netlists)
+        netlist.nState > 0 ? Array.from({ length: netlist.nState }, (_, index) => {
+          const value = (Number(stateBits) || 0) >> index & 1
+          return h('span', {
+            key: `state-${index}`,
+            className: 'tt-netgrid-state',
+            'data-on': value ? 'true' : 'false',
+            style: { left: 10 + index * 54, top: plan.height - 24 },
+          }, `Q${index} ${value}`)
+        }) : null,
         // gates
         plan.gateCards.map((card) => h('button', {
           key: `g-${card.index}`,
@@ -205,6 +225,7 @@ TT.NetlistGridUI = (function () {
           className: 'tt-netgrid-node tt-netgrid-gate',
           'data-selected': selected === card.index ? 'true' : 'false',
           'data-out': signals[card.node] === 1 ? 'true' : 'false',
+          'data-changed': changed.has(card.node) ? 'true' : 'false',
           style: { left: card.x, top: card.y, width: card.w, height: card.h },
           title: `NAND #${card.index + 1} · a=${card.a} b=${card.b} y=${card.node}`,
           onClick: () => setSelected(selected === card.index ? null : card.index),
