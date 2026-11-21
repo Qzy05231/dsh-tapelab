@@ -41,6 +41,7 @@ const SOURCES = [
   '52-apps-sim.js',
   '51-ecosystem.js',
   '50-version.js',
+  '52-netgrid.js',
   '40-ui.js',
   '50-app.js',
 ]

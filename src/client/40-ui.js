@@ -3242,6 +3242,13 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-netgrid-compact .tt-netgrid-const { display:none; }
 .tt-netgrid-compact .tt-netgrid-wire { stroke-width:.8; }
 
+.tt-netgrid-entry { padding-top:6px; margin-top:2px; border-top:1px solid rgba(86,225,255,.12); }
+.tt-netgrid-toggle { width:100%; padding:5px 8px; border-radius:8px; cursor:pointer; font-size:11px;
+  color:var(--tt-dim); background:rgba(8,20,32,.75); border:1px solid rgba(86,225,255,.22); }
+.tt-netgrid-toggle:hover { color:var(--tt-mint); border-color:rgba(43,230,194,.5); }
+.tt-netgridcard { width:min(1240px,94%); height:min(88vh,840px); display:flex; flex-direction:column; }
+.tt-netgridcard .tt-netgrid-wrap { flex:1 1 auto; min-height:0; }
+.tt-netgridcard .tt-netgrid-viewport { flex:1 1 auto; height:auto; min-height:0; }
 .tt-netgrid-inlinehead { display:flex; justify-content:flex-end; padding-top:5px; margin-top:2px;
   border-top:1px solid rgba(86,225,255,.12); }
 .tt-netgrid-inlinebody { display:flex; flex-direction:column; gap:6px; min-height:0; }
@@ -3654,6 +3661,89 @@ TT.UI.Panel = function Panel(props) {
   ) : null
 
   const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
+
+  let gridConfig = null
+  if (state.gridOpen && TT.Circuit) {
+    if (state.gridKind === 'half') {
+      gridConfig = {
+        netlist: (state.play && state.play.halfNetlist) || TT.Circuit.canonical.halfAdder(),
+        bits: (state.play && state.play.bits) || 0,
+        inputLabels: ['A', 'B'],
+        outputLabels: ['S', 'C'],
+        titleKey: 'netgrid.halfTitle',
+      }
+    } else if (state.gridKind === 'latch') {
+      gridConfig = {
+        netlist: (state.play && state.play.latch) || TT.Circuit.canonical.srLatch(),
+        bits: ((state.play && state.play.S) || 0) | (((state.play && state.play.R) || 0) << 1),
+        stateBits: (state.play && state.play.stateBits) || 0,
+        inputLabels: ['S', 'R'],
+        outputLabels: ['Q', 'Q̄'],
+        titleKey: 'netgrid.latchTitle',
+      }
+    } else if (state.gridKind === 'adder') {
+      gridConfig = {
+        netlist: (state.play && state.play.adder) || TT.Circuit.canonical.fourBitAdder(),
+        bits: (state.play && state.play.bits) || 0,
+        inputLabels: ['A0', 'A1', 'A2', 'A3', 'B0', 'B1', 'B2', 'B3', 'Cin'],
+        outputLabels: ['S0', 'S1', 'S2', 'S3', 'Cout'],
+        titleKey: 'netgrid.adderTitle',
+      }
+    } else if (state.gridKind === 'sevenseg') {
+      const inputs = (state.play && state.play.inputs) || [0, 0, 0, 0]
+      gridConfig = {
+        netlist: TT.Circuit.canonical.sevenSegment(),
+        bits: inputs.reduce((acc, value, index) => acc | ((value ? 1 : 0) << index), 0),
+        inputLabels: ['D0', 'D1', 'D2', 'D3'],
+        outputLabels: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+        titleKey: 'netgrid.sevensegTitle',
+      }
+    } else if (state.gridKind === 'counter') {
+      gridConfig = {
+        netlist: (state.play && state.play.netlist) || TT.Circuit.canonical.counter4(),
+        bits: 0,
+        stateBits: (state.play && state.play.stateBits) || 0,
+        inputLabels: [],
+        outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
+        titleKey: 'netgrid.counterTitle',
+        stepLabel: 'netgrid.nextBeat',
+        stepAction: { type: 'counter/step' },
+      }
+    } else if (TT.Safety) {
+      gridConfig = {
+        netlist: TT.Safety.netlist(),
+        bits: (state.play && state.play.bits) || 0,
+        inputLabels: TT.Safety.KEYS,
+        outputLabels: TT.Safety.OUTPUT_LABELS,
+        titleKey: 'netgrid.title',
+      }
+    }
+  }
+  const netgrid = gridConfig && TT.NetlistGridUI ? TT.h('div', { className: 'tt-welcome' },
+    TT.h('div', { className: 'tt-welcomecard tt-netgridcard' },
+      TT.h('div', { className: 'tt-achvhead' },
+        TT.h('h2', { className: 'tt-introtitle' }, `🧮 ${t(gridConfig.titleKey)}`),
+        TT.h('button', { type: 'button', className: 'tt-achvclose', onClick: () => api.dispatch({ type: 'grid/close' }) }, '✕'),
+      ),
+      TT.h(TT.NetlistGridUI.Grid, {
+        netlist: gridConfig.netlist,
+        bits: gridConfig.bits,
+        stateBits: gridConfig.stateBits,
+        onToggle: state.gridKind === 'safety'
+          ? (index) => api.dispatch({ type: 'safety/toggle', index })
+          : state.gridKind === 'latch'
+            ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' })
+            : undefined,
+        t,
+        inputLabels: gridConfig.inputLabels,
+        outputLabels: gridConfig.outputLabels,
+      }),
+      gridConfig.stepLabel ? TT.h('div', { className: 'tt-labrow', style: { justifyContent: 'center' } },
+        TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', onClick: () => api.dispatch(gridConfig.stepAction) }, `⏭ ${t(gridConfig.stepLabel)}`),
+        TT.h('span', { className: 'tt-lablabel' }, t('netgrid.beatHint')),
+      ) : null,
+    ),
+  ) : null
   return TT.h('div', {
     className: 'tt-lab',
     ref: rootRef,
@@ -3862,6 +3952,13 @@ TT.UI.Panel = function Panel(props) {
               style: narrow && !dataOpen ? { display: 'none' } : undefined,
             },
               TT.UI.Telemetry({ state, t, resolve, api, chapterIndex: state.chapter }),
+              [3, 4, 6, 7, 8, 10].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-entry' },
+                TT.h('button', {
+                  type: 'button',
+                  className: 'tt-netgrid-toggle',
+                  onClick: () => api.dispatch({ type: 'grid/open', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety' })[state.chapter] }),
+                }, `🧮 ${t('netgrid.open')}`),
+              ) : null,
             ),
           ),
         ),
@@ -3900,6 +3997,7 @@ TT.UI.Panel = function Panel(props) {
       welcome,
       achievements,
       versionModal,
+      netgrid,
       allDone && !state.finaleDismissed ? TT.UI.Finale({ state, t, resolve, api }) : null,
       state.codex ? TT.UI.Codex({ t, resolve, api }) : null,
     ),
