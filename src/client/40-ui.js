@@ -3208,18 +3208,24 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   background:rgba(10,22,36,.9); border:1px solid rgba(86,225,255,.25); pointer-events:none; }
 .tt-netgrid-state[data-on="true"] { color:var(--tt-amber); border-color:rgba(255,195,92,.6); }
 
-.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(300px,34%); pointer-events:auto; min-width:0; transition:width .18s ease; }
-.tt-netgrid-slot { display:flex; flex-direction:column; gap:6px; min-height:0; }
+
+
 .tt-netgrid-toggle { align-self:flex-start; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:11px;
   color:var(--tt-dim); background:rgba(8,20,32,.75); border:1px solid rgba(86,225,255,.22); }
 .tt-netgrid-toggle[data-active="true"] { color:var(--tt-mint); border-color:rgba(43,230,194,.5); }
-.tt-netgrid-drawer { position:absolute; right:16px; bottom:62px; width:min(1120px, 96%); max-height:min(60vh,560px);
-  display:flex; flex-direction:column; gap:6px; padding:9px 11px; pointer-events:auto; z-index:4;
-  box-shadow:0 18px 50px rgba(0,0,0,.55); }
-.tt-netgrid-drawerhead { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; color:var(--tt-ink); }
-.tt-netgrid-drawer .tt-netgrid-viewport { height:min(50vh,480px); }
-.tt-netgrid-drawer .tt-netgrid-zoom { display:none; }
-@media (max-width: 1000px) { .tt-netgrid-drawer { right:8px; bottom:56px; width:calc(100% - 16px); } }
+
+
+
+
+.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(300px,34%); pointer-events:auto; min-width:0; transition:width .2s ease; }
+.tt-rightcol[data-netgrid="true"] { width:min(960px,76%); margin-right:-6px; }
+.tt-rightcol[data-netgrid="true"] .tt-telemetry { width:100%; max-width:100%; max-height:min(82vh,780px); }
+.tt-netgrid-inlinehead { display:flex; justify-content:flex-end; padding-top:5px; margin-top:2px;
+  border-top:1px solid rgba(86,225,255,.12); }
+.tt-netgrid-inlinebody { display:flex; flex-direction:column; gap:6px; min-height:0; }
+.tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(48vh,470px); }
+.tt-netgrid-inlinebody .tt-netgrid-zoom { display:none; }
+
 
 @media (max-width: 1000px) {
   .tt-labgrid { grid-template-columns: 1fr; }
@@ -3866,41 +3872,38 @@ TT.UI.Panel = function Panel(props) {
               className: 'tt-card tt-telemetry',
               'data-narrow': medium ? 'true' : 'false',
               'data-forced': dataOpen ? 'true' : 'false',
+              'data-netgrid': state.gridOpen ? 'true' : 'false',
               style: narrow && !dataOpen ? { display: 'none' } : undefined,
             },
               TT.UI.Telemetry({ state, t, resolve, api, chapterIndex: state.chapter }),
+              [4, 8, 10].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-inlinehead' },
+                TT.h('button', {
+                  type: 'button',
+                  className: 'tt-netgrid-toggle',
+                  'data-active': state.gridOpen ? 'true' : 'false',
+                  onClick: () => api.dispatch(state.gridOpen ? { type: 'grid/close' } : { type: 'grid/open', kind: state.chapter === 4 ? 'latch' : state.chapter === 8 ? 'counter' : 'safety' }),
+                }, state.gridOpen ? `▾ ${t('netgrid.collapse')}` : `🧮 ${t('netgrid.expandWide')}`),
+              ) : null,
+              state.gridOpen && gridConfig ? TT.h('div', { className: 'tt-netgrid-inlinebody' },
+                TT.h(TT.NetlistGridUI.Grid, {
+                  netlist: gridConfig.netlist,
+                  bits: gridConfig.bits,
+                  stateBits: gridConfig.stateBits,
+                  onToggle: state.gridKind === 'safety'
+                    ? (index) => api.dispatch({ type: 'safety/toggle', index })
+                    : (gridConfig.inputLabels.length ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' }) : undefined),
+                  t,
+                  inputLabels: gridConfig.inputLabels,
+                  outputLabels: gridConfig.outputLabels,
+                }),
+                gridConfig.stepLabel ? TT.h('div', { className: 'tt-labrow', style: { justifyContent: 'center' } },
+                  TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', onClick: () => api.dispatch(gridConfig.stepAction) }, `⏭ ${t(gridConfig.stepLabel)}`),
+                  TT.h('span', { className: 'tt-lablabel' }, t('netgrid.beatHint')),
+                ) : TT.h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t(state.chapter === 4 ? 'netgrid.latchHint' : 'netgrid.openHint')),
+              ) : null,
             ),
-            [4, 8, 10].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-slot' },
-              TT.h('button', {
-                type: 'button',
-                className: 'tt-netgrid-toggle',
-                'data-active': state.gridOpen ? 'true' : 'false',
-                onClick: () => api.dispatch(state.gridOpen ? { type: 'grid/close' } : { type: 'grid/open', kind: state.chapter === 4 ? 'latch' : state.chapter === 8 ? 'counter' : 'safety' }),
-              }, state.gridOpen ? `▾ ${t('netgrid.collapse')}` : `🧮 ${t('netgrid.expandWide')}`),
-            ) : null,
           ),
         ),
-        state.gridOpen && gridConfig ? TT.h('section', { className: 'tt-card tt-netgrid-drawer' },
-          TT.h('div', { className: 'tt-netgrid-drawerhead' },
-            TT.h('strong', null, `🧮 ${t(gridConfig.titleKey)}`),
-            TT.h('button', { type: 'button', className: 'tt-chip', onClick: () => api.dispatch({ type: 'grid/close' }) }, t('netgrid.collapse')),
-          ),
-          TT.h(TT.NetlistGridUI.Grid, {
-            netlist: gridConfig.netlist,
-            bits: gridConfig.bits,
-            stateBits: gridConfig.stateBits,
-            onToggle: state.gridKind === 'safety'
-              ? (index) => api.dispatch({ type: 'safety/toggle', index })
-              : (gridConfig.inputLabels.length ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' }) : undefined),
-            t,
-            inputLabels: gridConfig.inputLabels,
-            outputLabels: gridConfig.outputLabels,
-          }),
-          gridConfig.stepLabel ? TT.h('div', { className: 'tt-labrow', style: { justifyContent: 'center' } },
-            TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', onClick: () => api.dispatch(gridConfig.stepAction) }, `⏭ ${t(gridConfig.stepLabel)}`),
-            TT.h('span', { className: 'tt-lablabel' }, t('netgrid.beatHint')),
-          ) : TT.h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t(state.chapter === 4 ? 'netgrid.latchHint' : 'netgrid.openHint')),
-        ) : null,
         TT.h('div', { className: 'tt-dockwrap' },
           TT.h('div', { className: 'tt-dock' },
             dock.map((item) => TT.h('button', {
