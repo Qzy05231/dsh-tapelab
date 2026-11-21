@@ -31,9 +31,9 @@ TT.NetlistGrid = (function () {
     const columns = count <= 4 ? Math.max(1, count) : count <= 16 ? 4 : 8
     const rowsCount = Math.max(1, Math.ceil(count / columns))
     const cellW = 92
-    const cellH = 34
+    const cellH = 32
     const gapX = 6
-    const gapY = 6
+    const gapY = 5
     const inputW = 52
     const inputGap = 4
     const inputY = 30

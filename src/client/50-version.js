@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.9'
+  const VERSION = '1.7.0'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.0',
+      date: '2026-11-21',
+      items: [
+        '网表改为右侧宽抽屉：宽度接近整个面板，默认收起，一键展开/收起',
+        '抽屉内完整显示 8×10 门矩阵，不再被右栏挤窄',
+      ],
+    },
     {
       version: '1.6.9',
       date: '2026-11-21',
