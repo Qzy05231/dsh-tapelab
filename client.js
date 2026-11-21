@@ -13513,12 +13513,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.4'
+  const VERSION = '1.7.5'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.5',
+      date: '2026-11-22',
+      items: ['框内网表默认按 100% 原始大小显示，可滚动查看；点「适应」再缩放'],
+    },
     {
       version: '1.7.4',
       date: '2026-11-22',
@@ -13909,7 +13914,7 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, compact } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit } = props
     const [selected, setSelected] = React.useState(null)
     const plan = TT.NetlistGrid.layout(netlist)
     const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
@@ -13964,7 +13969,7 @@ TT.NetlistGridUI = (function () {
 
     const viewportRef = React.useRef(null)
     const [viewport, setViewport] = React.useState({ w: 0, h: 0 })
-    const [zoom, setZoom] = React.useState(null)
+    const [zoom, setZoom] = React.useState(autoFit === false ? 1 : null)
     React.useEffect(() => {
       const el = viewportRef.current
       if (!el) return undefined
@@ -17959,6 +17964,7 @@ TT.UI.Panel = function Panel(props) {
                   t,
                   inputLabels: gridConfig.inputLabels,
                   outputLabels: gridConfig.outputLabels,
+                  autoFit: false,
                 }),
                 gridConfig.stepLabel ? TT.h('div', { className: 'tt-labrow', style: { justifyContent: 'center' } },
                   TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', onClick: () => api.dispatch(gridConfig.stepAction) }, `⏭ ${t(gridConfig.stepLabel)}`),

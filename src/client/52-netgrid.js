@@ -111,7 +111,7 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, compact } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit } = props
     const [selected, setSelected] = React.useState(null)
     const plan = TT.NetlistGrid.layout(netlist)
     const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
@@ -166,7 +166,7 @@ TT.NetlistGridUI = (function () {
 
     const viewportRef = React.useRef(null)
     const [viewport, setViewport] = React.useState({ w: 0, h: 0 })
-    const [zoom, setZoom] = React.useState(null)
+    const [zoom, setZoom] = React.useState(autoFit === false ? 1 : null)
     React.useEffect(() => {
       const el = viewportRef.current
       if (!el) return undefined

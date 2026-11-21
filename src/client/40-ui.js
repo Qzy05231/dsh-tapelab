@@ -3897,6 +3897,7 @@ TT.UI.Panel = function Panel(props) {
                   t,
                   inputLabels: gridConfig.inputLabels,
                   outputLabels: gridConfig.outputLabels,
+                  autoFit: false,
                 }),
                 gridConfig.stepLabel ? TT.h('div', { className: 'tt-labrow', style: { justifyContent: 'center' } },
                   TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', onClick: () => api.dispatch(gridConfig.stepAction) }, `⏭ ${t(gridConfig.stepLabel)}`),
