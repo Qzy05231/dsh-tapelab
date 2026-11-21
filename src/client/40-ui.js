@@ -3217,8 +3217,8 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 
 
 
-.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(400px,42%); margin-right:-8px; pointer-events:auto; min-width:0; }
-.tt-rightcol[data-netgrid="true"] { width:min(400px,42%); }
+.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(330px,38%); margin-right:-8px; pointer-events:auto; min-width:0; }
+.tt-rightcol[data-netgrid="true"] { width:min(330px,38%); }
 .tt-telemetry, .tt-telemetry[data-narrow="true"] { width:100%; max-width:100%; }
 .tt-rightcol[data-netgrid="true"] .tt-telemetry { max-height:min(84vh,820px); }
 .tt-netgrid-inlinehead { display:flex; justify-content:flex-end; padding-top:5px; margin-top:2px;
@@ -3228,8 +3228,8 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 
 
 
-@media (max-width: 1000px) {
-  .tt-rightcol, .tt-rightcol[data-netgrid="true"] { width:min(330px,52%); }
+@media (max-width: 900px) {
+  .tt-rightcol, .tt-rightcol[data-netgrid="true"] { width:min(300px,50%); }
   .tt-labgrid { grid-template-columns: 1fr; }
 }
 @media (max-width: 1180px) {

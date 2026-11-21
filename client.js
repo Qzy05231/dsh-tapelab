@@ -13513,12 +13513,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.2'
+  const VERSION = '1.7.3'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.3',
+      date: '2026-11-22',
+      items: ['右侧遥测框宽度与左上角任务框一致，展开网表时保持同宽'],
+    },
     {
       version: '1.7.2',
       date: '2026-11-21',
@@ -17269,8 +17274,8 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 
 
 
-.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(400px,42%); margin-right:-8px; pointer-events:auto; min-width:0; }
-.tt-rightcol[data-netgrid="true"] { width:min(400px,42%); }
+.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(330px,38%); margin-right:-8px; pointer-events:auto; min-width:0; }
+.tt-rightcol[data-netgrid="true"] { width:min(330px,38%); }
 .tt-telemetry, .tt-telemetry[data-narrow="true"] { width:100%; max-width:100%; }
 .tt-rightcol[data-netgrid="true"] .tt-telemetry { max-height:min(84vh,820px); }
 .tt-netgrid-inlinehead { display:flex; justify-content:flex-end; padding-top:5px; margin-top:2px;
@@ -17280,8 +17285,8 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 
 
 
-@media (max-width: 1000px) {
-  .tt-rightcol, .tt-rightcol[data-netgrid="true"] { width:min(330px,52%); }
+@media (max-width: 900px) {
+  .tt-rightcol, .tt-rightcol[data-netgrid="true"] { width:min(300px,50%); }
   .tt-labgrid { grid-template-columns: 1fr; }
 }
 @media (max-width: 1180px) {
