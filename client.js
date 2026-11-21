@@ -3463,9 +3463,9 @@ TT.Parts = (function () {
     museumEntry('andGate', 'AND gate', 'Y = A · B', 2, 'andGate'),
     museumEntry('orGate', 'OR gate', 'Y = A + B', 3, 'orGate'),
     museumEntry('xorGate', 'XOR gate', 'Y = A ⊕ B', 4, 'xorGate'),
-    museumEntry('nandGate', 'NAND gate', 'Y = ¬(A · B)', 1, null),
+    museumEntry('nandGate', 'NAND gate', 'Y = ¬(A · B)', 1, 'nandGate'),
     museumEntry('mux2', '2:1 multiplexer', 'Y = S ? B : A', 3, 'mux2'),
-    museumEntry('decoder2to4', '2-to-4 decoder', 'Y_i = (A = i)', 6, null),
+    museumEntry('decoder2to4', '2-to-4 decoder', 'Y_i = (A = i)', 6, 'decoder2to4'),
     museumEntry('halfAdder', 'Half adder', 'S = A ⊕ B, C = A · B', 5, 'halfAdder'),
     museumEntry('fullAdder', 'Full adder', 'S = A ⊕ B ⊕ Cin, Co = AB + Cin(A ⊕ B)', 9, 'fullAdder'),
     museumEntry('srLatch', 'SR latch', 'Q = ¬(S · Q̄), Q̄ = ¬(R · Q)', 2, 'srLatch'),
@@ -3477,7 +3477,7 @@ TT.Parts = (function () {
       name: '4-bit counter',
       formula: 'Q⁺ = Q + 1 · 4 latches',
       gates: null,
-      build: null,
+      build: 'counter4',
       latches: 4,
     }),
     museumEntry('sevenSegment', '7-segment driver', '7 NAND per segment ≈ 100 gates', 100, 'sevenSegment'),
@@ -13657,12 +13657,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.0'
+  const VERSION = '1.9.1'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.1',
+      date: '2026-11-22',
+      items: ['元件展厅补齐 NAND、2-4 译码器、4 位计数器的网表，所有展品都能预览'],
+    },
     {
       version: '1.9.0',
       date: '2026-11-22',
@@ -13735,6 +13740,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.1',
+      date: '2026-11-22',
+      items: ['元件展厅补齐 NAND、2-4 译码器、4 位计数器的网表，所有展品都能预览'],
     },
     {
       version: '1.9.0',

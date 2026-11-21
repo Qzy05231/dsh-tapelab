@@ -122,3 +122,14 @@ test('TT.Parts exposes museum metadata and drawable sprites', () => {
   }
   assert.deepEqual(TT.Parts.sevenSegMaskBits(TT.Parts.sevenSegMaskForDigit(8)).map((value) => (value ? 1 : 0)), [1, 1, 1, 1, 1, 1, 1])
 })
+
+
+test('every museum exhibit can build a netlist for the preview', () => {
+  for (const entry of TT.Parts.museum) {
+    assert.ok(entry.build, `${entry.id} should have a canonical builder`)
+    const builder = TT.Circuit.canonical[entry.build]
+    assert.equal(typeof builder, 'function', `${entry.id} builder missing`)
+    const netlist = builder()
+    assert.ok(netlist && netlist.gates.length > 0, `${entry.id} netlist empty`)
+  }
+})
