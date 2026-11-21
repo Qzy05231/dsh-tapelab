@@ -953,6 +953,22 @@ TT.Missions = (function () {
     return play
   }
 
+  // which chapters have a gate-level netlist, and which one
+  const NETGRID_KINDS = {
+    1: 'nand',
+    2: 'playerHalf',
+    3: 'half',
+    4: 'latch',
+    5: 'lego',
+    7: 'sevenseg',
+    8: 'counter',
+    10: 'safety',
+    13: 'container',
+  }
+  function netgridKind(index) {
+    return NETGRID_KINDS[index] || null
+  }
+
   function selectChapter(state, index) {
     const clamped = Math.max(0, Math.min(CHAPTERS.length - 1, index))
     let next = {
@@ -964,6 +980,14 @@ TT.Missions = (function () {
       mode: 'missions',
       play: {},
       epoch: (state.epoch || 1) + 1,
+    }
+    // keep the open netlist in sync with the chapter being entered
+    const gridKind = netgridKind(clamped)
+    if (gridKind) next.gridKind = gridKind
+    else {
+      next.gridOpen = false
+      next.gridInline = false
+      next.gridKind = 'safety'
     }
     next.play = setupChapterPlay({ ...next, play: playFor(next, clamped) }, clamped)
     next = ensureResources(next, clamped)
@@ -3061,6 +3085,7 @@ TT.Missions = (function () {
     describeWire,
     describePort,
     playerNetlist,
+    netgridKind,
     selectChapter,
     CH,
   }

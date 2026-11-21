@@ -93,3 +93,18 @@ test('inline netlist toggles independently from the big modal', () => {
   state = TT.Missions.reduce(state, { type: 'grid/inline', kind: 'counter' })
   assert.equal(state.gridInline, false)
 })
+
+
+test('switching chapters retargets or closes the open netlist', () => {
+  let state = TT.Missions.initial()
+  state = TT.Missions.reduce(state, { type: 'chapter/select', index: 1 })
+  state = TT.Missions.reduce(state, { type: 'grid/inline', kind: 'nand' })
+  assert.equal(state.gridInline, true)
+  state = TT.Missions.reduce(state, { type: 'chapter/select', index: 7 })
+  assert.equal(state.gridKind, 'sevenseg')
+  assert.equal(state.gridInline, true, 'stays open on a chapter that has a netlist')
+  state = TT.Missions.reduce(state, { type: 'chapter/select', index: 6 })
+  assert.equal(state.gridKind, 'safety')
+  assert.equal(state.gridInline, false, 'closes on a chapter without a gate-level netlist')
+  assert.equal(state.gridOpen, false)
+})

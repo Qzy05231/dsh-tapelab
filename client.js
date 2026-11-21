@@ -5948,6 +5948,22 @@ TT.Missions = (function () {
     return play
   }
 
+  // which chapters have a gate-level netlist, and which one
+  const NETGRID_KINDS = {
+    1: 'nand',
+    2: 'playerHalf',
+    3: 'half',
+    4: 'latch',
+    5: 'lego',
+    7: 'sevenseg',
+    8: 'counter',
+    10: 'safety',
+    13: 'container',
+  }
+  function netgridKind(index) {
+    return NETGRID_KINDS[index] || null
+  }
+
   function selectChapter(state, index) {
     const clamped = Math.max(0, Math.min(CHAPTERS.length - 1, index))
     let next = {
@@ -5959,6 +5975,14 @@ TT.Missions = (function () {
       mode: 'missions',
       play: {},
       epoch: (state.epoch || 1) + 1,
+    }
+    // keep the open netlist in sync with the chapter being entered
+    const gridKind = netgridKind(clamped)
+    if (gridKind) next.gridKind = gridKind
+    else {
+      next.gridOpen = false
+      next.gridInline = false
+      next.gridKind = 'safety'
     }
     next.play = setupChapterPlay({ ...next, play: playFor(next, clamped) }, clamped)
     next = ensureResources(next, clamped)
@@ -8056,6 +8080,7 @@ TT.Missions = (function () {
     describeWire,
     describePort,
     playerNetlist,
+    netgridKind,
     selectChapter,
     CH,
   }
@@ -13533,12 +13558,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.4'
+  const VERSION = '1.8.5'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.8.5',
+      date: '2026-11-22',
+      items: ['切换章节时自动切换/关闭网表，不再停留在上一章的网表'],
+    },
     {
       version: '1.8.4',
       date: '2026-11-22',
@@ -13574,6 +13604,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.8.5',
+      date: '2026-11-22',
+      items: ['切换章节时自动切换/关闭网表，不再停留在上一章的网表'],
     },
     {
       version: '1.8.4',
