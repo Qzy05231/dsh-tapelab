@@ -8176,6 +8176,7 @@ TT.LabUI = (function () {
   // ---------------------------------------------------------------- synthesizer
   function Synthesizer(props) {
     const { lab, t, api } = props
+    const [showGrid, setShowGrid] = React.useState(false)
     const count = 1 << lab.nIn
     const result = lab.result
     const verify = lab.verify
@@ -8237,6 +8238,12 @@ TT.LabUI = (function () {
           h('strong', null, t('lab.synth.result')),
           verify ? h('span', { className: 'tt-badge', 'data-tone': verify.status === 'pass' ? 'good' : 'bad' },
             verify.status === 'pass' ? t('lab.verify.pass') : t('lab.verify.fail')) : null,
+          result && TT.NetlistGridUI ? h('button', {
+            type: 'button',
+            className: 'tt-chip',
+            'data-active': showGrid ? 'true' : 'false',
+            onClick: () => setShowGrid((value) => !value),
+          }, showGrid ? t('netgrid.collapse') : t('netgrid.viewgrid')) : null,
         ),
         result ? h('div', null,
           h('div', { className: 'tt-labstats' },
@@ -8246,6 +8253,15 @@ TT.LabUI = (function () {
             h('div', { className: 'tt-labstat' }, h('b', null, count), h('span', null, t('lab.synth.rows'))),
           ),
           h('div', { className: 'tt-hex tt-mono' }, result.hex.length > 160 ? result.hex.slice(0, 157) + '…' : result.hex),
+          result && showGrid && TT.NetlistGridUI ? h('div', { style: { minHeight: 360, marginTop: 8 } },
+            h(TT.NetlistGridUI.Grid, {
+              netlist: result.netlist,
+              bits: 0,
+              t,
+              inputLabels: Array.from({ length: result.netlist.nIn }, (_, index) => `I${index}`),
+              outputLabels: Array.from({ length: result.netlist.outputs.length }, (_, index) => `O${index}`),
+            }),
+          ) : null,
           verify ? h('table', { className: 'tt-table' },
             h('thead', null, h('tr', null,
               h('th', null, t('hud.evalInput')),
@@ -8269,6 +8285,14 @@ TT.LabUI = (function () {
   function Museum(props) {
     const { t, api } = props
     const entries = TT.Parts && TT.Parts.museum ? TT.Parts.museum : []
+    const [preview, setPreview] = React.useState(null)
+    const netlistOf = (entry) => {
+      if (!entry || !entry.build || !TT.Circuit || !TT.Circuit.canonical) return null
+      const builder = TT.Circuit.canonical[entry.build]
+      if (typeof builder !== 'function') return null
+      try { return builder() } catch (error) { return null }
+    }
+    const previewNetlist = netlistOf(entries.find((entry) => entry.id === preview))
     return h('div', { className: 'tt-museum' },
       h('div', { className: 'tt-labcardhead' },
         h('strong', null, t('lab.museum.title')),
@@ -8294,9 +8318,29 @@ TT.LabUI = (function () {
               disabled: stateful,
               onClick: () => api.dispatch({ type: 'lab/sandbox', source: 'museum', id: entry.id }),
             }, t('lab.museum.open')),
+            h('button', {
+              type: 'button',
+              className: 'tt-chip',
+              disabled: !entry.build,
+              'data-active': preview === entry.id ? 'true' : 'false',
+              onClick: () => setPreview(preview === entry.id ? null : entry.id),
+            }, t('netgrid.viewgrid')),
           ),
         )
       })),
+      previewNetlist && TT.NetlistGridUI ? h('section', { className: 'tt-labcard', style: { marginTop: 10 } },
+        h('div', { className: 'tt-labcardhead' },
+          h('strong', null, `${t('netgrid.viewgrid')} · ${t(entries.find((entry) => entry.id === preview).nameKey)}`),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => setPreview(null) }, t('netgrid.collapse')),
+        ),
+        h('div', { style: { minHeight: 360 } }, h(TT.NetlistGridUI.Grid, {
+          netlist: previewNetlist,
+          bits: 0,
+          t,
+          inputLabels: Array.from({ length: previewNetlist.nIn }, (_, index) => `I${index}`),
+          outputLabels: Array.from({ length: previewNetlist.outputs.length }, (_, index) => `O${index}`),
+        })),
+      ) : null,
     )
   }
 
@@ -8306,6 +8350,8 @@ TT.LabUI = (function () {
     const library = lab.library || []
     const [archive, setArchive] = React.useState('')
     const [importing, setImporting] = React.useState(false)
+    const [preview, setPreview] = React.useState(null)
+    const previewEntry = library.find((entry) => entry.id === preview)
     return h('div', { className: 'tt-labcard' },
       h('div', { className: 'tt-labcardhead' },
         h('strong', null, t('lab.library.title')),
@@ -8342,10 +8388,26 @@ TT.LabUI = (function () {
               h('span', { className: 'tt-libraryhex tt-mono' }, (entry.hex || '').slice(0, 42)),
               h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'secondary',
                 onClick: () => api.dispatch({ type: 'lab/sandbox', source: 'library', id: entry.id }) }, t('lab.museum.open')),
+              h('button', { type: 'button', className: 'tt-chip',
+                'data-active': preview === entry.id ? 'true' : 'false',
+                onClick: () => setPreview(preview === entry.id ? null : entry.id) }, t('netgrid.viewgrid')),
               h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
                 onClick: () => api.dispatch({ type: 'lab/remove', id: entry.id }) }, '✕'),
             ),
           )),
+      previewEntry && previewEntry.netlist && TT.NetlistGridUI ? h('section', { className: 'tt-labcard', style: { marginTop: 10 } },
+        h('div', { className: 'tt-labcardhead' },
+          h('strong', null, `${t('netgrid.viewgrid')} · ${previewEntry.name}`),
+          h('button', { type: 'button', className: 'tt-chip', onClick: () => setPreview(null) }, t('netgrid.collapse')),
+        ),
+        h('div', { style: { minHeight: 360 } }, h(TT.NetlistGridUI.Grid, {
+          netlist: previewEntry.netlist,
+          bits: 0,
+          t,
+          inputLabels: Array.from({ length: previewEntry.netlist.nIn }, (_, index) => `I${index}`),
+          outputLabels: Array.from({ length: previewEntry.netlist.outputs.length }, (_, index) => `O${index}`),
+        })),
+      ) : null,
     )
   }
 
@@ -13558,12 +13620,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.5'
+  const VERSION = '1.8.6'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['实验室综合结果、元件展厅、电路库都支持直接预览网表'],
+    },
     {
       version: '1.8.5',
       date: '2026-11-22',
@@ -13604,6 +13671,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['实验室综合结果、元件展厅、电路库都支持直接预览网表'],
     },
     {
       version: '1.8.5',
