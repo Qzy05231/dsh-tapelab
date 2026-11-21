@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.8'
+  const VERSION = '1.6.9'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.9',
+      date: '2026-11-21',
+      items: [
+        '网表改为右侧遥测卡下方的可折叠面板，不再使用全屏弹窗',
+        '展开时右列自动变宽，网表与演示画面并排；收起后恢复原布局',
+      ],
+    },
     {
       version: '1.6.8',
       date: '2026-11-21',
