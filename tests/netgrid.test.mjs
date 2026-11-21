@@ -82,3 +82,14 @@ test('grid overlay remembers which kind was opened', () => {
   state = TT.Missions.reduce(state, { type: 'grid/close' })
   assert.equal(state.gridOpen, false)
 })
+
+
+test('inline netlist toggles independently from the big modal', () => {
+  let state = TT.Missions.initial()
+  state = TT.Missions.reduce(state, { type: 'grid/inline', kind: 'counter' })
+  assert.equal(state.gridInline, true)
+  assert.equal(state.gridKind, 'counter')
+  assert.equal(state.gridOpen, false)
+  state = TT.Missions.reduce(state, { type: 'grid/inline', kind: 'counter' })
+  assert.equal(state.gridInline, false)
+})

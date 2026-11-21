@@ -582,6 +582,7 @@ TT.Missions = (function () {
       achvOpen: false,
       updateOpen: false,
       gridOpen: false,
+      gridInline: false,
       gridKind: 'safety',
       sims: { deweb: false, relay: false, container: false },
       simOpen: null,
@@ -1338,6 +1339,11 @@ TT.Missions = (function () {
         return { ...state, gridOpen: true, gridKind: ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg'].indexOf(action.kind) >= 0 ? action.kind : 'safety' }
       case 'grid/close':
         return { ...state, gridOpen: false }
+      case 'grid/inline': {
+        const kinds = ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg']
+        const kind = kinds.indexOf(action.kind) >= 0 ? action.kind : state.gridKind || 'safety'
+        return { ...state, gridInline: !state.gridInline, gridKind: kind }
+      }
       case 'update/open':
         return { ...state, updateOpen: true }
       case 'update/close':
