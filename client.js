@@ -13513,12 +13513,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.1'
+  const VERSION = '1.7.2'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.2',
+      date: '2026-11-21',
+      items: [
+        '右上角遥测框加宽并贴近右侧边缘，展开网表时宽度不再变化',
+        '展开只向下延展，避免宽面板遮挡中间的 3D 演示',
+      ],
+    },
     {
       version: '1.7.1',
       date: '2026-11-21',
@@ -17261,17 +17269,19 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 
 
 
-.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(300px,34%); pointer-events:auto; min-width:0; transition:width .2s ease; }
-.tt-rightcol[data-netgrid="true"] { width:min(960px,76%); margin-right:-6px; }
-.tt-rightcol[data-netgrid="true"] .tt-telemetry { width:100%; max-width:100%; max-height:min(82vh,780px); }
+.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(400px,42%); margin-right:-8px; pointer-events:auto; min-width:0; }
+.tt-rightcol[data-netgrid="true"] { width:min(400px,42%); }
+.tt-telemetry, .tt-telemetry[data-narrow="true"] { width:100%; max-width:100%; }
+.tt-rightcol[data-netgrid="true"] .tt-telemetry { max-height:min(84vh,820px); }
 .tt-netgrid-inlinehead { display:flex; justify-content:flex-end; padding-top:5px; margin-top:2px;
   border-top:1px solid rgba(86,225,255,.12); }
 .tt-netgrid-inlinebody { display:flex; flex-direction:column; gap:6px; min-height:0; }
-.tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(48vh,470px); }
-.tt-netgrid-inlinebody .tt-netgrid-zoom { display:none; }
+.tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(44vh,430px); }
+
 
 
 @media (max-width: 1000px) {
+  .tt-rightcol, .tt-rightcol[data-netgrid="true"] { width:min(330px,52%); }
   .tt-labgrid { grid-template-columns: 1fr; }
 }
 @media (max-width: 1180px) {

@@ -3217,17 +3217,19 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 
 
 
-.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(300px,34%); pointer-events:auto; min-width:0; transition:width .2s ease; }
-.tt-rightcol[data-netgrid="true"] { width:min(960px,76%); margin-right:-6px; }
-.tt-rightcol[data-netgrid="true"] .tt-telemetry { width:100%; max-width:100%; max-height:min(82vh,780px); }
+.tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(400px,42%); margin-right:-8px; pointer-events:auto; min-width:0; }
+.tt-rightcol[data-netgrid="true"] { width:min(400px,42%); }
+.tt-telemetry, .tt-telemetry[data-narrow="true"] { width:100%; max-width:100%; }
+.tt-rightcol[data-netgrid="true"] .tt-telemetry { max-height:min(84vh,820px); }
 .tt-netgrid-inlinehead { display:flex; justify-content:flex-end; padding-top:5px; margin-top:2px;
   border-top:1px solid rgba(86,225,255,.12); }
 .tt-netgrid-inlinebody { display:flex; flex-direction:column; gap:6px; min-height:0; }
-.tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(48vh,470px); }
-.tt-netgrid-inlinebody .tt-netgrid-zoom { display:none; }
+.tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(44vh,430px); }
+
 
 
 @media (max-width: 1000px) {
+  .tt-rightcol, .tt-rightcol[data-netgrid="true"] { width:min(330px,52%); }
   .tt-labgrid { grid-template-columns: 1fr; }
 }
 @media (max-width: 1180px) {

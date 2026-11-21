@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.1'
+  const VERSION = '1.7.2'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.2',
+      date: '2026-11-21',
+      items: [
+        '右上角遥测框加宽并贴近右侧边缘，展开网表时宽度不再变化',
+        '展开只向下延展，避免宽面板遮挡中间的 3D 演示',
+      ],
+    },
     {
       version: '1.7.1',
       date: '2026-11-21',
