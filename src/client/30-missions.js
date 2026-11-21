@@ -2707,7 +2707,7 @@ TT.Missions = (function () {
             lab: {
               ...state.lab,
               tab: 'sandbox',
-              sandbox: { name: parsed.name || 'verilog', netlist: parsed.netlist },
+              sandbox: { name: parsed.name || 'verilog', netlist: parsed.netlist, from: 'synth' },
               sandboxInputs: 0,
               museumId: null,
             },
@@ -2738,7 +2738,7 @@ TT.Missions = (function () {
         return {
           ...state,
           mode: 'lab',
-          lab: { ...state.lab, tab: 'sandbox', sandbox: { name, netlist }, sandboxInputs: 0, museumId: action.id || null },
+          lab: { ...state.lab, tab: 'sandbox', sandbox: { name, netlist, from: action.source || 'result' }, sandboxInputs: 0, museumId: action.id || null },
         }
       }
       case 'lab/input':

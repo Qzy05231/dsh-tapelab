@@ -64,3 +64,15 @@ test('lock gives up after six failed attempts and records best solve', () => {
   assert.equal(state.arcade.lock.solved, true)
   assert.equal(state.stats.lockBestAttempts, 2)
 })
+
+
+test('sandbox remembers the page it was opened from', () => {
+  let state = M.initial()
+  state = { ...state, lab: { ...state.lab, result: { netlist: TT.Circuit.canonical.halfAdder() } } }
+  state = M.reduce(state, { type: 'lab/sandbox', source: 'result' })
+  assert.equal(state.lab.tab, 'sandbox')
+  assert.equal(state.lab.sandbox.from, 'result')
+  state = { ...state, lab: { ...state.lab, library: [{ id: 'one', name: 'one', netlist: TT.Circuit.canonical.halfAdder() }] } }
+  state = M.reduce(state, { type: 'lab/sandbox', source: 'library', id: 'one' })
+  assert.equal(state.lab.sandbox.from, 'library')
+})

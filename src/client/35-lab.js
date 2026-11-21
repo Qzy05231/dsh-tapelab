@@ -453,8 +453,13 @@ TT.LabUI = (function () {
       h('div', { className: 'tt-labcardhead' },
         h('strong', null, t('lab.sandbox.title')),
         h('span', null, `${sandbox.name} · ${TT.Circuit.gateCount(netlist)} ${t('lab.synth.gates')} · ${netlist.nIn} in / ${netlist.outputs.length} out`),
-        h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
-          onClick: () => api.dispatch({ type: 'lab/tab', tab: 'synth' }) }, '←'),
+        h('button', {
+          type: 'button',
+          className: 'tt-btn',
+          'data-kind': 'ghost',
+          title: t('lab.back'),
+          onClick: () => api.dispatch({ type: 'lab/tab', tab: sandbox.from === 'museum' ? 'museum' : sandbox.from === 'library' ? 'library' : 'synth' }),
+        }, '←'),
         TT.NetlistGridUI ? h('button', {
           type: 'button',
           className: 'tt-chip',

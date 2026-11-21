@@ -7702,7 +7702,7 @@ TT.Missions = (function () {
             lab: {
               ...state.lab,
               tab: 'sandbox',
-              sandbox: { name: parsed.name || 'verilog', netlist: parsed.netlist },
+              sandbox: { name: parsed.name || 'verilog', netlist: parsed.netlist, from: 'synth' },
               sandboxInputs: 0,
               museumId: null,
             },
@@ -7733,7 +7733,7 @@ TT.Missions = (function () {
         return {
           ...state,
           mode: 'lab',
-          lab: { ...state.lab, tab: 'sandbox', sandbox: { name, netlist }, sandboxInputs: 0, museumId: action.id || null },
+          lab: { ...state.lab, tab: 'sandbox', sandbox: { name, netlist, from: action.source || 'result' }, sandboxInputs: 0, museumId: action.id || null },
         }
       }
       case 'lab/input':
@@ -8542,8 +8542,13 @@ TT.LabUI = (function () {
       h('div', { className: 'tt-labcardhead' },
         h('strong', null, t('lab.sandbox.title')),
         h('span', null, `${sandbox.name} · ${TT.Circuit.gateCount(netlist)} ${t('lab.synth.gates')} · ${netlist.nIn} in / ${netlist.outputs.length} out`),
-        h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
-          onClick: () => api.dispatch({ type: 'lab/tab', tab: 'synth' }) }, '←'),
+        h('button', {
+          type: 'button',
+          className: 'tt-btn',
+          'data-kind': 'ghost',
+          title: t('lab.back'),
+          onClick: () => api.dispatch({ type: 'lab/tab', tab: sandbox.from === 'museum' ? 'museum' : sandbox.from === 'library' ? 'library' : 'synth' }),
+        }, '←'),
         TT.NetlistGridUI ? h('button', {
           type: 'button',
           className: 'tt-chip',
@@ -13646,12 +13651,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.8'
+  const VERSION = '1.8.9'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.8.9',
+      date: '2026-11-22',
+      items: ['沙盒的返回键会回到打开它的页面（综合/展厅/电路库），不再固定跳综合器'],
+    },
     {
       version: '1.8.8',
       date: '2026-11-22',
@@ -13712,6 +13722,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.8.9',
+      date: '2026-11-22',
+      items: ['沙盒的返回键会回到打开它的页面（综合/展厅/电路库），不再固定跳综合器'],
     },
     {
       version: '1.8.8',
@@ -15478,6 +15493,7 @@ TT.dict = {
     'lab.museum.open': '沙盒打开',
     'lab.library.title': '我的电路库',
     'lab.library.empty': '还没有保存的电路。去综合器里造一个吧。',
+    'lab.back': '返回上一级',
     'lab.sandbox.title': '3D 电路沙盒',
     'lab.verilog.title': 'Verilog 导入',
     'lab.verilog.hint': '支持 gate-level 子集：input/output/wire + assign，表达式 ~ & | ^ 与括号；会自动降级成 NAND 网表。',
@@ -16731,6 +16747,7 @@ TT.dict = {
     'lab.museum.open': 'Open in sandbox',
     'lab.library.title': 'My circuit library',
     'lab.library.empty': 'Nothing saved yet. Build something in the synthesizer.',
+    'lab.back': 'Back',
     'lab.sandbox.title': '3D circuit sandbox',
     'lab.verilog.title': 'Import Verilog',
     'lab.verilog.hint': 'Gate-level subset: input/output/wire + assign, expressions ~ & | ^ and parentheses; lowered to NAND automatically.',
