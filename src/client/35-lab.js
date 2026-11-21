@@ -192,6 +192,26 @@ TT.LabUI = (function () {
     )
   }
 
+  function NetlistModal(props) {
+    const { netlist, title, t, onClose } = props
+    if (!netlist || !TT.NetlistGridUI) return null
+    return h('div', { className: 'tt-welcome' },
+      h('div', { className: 'tt-welcomecard tt-netgridcard' },
+        h('div', { className: 'tt-achvhead' },
+          h('h2', { className: 'tt-introtitle' }, `🧮 ${title}`),
+          h('button', { type: 'button', className: 'tt-achvclose', onClick: onClose }, '✕'),
+        ),
+        h(TT.NetlistGridUI.Grid, {
+          netlist,
+          bits: 0,
+          t,
+          inputLabels: Array.from({ length: netlist.nIn }, (_, index) => `I${index}`),
+          outputLabels: Array.from({ length: netlist.outputs.length }, (_, index) => `O${index}`),
+        }),
+      ),
+    )
+  }
+
   // ---------------------------------------------------------------- museum
   function Museum(props) {
     const { t, api } = props
@@ -239,19 +259,12 @@ TT.LabUI = (function () {
           ),
         )
       })),
-      previewNetlist && TT.NetlistGridUI ? h('section', { className: 'tt-labcard', style: { marginTop: 10 } },
-        h('div', { className: 'tt-labcardhead' },
-          h('strong', null, `${t('netgrid.viewgrid')} · ${t(entries.find((entry) => entry.id === preview).nameKey)}`),
-          h('button', { type: 'button', className: 'tt-chip', onClick: () => setPreview(null) }, t('netgrid.collapse')),
-        ),
-        h('div', { style: { minHeight: 360 } }, h(TT.NetlistGridUI.Grid, {
-          netlist: previewNetlist,
-          bits: 0,
-          t,
-          inputLabels: Array.from({ length: previewNetlist.nIn }, (_, index) => `I${index}`),
-          outputLabels: Array.from({ length: previewNetlist.outputs.length }, (_, index) => `O${index}`),
-        })),
-      ) : null,
+      h(NetlistModal, {
+        netlist: previewNetlist,
+        title: preview ? `${t('netgrid.viewgrid')} · ${t(entries.find((entry) => entry.id === preview).nameKey)}` : '',
+        t,
+        onClose: () => setPreview(null),
+      }),
     )
   }
 
@@ -306,19 +319,12 @@ TT.LabUI = (function () {
                 onClick: () => api.dispatch({ type: 'lab/remove', id: entry.id }) }, '✕'),
             ),
           )),
-      previewEntry && previewEntry.netlist && TT.NetlistGridUI ? h('section', { className: 'tt-labcard', style: { marginTop: 10 } },
-        h('div', { className: 'tt-labcardhead' },
-          h('strong', null, `${t('netgrid.viewgrid')} · ${previewEntry.name}`),
-          h('button', { type: 'button', className: 'tt-chip', onClick: () => setPreview(null) }, t('netgrid.collapse')),
-        ),
-        h('div', { style: { minHeight: 360 } }, h(TT.NetlistGridUI.Grid, {
-          netlist: previewEntry.netlist,
-          bits: 0,
-          t,
-          inputLabels: Array.from({ length: previewEntry.netlist.nIn }, (_, index) => `I${index}`),
-          outputLabels: Array.from({ length: previewEntry.netlist.outputs.length }, (_, index) => `O${index}`),
-        })),
-      ) : null,
+      h(NetlistModal, {
+        netlist: previewEntry ? previewEntry.netlist : null,
+        title: previewEntry ? `${t('netgrid.viewgrid')} · ${previewEntry.name}` : '',
+        t,
+        onClose: () => setPreview(null),
+      }),
     )
   }
 

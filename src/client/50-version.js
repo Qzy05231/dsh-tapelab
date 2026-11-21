@@ -5,12 +5,19 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.9'
+  const VERSION = '1.9.0'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.0',
+      date: '2026-11-22',
+      items: [
+        '元件展厅与电路库的「网表视图」改为弹出大窗，关闭即返回列表',
+      ],
+    },
     {
       version: '1.8.9',
       date: '2026-11-22',
@@ -76,6 +83,13 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.0',
+      date: '2026-11-22',
+      items: [
+        '元件展厅与电路库的「网表视图」改为弹出大窗，关闭即返回列表',
+      ],
     },
     {
       version: '1.8.9',

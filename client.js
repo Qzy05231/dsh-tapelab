@@ -8281,6 +8281,26 @@ TT.LabUI = (function () {
     )
   }
 
+  function NetlistModal(props) {
+    const { netlist, title, t, onClose } = props
+    if (!netlist || !TT.NetlistGridUI) return null
+    return h('div', { className: 'tt-welcome' },
+      h('div', { className: 'tt-welcomecard tt-netgridcard' },
+        h('div', { className: 'tt-achvhead' },
+          h('h2', { className: 'tt-introtitle' }, `🧮 ${title}`),
+          h('button', { type: 'button', className: 'tt-achvclose', onClick: onClose }, '✕'),
+        ),
+        h(TT.NetlistGridUI.Grid, {
+          netlist,
+          bits: 0,
+          t,
+          inputLabels: Array.from({ length: netlist.nIn }, (_, index) => `I${index}`),
+          outputLabels: Array.from({ length: netlist.outputs.length }, (_, index) => `O${index}`),
+        }),
+      ),
+    )
+  }
+
   // ---------------------------------------------------------------- museum
   function Museum(props) {
     const { t, api } = props
@@ -8328,19 +8348,12 @@ TT.LabUI = (function () {
           ),
         )
       })),
-      previewNetlist && TT.NetlistGridUI ? h('section', { className: 'tt-labcard', style: { marginTop: 10 } },
-        h('div', { className: 'tt-labcardhead' },
-          h('strong', null, `${t('netgrid.viewgrid')} · ${t(entries.find((entry) => entry.id === preview).nameKey)}`),
-          h('button', { type: 'button', className: 'tt-chip', onClick: () => setPreview(null) }, t('netgrid.collapse')),
-        ),
-        h('div', { style: { minHeight: 360 } }, h(TT.NetlistGridUI.Grid, {
-          netlist: previewNetlist,
-          bits: 0,
-          t,
-          inputLabels: Array.from({ length: previewNetlist.nIn }, (_, index) => `I${index}`),
-          outputLabels: Array.from({ length: previewNetlist.outputs.length }, (_, index) => `O${index}`),
-        })),
-      ) : null,
+      h(NetlistModal, {
+        netlist: previewNetlist,
+        title: preview ? `${t('netgrid.viewgrid')} · ${t(entries.find((entry) => entry.id === preview).nameKey)}` : '',
+        t,
+        onClose: () => setPreview(null),
+      }),
     )
   }
 
@@ -8395,19 +8408,12 @@ TT.LabUI = (function () {
                 onClick: () => api.dispatch({ type: 'lab/remove', id: entry.id }) }, '✕'),
             ),
           )),
-      previewEntry && previewEntry.netlist && TT.NetlistGridUI ? h('section', { className: 'tt-labcard', style: { marginTop: 10 } },
-        h('div', { className: 'tt-labcardhead' },
-          h('strong', null, `${t('netgrid.viewgrid')} · ${previewEntry.name}`),
-          h('button', { type: 'button', className: 'tt-chip', onClick: () => setPreview(null) }, t('netgrid.collapse')),
-        ),
-        h('div', { style: { minHeight: 360 } }, h(TT.NetlistGridUI.Grid, {
-          netlist: previewEntry.netlist,
-          bits: 0,
-          t,
-          inputLabels: Array.from({ length: previewEntry.netlist.nIn }, (_, index) => `I${index}`),
-          outputLabels: Array.from({ length: previewEntry.netlist.outputs.length }, (_, index) => `O${index}`),
-        })),
-      ) : null,
+      h(NetlistModal, {
+        netlist: previewEntry ? previewEntry.netlist : null,
+        title: previewEntry ? `${t('netgrid.viewgrid')} · ${previewEntry.name}` : '',
+        t,
+        onClose: () => setPreview(null),
+      }),
     )
   }
 
@@ -13651,12 +13657,19 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.9'
+  const VERSION = '1.9.0'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.0',
+      date: '2026-11-22',
+      items: [
+        '元件展厅与电路库的「网表视图」改为弹出大窗，关闭即返回列表',
+      ],
+    },
     {
       version: '1.8.9',
       date: '2026-11-22',
@@ -13722,6 +13735,13 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.0',
+      date: '2026-11-22',
+      items: [
+        '元件展厅与电路库的「网表视图」改为弹出大窗，关闭即返回列表',
+      ],
     },
     {
       version: '1.8.9',
