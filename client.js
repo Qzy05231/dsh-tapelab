@@ -13513,12 +13513,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.3'
+  const VERSION = '1.7.4'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.4',
+      date: '2026-11-22',
+      items: ['展开网表时限制右侧卡片高度，修复底部操作按键被顶出画面'],
+    },
     {
       version: '1.7.3',
       date: '2026-11-22',
@@ -16643,7 +16648,7 @@ TT.UI.CSS = `
 .tt-canvas:active { cursor:grabbing; }
 .tt-scrim { position:absolute; inset:0; background:linear-gradient(180deg, rgba(3,6,12,.55), rgba(3,6,12,0) 22%, rgba(3,6,12,0) 70%, rgba(3,6,12,.6)); pointer-events:none; }
 .tt-hud { position:absolute; inset:0; pointer-events:none; display:flex; flex-direction:column; justify-content:space-between; }
-.tt-hudrow { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:14px 16px; min-width:0; }
+.tt-hudrow { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:14px 16px; min-width:0; max-height:calc(100% - 78px); }
 .tt-card { pointer-events:auto; border:1px solid rgba(86,225,255,.16); border-radius:14px;
   background:linear-gradient(180deg, rgba(9,21,35,.9), rgba(5,12,22,.86));
   box-shadow:0 18px 44px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
@@ -16711,7 +16716,7 @@ TT.UI.CSS = `
 .tt-wcell[data-on="true"][data-ch="2"] { background:var(--tt-mint); }
 .tt-wcell[data-on="true"][data-ch="3"] { background:var(--tt-magenta); }
 .tt-wlabels { display:flex; justify-content:space-between; font-size:9px; color:var(--tt-faint); margin-top:3px; }
-.tt-dockwrap { display:flex; justify-content:center; padding:0 16px 18px; }
+.tt-dockwrap { position:relative; z-index:6;  display:flex; justify-content:center; padding:0 16px 18px; }
 .tt-dock { pointer-events:auto; display:flex; flex-wrap:wrap; justify-content:center; gap:7px; padding:8px 10px;
   border-radius:14px; border:1px solid rgba(86,225,255,.16); background:var(--tt-glass); backdrop-filter:blur(16px);
   box-shadow:0 18px 40px rgba(0,0,0,.45); max-width:min(860px, 94%); }
@@ -17277,11 +17282,11 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-rightcol { display:flex; flex-direction:column; gap:8px; width:min(330px,38%); margin-right:-8px; pointer-events:auto; min-width:0; }
 .tt-rightcol[data-netgrid="true"] { width:min(330px,38%); }
 .tt-telemetry, .tt-telemetry[data-narrow="true"] { width:100%; max-width:100%; }
-.tt-rightcol[data-netgrid="true"] .tt-telemetry { max-height:min(84vh,820px); }
+.tt-rightcol[data-netgrid="true"] .tt-telemetry { max-height:min(58vh,560px); }
 .tt-netgrid-inlinehead { display:flex; justify-content:flex-end; padding-top:5px; margin-top:2px;
   border-top:1px solid rgba(86,225,255,.12); }
 .tt-netgrid-inlinebody { display:flex; flex-direction:column; gap:6px; min-height:0; }
-.tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(44vh,430px); }
+.tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(36vh,350px); }
 
 
 
@@ -17303,7 +17308,7 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   .tt-mission { width:64%; padding:10px; }
   .tt-telemetry { display:none; }
   .tt-telemetry[data-forced="true"] { display:flex; position:absolute; right:10px; top:52px; }
-  .tt-dockwrap { padding:0 8px 10px; }
+  .tt-dockwrap { position:relative; z-index:6;  padding:0 8px 10px; }
   .tt-btn { height:30px; padding:0 10px; font-size:11px; }
 }
 @media (prefers-reduced-motion: reduce) {
