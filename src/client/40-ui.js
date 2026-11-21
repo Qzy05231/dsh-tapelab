@@ -3223,6 +3223,9 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-netgrid-hint { justify-content:space-between; }
 
 .tt-netgrid-gate[data-changed="true"] { border-color:#56e1ff; box-shadow:0 0 12px rgba(86,225,255,.65); }
+.tt-netgrid-gate[data-fault="true"] { border-color:#ff6b7a; box-shadow:0 0 12px rgba(255,107,122,.65); background:rgba(255,107,122,.12); }
+.tt-netgrid-gate[data-ok="true"] { border-color:#2be6c2; box-shadow:0 0 12px rgba(43,230,194,.55); background:rgba(43,230,194,.1); }
+.tt-debuggrid .tt-netgrid-viewport { height:320px; }
 .tt-netgrid-state { position:absolute; display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px;
   font-family:var(--dsh-font-family-mono, monospace); font-size:9px; color:var(--tt-dim);
   background:rgba(10,22,36,.9); border:1px solid rgba(86,225,255,.25); pointer-events:none; }

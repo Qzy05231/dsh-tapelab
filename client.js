@@ -9607,6 +9607,11 @@ TT.ArcadeUI = (function () {
     const debug = arcade.debug
     const puzzles = debug.puzzles || []
     const puzzle = puzzles[debug.level]
+    const [showGrid, setShowGrid] = React.useState(false)
+    const fixed = puzzle && debug.selected !== null && debug.selected !== undefined
+      ? TT.Arcade.fixedNetlist(puzzle, debug.selected)
+      : null
+    const displayNetlist = fixed || (puzzle && puzzle.buggy)
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.debug.title'), hint: t('arcade.debug.hint') },
         h('div', { className: 'tt-labrow' }, puzzles.map((item, index) =>
@@ -9639,7 +9644,28 @@ TT.ArcadeUI = (function () {
         ) : null,
         puzzle ? h('div', { className: 'tt-labrow' },
           h('span', { className: 'tt-lablabel' }, t('arcade.debug.options')),
+          TT.NetlistGridUI ? h('button', {
+            type: 'button',
+            className: 'tt-chip',
+            'data-active': showGrid ? 'true' : 'false',
+            onClick: () => setShowGrid((value) => !value),
+          }, showGrid ? t('netgrid.collapse') : t('netgrid.viewgrid')) : null,
         ) : null,
+        showGrid && puzzle && displayNetlist && TT.NetlistGridUI
+          ? h('div', { className: 'tt-debuggrid', style: { marginTop: 6 } },
+              h(TT.NetlistGridUI.Grid, {
+                  netlist: displayNetlist,
+                  bits: 0,
+                  t,
+                  inputLabels: Array.from({ length: displayNetlist.nIn }, (_, index) => `I${index}`),
+                  outputLabels: Array.from({ length: displayNetlist.outputs.length }, (_, index) => `O${index}`),
+                  faultGates: debug.status === 'pass' ? [] : [puzzle.gateIndex],
+                  okGates: debug.status === 'pass' ? [puzzle.gateIndex] : [],
+                }),
+              h('p', { className: 'tt-finalenote', style: { margin: '4px 0 0' } },
+                fixed ? t('arcade.debug.netgridFixed') : t('arcade.debug.netgridFault')),
+            )
+          : null,
         puzzle ? h('div', { className: 'tt-debugoptions' }, puzzle.options.map((option, index) =>
           h('button', {
             key: index,
@@ -13620,12 +13646,19 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.6'
+  const VERSION = '1.8.7'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: [
+        '故障排查实验室支持网表视图：红色高亮故障门，修复后变绿',
+      ],
+    },
     {
       version: '1.8.6',
       date: '2026-11-22',
@@ -13671,6 +13704,13 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: [
+        '故障排查实验室支持网表视图：红色高亮故障门，修复后变绿',
+      ],
     },
     {
       version: '1.8.6',
@@ -14139,7 +14179,7 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates } = props
     const [selected, setSelected] = React.useState(null)
     const plan = TT.NetlistGrid.layout(netlist, { compact: Boolean(compactLayout) })
     const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
@@ -14254,6 +14294,8 @@ TT.NetlistGridUI = (function () {
           'data-selected': selected === card.index ? 'true' : 'false',
           'data-out': signals[card.node] === 1 ? 'true' : 'false',
           'data-changed': changed.has(card.node) ? 'true' : 'false',
+          'data-fault': faultGates && faultGates.indexOf(card.index) >= 0 ? 'true' : 'false',
+          'data-ok': okGates && okGates.indexOf(card.index) >= 0 ? 'true' : 'false',
           style: { left: card.x, top: card.y, width: card.w, height: card.h },
           title: `NAND #${card.index + 1} · a=${card.a} b=${card.b} y=${card.node}`,
           onClick: () => setSelected(selected === card.index ? null : card.index),
@@ -17515,6 +17557,9 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-netgrid-hint { justify-content:space-between; }
 
 .tt-netgrid-gate[data-changed="true"] { border-color:#56e1ff; box-shadow:0 0 12px rgba(86,225,255,.65); }
+.tt-netgrid-gate[data-fault="true"] { border-color:#ff6b7a; box-shadow:0 0 12px rgba(255,107,122,.65); background:rgba(255,107,122,.12); }
+.tt-netgrid-gate[data-ok="true"] { border-color:#2be6c2; box-shadow:0 0 12px rgba(43,230,194,.55); background:rgba(43,230,194,.1); }
+.tt-debuggrid .tt-netgrid-viewport { height:320px; }
 .tt-netgrid-state { position:absolute; display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px;
   font-family:var(--dsh-font-family-mono, monospace); font-size:9px; color:var(--tt-dim);
   background:rgba(10,22,36,.9); border:1px solid rgba(86,225,255,.25); pointer-events:none; }

@@ -119,7 +119,7 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates } = props
     const [selected, setSelected] = React.useState(null)
     const plan = TT.NetlistGrid.layout(netlist, { compact: Boolean(compactLayout) })
     const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
@@ -234,6 +234,8 @@ TT.NetlistGridUI = (function () {
           'data-selected': selected === card.index ? 'true' : 'false',
           'data-out': signals[card.node] === 1 ? 'true' : 'false',
           'data-changed': changed.has(card.node) ? 'true' : 'false',
+          'data-fault': faultGates && faultGates.indexOf(card.index) >= 0 ? 'true' : 'false',
+          'data-ok': okGates && okGates.indexOf(card.index) >= 0 ? 'true' : 'false',
           style: { left: card.x, top: card.y, width: card.w, height: card.h },
           title: `NAND #${card.index + 1} · a=${card.a} b=${card.b} y=${card.node}`,
           onClick: () => setSelected(selected === card.index ? null : card.index),

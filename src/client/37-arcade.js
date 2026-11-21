@@ -731,6 +731,11 @@ TT.ArcadeUI = (function () {
     const debug = arcade.debug
     const puzzles = debug.puzzles || []
     const puzzle = puzzles[debug.level]
+    const [showGrid, setShowGrid] = React.useState(false)
+    const fixed = puzzle && debug.selected !== null && debug.selected !== undefined
+      ? TT.Arcade.fixedNetlist(puzzle, debug.selected)
+      : null
+    const displayNetlist = fixed || (puzzle && puzzle.buggy)
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.debug.title'), hint: t('arcade.debug.hint') },
         h('div', { className: 'tt-labrow' }, puzzles.map((item, index) =>
@@ -763,7 +768,28 @@ TT.ArcadeUI = (function () {
         ) : null,
         puzzle ? h('div', { className: 'tt-labrow' },
           h('span', { className: 'tt-lablabel' }, t('arcade.debug.options')),
+          TT.NetlistGridUI ? h('button', {
+            type: 'button',
+            className: 'tt-chip',
+            'data-active': showGrid ? 'true' : 'false',
+            onClick: () => setShowGrid((value) => !value),
+          }, showGrid ? t('netgrid.collapse') : t('netgrid.viewgrid')) : null,
         ) : null,
+        showGrid && puzzle && displayNetlist && TT.NetlistGridUI
+          ? h('div', { className: 'tt-debuggrid', style: { marginTop: 6 } },
+              h(TT.NetlistGridUI.Grid, {
+                  netlist: displayNetlist,
+                  bits: 0,
+                  t,
+                  inputLabels: Array.from({ length: displayNetlist.nIn }, (_, index) => `I${index}`),
+                  outputLabels: Array.from({ length: displayNetlist.outputs.length }, (_, index) => `O${index}`),
+                  faultGates: debug.status === 'pass' ? [] : [puzzle.gateIndex],
+                  okGates: debug.status === 'pass' ? [puzzle.gateIndex] : [],
+                }),
+              h('p', { className: 'tt-finalenote', style: { margin: '4px 0 0' } },
+                fixed ? t('arcade.debug.netgridFixed') : t('arcade.debug.netgridFault')),
+            )
+          : null,
         puzzle ? h('div', { className: 'tt-debugoptions' }, puzzle.options.map((option, index) =>
           h('button', {
             key: index,
