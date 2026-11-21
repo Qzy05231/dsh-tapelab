@@ -27,7 +27,7 @@ test('snake speed can be chosen before a run', () => {
 test('a crashing run records the local leaderboard and per-speed best', () => {
   let state = M.initial()
   state = M.reduce(state, { type: 'arcade/game', game: 'snake' })
-  const snake = { ...TT.Arcade.snakeInitial(undefined, 'fast'), cells: [7, 6, 5], dir: 'right', running: true, score: 4 }
+  const snake = { ...TT.Arcade.snakeInitial(undefined, 'fast'), cells: [15, 14, 13], dir: 'right', running: true, score: 4 }
   state = { ...state, arcade: { ...state.arcade, snake } }
   const death = M.reduce(state, { type: 'snake/tick' })
   assert.equal(death.arcade.snake.alive, false)

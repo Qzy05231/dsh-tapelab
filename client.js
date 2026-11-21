@@ -9046,17 +9046,30 @@ TT.Arcade = (function () {
   }
 
   // ------------------------------------------------------------ snake on the matrix
+  const SNAKE_SIZE = 16
+  const SNAKE_CELLS = SNAKE_SIZE * SNAKE_SIZE
   const SNAKE_DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
 
   function snakeInitial(seed, speed) {
-    const start = { cells: [27, 26, 25], dir: 'right', food: 12, score: 0, alive: true, running: false, ticks: 0, speed: speed || 'normal' }
+    const mid = Math.floor(SNAKE_SIZE / 2)
+    const head = mid * SNAKE_SIZE + mid
+    const start = {
+      cells: [head, head - 1, head - 2],
+      dir: 'right',
+      food: 12,
+      score: 0,
+      alive: true,
+      running: false,
+      ticks: 0,
+      speed: speed || 'normal',
+    }
     return placeFood(start, seed || 7)
   }
 
   function placeFood(snake, seed) {
     const occupied = new Set(snake.cells)
     const free = []
-    for (let index = 0; index < 64; index += 1) if (!occupied.has(index)) free.push(index)
+    for (let index = 0; index < SNAKE_CELLS; index += 1) if (!occupied.has(index)) free.push(index)
     if (free.length === 0) return { ...snake, alive: false }
     const rand = TT.util.random((seed || 1) + snake.cells.length * 31 + snake.ticks * 7)
     const food = free[Math.floor(rand() * free.length)]
@@ -9066,15 +9079,15 @@ TT.Arcade = (function () {
   function snakeStep(snake) {
     if (!snake.alive) return snake
     const head = snake.cells[0]
-    const row = Math.floor(head / 8)
-    const col = head % 8
+    const row = Math.floor(head / SNAKE_SIZE)
+    const col = head % SNAKE_SIZE
     const delta = SNAKE_DIRS[snake.dir] || SNAKE_DIRS.right
     const nextRow = row + delta[1]
     const nextCol = col + delta[0]
-    if (nextRow < 0 || nextRow > 7 || nextCol < 0 || nextCol > 7) {
+    if (nextRow < 0 || nextRow >= SNAKE_SIZE || nextCol < 0 || nextCol >= SNAKE_SIZE) {
       return { ...snake, alive: false, running: false }
     }
-    const next = nextRow * 8 + nextCol
+    const next = nextRow * SNAKE_SIZE + nextCol
     const body = snake.cells.slice(0, snake.cells.length - 1)
     if (body.indexOf(next) >= 0) return { ...snake, alive: false, running: false }
     const ate = next === snake.food
@@ -9094,6 +9107,7 @@ TT.Arcade = (function () {
 
   return {
     SNAKE_DIRS,
+    SNAKE_SIZE,
     snakeInitial,
     snakeStep,
     snakeTurn,
@@ -9554,7 +9568,7 @@ TT.ArcadeUI = (function () {
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.snake.title'), hint: t('arcade.snake.hint') },
         h('div', { className: 'tt-snakewrap' },
-          h('div', { className: 'tt-snakegrid' }, Array.from({ length: 64 }, (_, index) => {
+          h('div', { className: 'tt-snakegrid', style: { gridTemplateColumns: `repeat(${TT.Arcade.SNAKE_SIZE}, 1fr)` } }, Array.from({ length: TT.Arcade.SNAKE_SIZE * TT.Arcade.SNAKE_SIZE }, (_, index) => {
             const kind = cellAt(index)
             return h('div', {
               key: index,
@@ -13497,12 +13511,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.8'
+  const VERSION = '1.7.9'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.9',
+      date: '2026-11-22',
+      items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
     {
       version: '1.7.8',
       date: '2026-11-22',
@@ -16725,13 +16744,13 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-debugoption[data-kind="good"] { color:#04121c; background:linear-gradient(160deg,#8df0ff,#2be6c2); border-color:transparent; }
 .tt-debugoption[data-kind="bad"] { color:#ff9aa4; border-color:rgba(255,93,108,.55); background:rgba(255,93,108,.08); }
 
-.tt-snakewrap { position:relative; width:min(400px, 100%); }
-.tt-snakegrid { display:grid; grid-template-columns:repeat(8, 1fr); gap:3px; width:min(400px, 100%); aspect-ratio:1;
-  padding:6px; border-radius:12px; background:rgba(4,12,20,.7); border:1px solid rgba(86,225,255,.18); }
-.tt-snakecell { border-radius:4px; background:rgba(86,225,255,.04); }
-.tt-snakecell[data-kind="head"] { background:linear-gradient(150deg,#ffe9ae,#ffc35c); box-shadow:0 0 12px rgba(255,195,92,.7); }
-.tt-snakecell[data-kind="body"] { background:rgba(255,195,92,.55); }
-.tt-snakecell[data-kind="food"] { background:var(--tt-mint); box-shadow:0 0 12px rgba(43,230,194,.8); }
+.tt-snakewrap { position:relative; width:min(440px, 100%); }
+.tt-snakegrid { display:grid; grid-template-columns:repeat(16, 1fr); gap:1px; width:min(440px, 100%); aspect-ratio:1;
+  padding:5px; border-radius:12px; background:rgba(4,12,20,.7); border:1px solid rgba(86,225,255,.18); }
+.tt-snakecell { border-radius:2px; background:rgba(86,225,255,.035); }
+.tt-snakecell[data-kind="head"] { background:linear-gradient(150deg,#ffe9ae,#ffc35c); box-shadow:0 0 6px rgba(255,195,92,.7); }
+.tt-snakecell[data-kind="body"] { background:rgba(255,195,92,.6); }
+.tt-snakecell[data-kind="food"] { background:var(--tt-mint); box-shadow:0 0 6px rgba(43,230,194,.8); }
 .tt-snakeover { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
   gap:4px; border-radius:12px; background:rgba(4,12,20,.72); color:#ff9aa4; font-size:13px; }
 .tt-archivebox { width:100%; min-height:72px; resize:vertical; border-radius:9px; padding:8px 10px; font-size:11px;

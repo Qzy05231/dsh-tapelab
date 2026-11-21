@@ -279,17 +279,30 @@ TT.Arcade = (function () {
   }
 
   // ------------------------------------------------------------ snake on the matrix
+  const SNAKE_SIZE = 16
+  const SNAKE_CELLS = SNAKE_SIZE * SNAKE_SIZE
   const SNAKE_DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
 
   function snakeInitial(seed, speed) {
-    const start = { cells: [27, 26, 25], dir: 'right', food: 12, score: 0, alive: true, running: false, ticks: 0, speed: speed || 'normal' }
+    const mid = Math.floor(SNAKE_SIZE / 2)
+    const head = mid * SNAKE_SIZE + mid
+    const start = {
+      cells: [head, head - 1, head - 2],
+      dir: 'right',
+      food: 12,
+      score: 0,
+      alive: true,
+      running: false,
+      ticks: 0,
+      speed: speed || 'normal',
+    }
     return placeFood(start, seed || 7)
   }
 
   function placeFood(snake, seed) {
     const occupied = new Set(snake.cells)
     const free = []
-    for (let index = 0; index < 64; index += 1) if (!occupied.has(index)) free.push(index)
+    for (let index = 0; index < SNAKE_CELLS; index += 1) if (!occupied.has(index)) free.push(index)
     if (free.length === 0) return { ...snake, alive: false }
     const rand = TT.util.random((seed || 1) + snake.cells.length * 31 + snake.ticks * 7)
     const food = free[Math.floor(rand() * free.length)]
@@ -299,15 +312,15 @@ TT.Arcade = (function () {
   function snakeStep(snake) {
     if (!snake.alive) return snake
     const head = snake.cells[0]
-    const row = Math.floor(head / 8)
-    const col = head % 8
+    const row = Math.floor(head / SNAKE_SIZE)
+    const col = head % SNAKE_SIZE
     const delta = SNAKE_DIRS[snake.dir] || SNAKE_DIRS.right
     const nextRow = row + delta[1]
     const nextCol = col + delta[0]
-    if (nextRow < 0 || nextRow > 7 || nextCol < 0 || nextCol > 7) {
+    if (nextRow < 0 || nextRow >= SNAKE_SIZE || nextCol < 0 || nextCol >= SNAKE_SIZE) {
       return { ...snake, alive: false, running: false }
     }
-    const next = nextRow * 8 + nextCol
+    const next = nextRow * SNAKE_SIZE + nextCol
     const body = snake.cells.slice(0, snake.cells.length - 1)
     if (body.indexOf(next) >= 0) return { ...snake, alive: false, running: false }
     const ate = next === snake.food
@@ -327,6 +340,7 @@ TT.Arcade = (function () {
 
   return {
     SNAKE_DIRS,
+    SNAKE_SIZE,
     snakeInitial,
     snakeStep,
     snakeTurn,
@@ -787,7 +801,7 @@ TT.ArcadeUI = (function () {
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.snake.title'), hint: t('arcade.snake.hint') },
         h('div', { className: 'tt-snakewrap' },
-          h('div', { className: 'tt-snakegrid' }, Array.from({ length: 64 }, (_, index) => {
+          h('div', { className: 'tt-snakegrid', style: { gridTemplateColumns: `repeat(${TT.Arcade.SNAKE_SIZE}, 1fr)` } }, Array.from({ length: TT.Arcade.SNAKE_SIZE * TT.Arcade.SNAKE_SIZE }, (_, index) => {
             const kind = cellAt(index)
             return h('div', {
               key: index,

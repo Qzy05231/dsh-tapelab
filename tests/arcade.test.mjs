@@ -100,6 +100,7 @@ test('chain snake moves, turns, eats and dies on walls', () => {
   assert.equal(snake.alive, true)
   assert.equal(snake.cells.length, 3)
   const head = snake.cells[0]
+  assert.equal(A.SNAKE_SIZE, 16)
   snake = A.snakeStep(snake)
   assert.equal(snake.cells[0], head + 1)
   snake = A.snakeTurn(snake, 'left')
@@ -107,7 +108,7 @@ test('chain snake moves, turns, eats and dies on walls', () => {
   snake = A.snakeTurn(snake, 'up')
   const before = snake.cells[0]
   snake = A.snakeStep(snake)
-  assert.equal(snake.cells[0], before - 8)
+  assert.equal(snake.cells[0], before - 16)
   // eating
   let eat = A.snakeInitial()
   eat = { ...eat, food: eat.cells[0] + 1 }
@@ -117,7 +118,7 @@ test('chain snake moves, turns, eats and dies on walls', () => {
   assert.equal(eat.cells.length, length + 1)
   // wall collision
   let wall = A.snakeInitial()
-  wall = { ...wall, cells: [7, 6, 5], dir: 'right' }
+  wall = { ...wall, cells: [15, 14, 13], dir: 'right' }
   wall = A.snakeStep(wall)
   assert.equal(wall.alive, false)
 })
