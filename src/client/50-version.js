@@ -5,12 +5,17 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.7'
+  const VERSION = '1.7.8'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.8',
+      date: '2026-11-22',
+      items: ['移除网表视图（章节展开面板与沙盒切换），恢复简洁 HUD'],
+    },
     {
       version: '1.7.7',
       date: '2026-11-22',

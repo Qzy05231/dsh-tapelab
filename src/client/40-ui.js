@@ -3654,74 +3654,6 @@ TT.UI.Panel = function Panel(props) {
   ) : null
 
   const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
-  let gridConfig = null
-  if (state.gridOpen) {
-    if (state.gridKind === 'half' && TT.Circuit) {
-      gridConfig = {
-        netlist: (state.play && state.play.halfNetlist) || TT.Circuit.canonical.halfAdder(),
-        bits: (state.play && state.play.bits) || 0,
-        stateBits: 0,
-        inputLabels: ['A', 'B'],
-        outputLabels: ['S', 'C'],
-        titleKey: 'netgrid.halfTitle',
-        stepLabel: null,
-      }
-    } else if (state.gridKind === 'latch' && TT.Circuit) {
-      gridConfig = {
-        netlist: (state.play && state.play.latch) || TT.Circuit.canonical.srLatch(),
-        bits: ((state.play && state.play.S) || 0) | (((state.play && state.play.R) || 0) << 1),
-        stateBits: (state.play && state.play.stateBits) || 0,
-        inputLabels: ['S', 'R'],
-        outputLabels: ['Q', 'Q̄'],
-        titleKey: 'netgrid.latchTitle',
-        stepLabel: null,
-      }
-    } else if (state.gridKind === 'adder' && TT.Circuit) {
-      gridConfig = {
-        netlist: (state.play && state.play.adder) || TT.Circuit.canonical.fourBitAdder(),
-        bits: (state.play && state.play.bits) || 0,
-        stateBits: 0,
-        inputLabels: ['A0', 'A1', 'A2', 'A3', 'B0', 'B1', 'B2', 'B3', 'Cin'],
-        outputLabels: ['S0', 'S1', 'S2', 'S3', 'Cout'],
-        titleKey: 'netgrid.adderTitle',
-        stepLabel: null,
-      }
-    } else if (state.gridKind === 'sevenseg' && TT.Circuit) {
-      const inputs = (state.play && state.play.inputs) || [0, 0, 0, 0]
-      gridConfig = {
-        netlist: TT.Circuit.canonical.sevenSegment(),
-        bits: inputs.reduce((acc, value, index) => acc | ((value ? 1 : 0) << index), 0),
-        stateBits: 0,
-        inputLabels: ['D0', 'D1', 'D2', 'D3'],
-        outputLabels: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
-        titleKey: 'netgrid.sevensegTitle',
-        stepLabel: null,
-      }
-    } else if (state.gridKind === 'counter' && TT.Circuit) {
-      gridConfig = {
-        netlist: (state.play && state.play.netlist) || TT.Circuit.canonical.counter4(),
-        bits: 0,
-        stateBits: (state.play && state.play.stateBits) || 0,
-        inputLabels: [],
-        outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
-        titleKey: 'netgrid.counterTitle',
-        stepLabel: 'netgrid.nextBeat',
-        stepAction: { type: 'counter/step' },
-      }
-    } else if (TT.Safety) {
-      gridConfig = {
-        netlist: TT.Safety.netlist(),
-        bits: (state.play && state.play.bits) || 0,
-        stateBits: 0,
-        inputLabels: TT.Safety.KEYS,
-        outputLabels: TT.Safety.OUTPUT_LABELS,
-        titleKey: 'netgrid.title',
-        stepLabel: null,
-      }
-    }
-  }
-
-
   return TT.h('div', {
     className: 'tt-lab',
     ref: rootRef,
@@ -3922,43 +3854,14 @@ TT.UI.Panel = function Panel(props) {
             narrow ? null : TT.h('div', { className: 'tt-fact' }, resolve(chapter.factKey)),
             TT.h('div', { className: 'tt-controls' }, t('panel.controls')),
           ),
-          TT.h('div', { className: 'tt-rightcol', 'data-netgrid': state.gridOpen ? 'true' : 'false' },
+          TT.h('div', { className: 'tt-rightcol' },
             TT.h('aside', {
               className: 'tt-card tt-telemetry',
               'data-narrow': medium ? 'true' : 'false',
               'data-forced': dataOpen ? 'true' : 'false',
-              'data-netgrid': state.gridOpen ? 'true' : 'false',
               style: narrow && !dataOpen ? { display: 'none' } : undefined,
             },
               TT.UI.Telemetry({ state, t, resolve, api, chapterIndex: state.chapter }),
-              [3, 4, 6, 7, 8, 10].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-inlinehead' },
-                TT.h('button', {
-                  type: 'button',
-                  className: 'tt-netgrid-toggle',
-                  'data-active': state.gridOpen ? 'true' : 'false',
-                  onClick: () => api.dispatch(state.gridOpen ? { type: 'grid/close' } : { type: 'grid/open', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety' })[state.chapter] }),
-                }, state.gridOpen ? `▾ ${t('netgrid.collapse')}` : `🧮 ${t('netgrid.expandWide')}`),
-              ) : null,
-              state.gridOpen && gridConfig ? TT.h('div', { className: 'tt-netgrid-inlinebody' },
-                TT.h(TT.NetlistGridUI.Grid, {
-                  netlist: gridConfig.netlist,
-                  bits: gridConfig.bits,
-                  stateBits: gridConfig.stateBits,
-                  onToggle: state.gridKind === 'safety'
-                    ? (index) => api.dispatch({ type: 'safety/toggle', index })
-                    : state.gridKind === 'latch'
-                      ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' })
-                      : undefined,
-                  t,
-                  inputLabels: gridConfig.inputLabels,
-                  outputLabels: gridConfig.outputLabels,
-                  compactLayout: true,
-                }),
-                gridConfig.stepLabel ? TT.h('div', { className: 'tt-labrow', style: { justifyContent: 'center' } },
-                  TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', onClick: () => api.dispatch(gridConfig.stepAction) }, `⏭ ${t(gridConfig.stepLabel)}`),
-                  TT.h('span', { className: 'tt-lablabel' }, t('netgrid.beatHint')),
-                ) : TT.h('p', { className: 'tt-finalenote', style: { marginBottom: 0 } }, t(state.chapter === 4 ? 'netgrid.latchHint' : 'netgrid.openHint')),
-              ) : null,
             ),
           ),
         ),
