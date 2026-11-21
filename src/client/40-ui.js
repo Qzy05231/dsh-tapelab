@@ -3789,11 +3789,15 @@ TT.UI.Panel = function Panel(props) {
         netlist: gridConfig.netlist,
         bits: gridConfig.bits,
         stateBits: gridConfig.stateBits,
-        onToggle: state.gridKind === 'safety'
-          ? (index) => api.dispatch({ type: 'safety/toggle', index })
-          : state.gridKind === 'latch'
-            ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' })
-            : undefined,
+        onToggle: ['nand', 'playerHalf', 'lego'].indexOf(state.gridKind) >= 0
+          ? (index) => api.dispatch({ type: 'input/toggle', index })
+          : state.gridKind === 'sevenseg'
+            ? (index) => api.dispatch({ type: 'seg/input', index })
+            : state.gridKind === 'safety'
+              ? (index) => api.dispatch({ type: 'safety/toggle', index })
+              : state.gridKind === 'latch'
+                ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' })
+                : undefined,
         t,
         inputLabels: gridConfig.inputLabels,
         outputLabels: gridConfig.outputLabels,
@@ -4031,11 +4035,15 @@ TT.UI.Panel = function Panel(props) {
                   netlist: gridConfig.netlist,
                   bits: gridConfig.bits,
                   stateBits: gridConfig.stateBits,
-                  onToggle: state.gridKind === 'safety'
-                    ? (index) => api.dispatch({ type: 'safety/toggle', index })
-                    : state.gridKind === 'latch'
-                      ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' })
-                      : undefined,
+                  onToggle: ['nand', 'playerHalf', 'lego'].indexOf(state.gridKind) >= 0
+                    ? (index) => api.dispatch({ type: 'input/toggle', index })
+                    : state.gridKind === 'sevenseg'
+                      ? (index) => api.dispatch({ type: 'seg/input', index })
+                      : state.gridKind === 'safety'
+                        ? (index) => api.dispatch({ type: 'safety/toggle', index })
+                        : state.gridKind === 'latch'
+                          ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' })
+                          : undefined,
                   t,
                   inputLabels: gridConfig.inputLabels,
                   outputLabels: gridConfig.outputLabels,

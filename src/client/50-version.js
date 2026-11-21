@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.7'
+  const VERSION = '1.8.8'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.8.8',
+      date: '2026-11-22',
+      items: [
+        '网表与演示联动：第 1/2/5/7 章的网表可直接拨输入，输出和连线实时刷新',
+        '网表仍位于演示画面右侧遥测框内，展开即可对照观看',
+      ],
+    },
     {
       version: '1.8.7',
       date: '2026-11-22',
@@ -63,6 +71,14 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.8.8',
+      date: '2026-11-22',
+      items: [
+        '网表与演示联动：第 1/2/5/7 章的网表可直接拨输入，输出和连线实时刷新',
+        '网表仍位于演示画面右侧遥测框内，展开即可对照观看',
+      ],
     },
     {
       version: '1.8.7',
