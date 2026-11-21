@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.3'
+  const VERSION = '1.8.4'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.8.4',
+      date: '2026-11-22',
+      items: [
+        '修正各章网表映射：第 1 章与非门、第 2 章半加器、第 5 章乐高全加器补齐入口',
+        '巨兽 CPU 章移除错误的 4 位加法器网表；第 7 章改用实际综合出的网表',
+      ],
+    },
     {
       version: '1.8.3',
       date: '2026-11-22',
@@ -38,6 +46,14 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.8.4',
+      date: '2026-11-22',
+      items: [
+        '修正各章网表映射：第 1 章与非门、第 2 章半加器、第 5 章乐高全加器补齐入口',
+        '巨兽 CPU 章移除错误的 4 位加法器网表；第 7 章改用实际综合出的网表',
+      ],
     },
     {
       version: '1.8.3',

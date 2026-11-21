@@ -30,11 +30,13 @@ TT.dict = {
     'netgrid.title': '安全电路网表',
     'netgrid.latchTitle': 'SR 锁存器网表',
     'netgrid.halfTitle': '半加器网表',
+    'netgrid.nandTitle': '与非门网表',
+    'netgrid.legoTitle': '乐高全加器网表',
     'netgrid.adderTitle': '4 位加法器网表',
     'netgrid.sevensegTitle': '七段显示网表',
 
     'netgrid.counterTitle': '4 位计数器网表',
-    'netgrid.containerTitle': '容器内电路网表',
+    'netgrid.containerTitle': '容器内打包的电路（半加器）',
     'netgrid.latchHint': '每来一个区块自动推进一拍；高亮的门表示这一拍状态翻转',
     'netgrid.counterHint': '点「下一拍」推进时钟，蓝色高亮为刚刚变化的门',
     'netgrid.nextBeat': '下一拍',
@@ -1280,11 +1282,13 @@ TT.dict = {
     'netgrid.title': 'Safety netlist',
     'netgrid.latchTitle': 'SR latch netlist',
     'netgrid.halfTitle': 'Half adder netlist',
+    'netgrid.nandTitle': 'NAND gate netlist',
+    'netgrid.legoTitle': 'LEGO full adder netlist',
     'netgrid.adderTitle': '4-bit adder netlist',
     'netgrid.sevensegTitle': 'Seven-segment netlist',
 
     'netgrid.counterTitle': '4-bit counter netlist',
-    'netgrid.containerTitle': 'Container circuit netlist',
+    'netgrid.containerTitle': 'Packed circuit (half adder)',
     'netgrid.latchHint': 'Advances one beat per block; highlighted gates changed this beat',
     'netgrid.counterHint': 'Press “next beat” to clock it; blue highlights mark changed gates',
     'netgrid.nextBeat': 'Next beat',
@@ -3684,7 +3688,32 @@ TT.UI.Panel = function Panel(props) {
 
   let gridConfig = null
   if ((state.gridOpen || state.gridInline) && TT.Circuit) {
-    if (state.gridKind === 'half') {
+    const player = TT.Missions.playerNetlist ? (() => { try { return TT.Missions.playerNetlist(state) } catch (error) { return null } })() : null
+    if (state.gridKind === 'nand') {
+      gridConfig = {
+        netlist: player || TT.Circuit.makeNetlist({ nIn: 2, gates: [{ a: 2, b: 3 }], outputs: [4] }),
+        bits: ((state.play && state.play.inputs) || [0, 0]).reduce((acc, value, index) => acc | ((value ? 1 : 0) << index), 0),
+        inputLabels: ['A', 'B'],
+        outputLabels: ['Y'],
+        titleKey: 'netgrid.nandTitle',
+      }
+    } else if (state.gridKind === 'playerHalf') {
+      gridConfig = {
+        netlist: player || TT.Circuit.canonical.halfAdder(),
+        bits: ((state.play && state.play.inputs) || [0, 0]).reduce((acc, value, index) => acc | ((value ? 1 : 0) << index), 0),
+        inputLabels: ['A', 'B'],
+        outputLabels: ['S', 'C'],
+        titleKey: 'netgrid.halfTitle',
+      }
+    } else if (state.gridKind === 'lego') {
+      gridConfig = {
+        netlist: player || TT.Circuit.canonical.fullAdder(),
+        bits: ((state.play && state.play.inputs) || [0, 0, 0]).reduce((acc, value, index) => acc | ((value ? 1 : 0) << index), 0),
+        inputLabels: ['A', 'B', 'Cin'],
+        outputLabels: ['S', 'Cout'],
+        titleKey: 'netgrid.legoTitle',
+      }
+    } else if (state.gridKind === 'half') {
       gridConfig = {
         netlist: (state.play && state.play.halfNetlist) || TT.Circuit.canonical.halfAdder(),
         bits: (state.play && state.play.bits) || 0,
@@ -3712,7 +3741,7 @@ TT.UI.Panel = function Panel(props) {
     } else if (state.gridKind === 'sevenseg') {
       const inputs = (state.play && state.play.inputs) || [0, 0, 0, 0]
       gridConfig = {
-        netlist: TT.Circuit.canonical.sevenSegment(),
+        netlist: (state.play && state.play.netlist) || TT.Circuit.canonical.sevenSegment(),
         bits: inputs.reduce((acc, value, index) => acc | ((value ? 1 : 0) << index), 0),
         inputLabels: ['D0', 'D1', 'D2', 'D3'],
         outputLabels: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
@@ -3981,17 +4010,17 @@ TT.UI.Panel = function Panel(props) {
               style: narrow && !dataOpen ? { display: 'none' } : undefined,
             },
               TT.h('div', { className: 'tt-telemetry-rows' }, TT.UI.Telemetry({ state, t, resolve, api, chapterIndex: state.chapter })),
-              [3, 4, 6, 7, 8, 10, 13].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-entry' },
+              [1, 2, 3, 4, 5, 7, 8, 10, 13].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-entry' },
                 TT.h('button', {
                   type: 'button',
                   className: 'tt-netgrid-toggle',
                   'data-active': state.gridInline ? 'true' : 'false',
-                  onClick: () => api.dispatch({ type: 'grid/inline', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
+                  onClick: () => api.dispatch({ type: 'grid/inline', kind: ({ 1: 'nand', 2: 'playerHalf', 3: 'half', 4: 'latch', 5: 'lego', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
                 }, state.gridInline ? `▾ ${t('netgrid.collapse')}` : `🧮 ${t('netgrid.inlineExpand')}`),
                 TT.h('button', {
                   type: 'button',
                   className: 'tt-netgrid-toggle',
-                  onClick: () => api.dispatch({ type: 'grid/open', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
+                  onClick: () => api.dispatch({ type: 'grid/open', kind: ({ 1: 'nand', 2: 'playerHalf', 3: 'half', 4: 'latch', 5: 'lego', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
                 }, `🔍 ${t('netgrid.zoom')}`),
               ) : null,
               state.gridInline && gridConfig ? TT.h('div', { className: 'tt-netgrid-inlinebody' },
