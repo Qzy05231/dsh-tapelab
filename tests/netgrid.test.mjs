@@ -20,6 +20,10 @@ test('the safety netlist lays out over 32 levels with 80 gates and 4 outputs', (
   assert.equal(plan.maxLevel, 32)
   assert.equal(plan.outputs.length, 4)
   assert.ok(plan.width > 600 && plan.height > 1000)
+  assert.equal(plan.inputRows, 2)
+  const fit = G.fitScale(plan, 1000, 650)
+  assert.ok(fit > 0.2 && fit < 1)
+  assert.equal(G.fitScale(plan, 0, 0), 1)
   for (const card of plan.gateCards) {
     assert.ok(plan.nodes[card.node], `missing position for gate ${card.index}`)
     assert.equal(card.a, netlist.gates[card.index].a)

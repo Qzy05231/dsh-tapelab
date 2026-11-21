@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.5'
+  const VERSION = '1.6.6'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.6',
+      date: '2026-11-21',
+      items: [
+        '网表网格默认自适应缩放，整张 80 门 / 32 层网表一屏显示，不再滚动',
+        '网格顶端新增 − / 适应 / + 缩放按钮，需要时可放大查看单个门',
+      ],
+    },
     {
       version: '1.6.5',
       date: '2026-11-21',

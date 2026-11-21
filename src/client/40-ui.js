@@ -3138,12 +3138,16 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-piano-black-key[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
   box-shadow:0 0 16px rgba(255,195,92,.55); }
 
-.tt-netgridcard { width:min(1200px,96%); max-height:92vh; display:flex; flex-direction:column; }
-.tt-netgrid-wrap { min-height:0; display:flex; flex-direction:column; gap:6px; flex:1 1 auto; }
-.tt-netgrid { position:relative; overflow:auto; flex:1 1 auto; min-height:320px; max-height:64vh;
-  border-radius:12px; background:
-    radial-gradient(70% 50% at 20% 0%, rgba(86,225,255,.08), transparent 70%),
-    #050b12; border:1px solid rgba(86,225,255,.16); }
+.tt-netgridcard { width:min(1200px,96%); max-height:94vh; display:flex; flex-direction:column; }
+.tt-netgrid-wrap { min-height:0; display:flex; flex-direction:column; gap:6px; }
+.tt-netgrid-viewport { position:relative; height:min(70vh,720px); overflow:auto; border-radius:12px;
+  background: radial-gradient(70% 50% at 20% 0%, rgba(86,225,255,.08), transparent 70%), #050b12;
+  border:1px solid rgba(86,225,255,.16); }
+.tt-netgrid-stage { position:relative; margin:0 auto; }
+.tt-netgrid { position:absolute; top:0; left:0; transform-origin:top left; overflow:hidden;
+  border-radius:12px; background:transparent; }
+.tt-netgrid-zoom { position:sticky; top:6px; left:100%; z-index:5; display:flex; gap:4px; justify-content:flex-end;
+  padding:6px 8px; width:max-content; margin-left:auto; }
 .tt-netgrid-svg { position:absolute; inset:0; pointer-events:none; overflow:visible; }
 .tt-netgrid-wire { fill:none; stroke:rgba(86,225,255,.22); stroke-width:1.2; transition:stroke .15s ease; }
 .tt-netgrid-wire[data-on="true"] { stroke:rgba(255,195,92,.55); stroke-width:1.6; }
