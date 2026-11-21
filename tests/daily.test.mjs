@@ -40,9 +40,12 @@ test('reducer runs a daily attempt and records the best', () => {
   state = TT.Missions.reduce(state, { type: 'arcade/open' })
   assert.ok(state.daily)
   const puzzle = D.puzzle(state.daily.date)
-  state = TT.Missions.reduce(state, { type: 'daily/query', index: 3 })
+  // the clue positions depend on the date seed, so query a position that is not
+  // already revealed by the two clues
+  const queryIndex = [0, 1, 2, 3, 4, 5, 6, 7].find((index) => !puzzle.clues.some((clue) => clue.index === index))
+  state = TT.Missions.reduce(state, { type: 'daily/query', index: queryIndex })
   assert.equal(state.daily.used, 1)
-  assert.equal(state.daily.answers[3], puzzle.truth[3])
+  assert.equal(state.daily.answers[queryIndex], puzzle.truth[queryIndex])
   // answer everything correctly, then submit
   const daily = { ...state.daily, answers: puzzle.truth.slice() }
   state = { ...state, daily }
