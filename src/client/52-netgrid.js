@@ -24,57 +24,65 @@ TT.NetlistGrid = (function () {
       depth[node] = 1 + Math.max(depth[gate.a] || 0, depth[gate.b] || 0)
     })
     const maxLevel = Math.max(1, ...netlist.gates.map((gate, index) => depth[2 + nIn + nState + index]))
-    const rows = Array.from({ length: maxLevel + 1 }, () => [])
-    netlist.gates.forEach((gate, index) => {
-      const node = 2 + nIn + nState + index
-      if (rows[depth[node]]) rows[depth[node]].push(index)
-      else rows[rows.length - 1].push(index)
-    })
-    // compact metrics so 32 levels fit on screen when scaled down
-    const cellW = 92
-    const cellH = 32
-    const gapX = 8
-    const gapY = 8
-    const inputH = 28
-    const inputGapY = 6
-    const inputRows = nIn > 8 ? 2 : 1
-    const perInputRow = inputRows === 2 ? Math.ceil(nIn / 2) : nIn
-    const topY = 22 + inputRows * (inputH + inputGapY) + 18
-    const widest = Math.max(perInputRow, ...rows.map((row) => row.length), 4)
-    const width = Math.max(620, widest * (cellW + gapX) + 100)
-    const nodes = Object.create(null)
-    const xFor = (count, index) => (width - count * cellW - (count - 1) * gapX) / 2 + index * (cellW + gapX)
 
-    nodes[0] = { x: 12, y: 8, w: 28, h: 20, kind: 'const', label: '0' }
-    nodes[1] = { x: 46, y: 8, w: 28, h: 20, kind: 'const', label: '1' }
+    // Matrix layout like a die photo: gates wrap in rows (8 columns), with the
+    // logic depth shown as L1..L32 on each card instead of as rows.
+    const count = netlist.gates.length
+    const columns = count <= 4 ? Math.max(1, count) : count <= 16 ? 4 : 8
+    const rowsCount = Math.max(1, Math.ceil(count / columns))
+    const cellW = 92
+    const cellH = 34
+    const gapX = 6
+    const gapY = 6
+    const inputW = 52
+    const inputGap = 4
+    const inputY = 30
+    const topY = inputY + 30
+    const gridW = columns * cellW + (columns - 1) * gapX
+    const inputWTotal = nIn * inputW + (nIn - 1) * inputGap
+    const width = Math.max(560, gridW + 60, inputWTotal + 60)
+    const nodes = Object.create(null)
+    const startX = (width - gridW) / 2
+    const inputStartX = (width - inputWTotal) / 2
+
+    nodes[0] = { x: 10, y: 6, w: 24, h: 18, kind: 'const', label: '0' }
+    nodes[1] = { x: 40, y: 6, w: 24, h: 18, kind: 'const', label: '1' }
     for (let i = 0; i < nIn; i += 1) {
-      const row = inputRows === 2 ? Math.floor(i / perInputRow) : 0
-      const column = inputRows === 2 ? i % perInputRow : i
       nodes[2 + i] = {
-        x: xFor(perInputRow, column),
-        y: 22 + row * (inputH + inputGapY),
-        w: cellW,
-        h: inputH,
+        x: inputStartX + i * (inputW + inputGap),
+        y: inputY,
+        w: inputW,
+        h: 22,
         kind: 'input',
         index: i,
       }
     }
     const gateCards = []
-    for (let level = 1; level <= maxLevel; level += 1) {
-      const row = rows[level] || []
-      const y = topY + (level - 1) * (cellH + gapY)
-      row.forEach((gateIndex, column) => {
-        const gate = netlist.gates[gateIndex]
-        const node = 2 + nIn + nState + gateIndex
-        const card = { x: xFor(row.length, column), y, w: cellW, h: cellH, node, index: gateIndex, level, a: gate.a, b: gate.b }
-        gateCards.push(card)
-        nodes[node] = { x: card.x, y, w: cellW, h: cellH, kind: 'gate', card }
-      })
-    }
-    const outputY = topY + maxLevel * (cellH + gapY) + 12
-    const outputs = netlist.outputs.map((node, index) => ({ x: xFor(netlist.outputs.length, index), y: outputY, w: cellW, h: 30, node, index }))
-    const height = outputY + 62
-    return { nodes, gateCards, outputs, width, height, maxLevel, rows, nIn, inputRows }
+    netlist.gates.forEach((gate, index) => {
+      const node = 2 + nIn + nState + index
+      const column = index % columns
+      const row = Math.floor(index / columns)
+      const card = {
+        x: startX + column * (cellW + gapX),
+        y: topY + row * (cellH + gapY),
+        w: cellW,
+        h: cellH,
+        node,
+        index,
+        level: depth[node],
+        a: gate.a,
+        b: gate.b,
+      }
+      gateCards.push(card)
+      nodes[node] = { x: card.x, y: card.y, w: cellW, h: cellH, kind: 'gate', card }
+    })
+    const outputY = topY + rowsCount * (cellH + gapY) + 8
+    const outputs = netlist.outputs.map((node, index) => {
+      const totalW = netlist.outputs.length * 96
+      return { x: (width - totalW) / 2 + index * 96, y: outputY, w: 90, h: 26, node, index }
+    })
+    const height = outputY + 52
+    return { nodes, gateCards, outputs, width, height, maxLevel, rows: [], nIn, inputRows: 1 }
   }
 
   function fitScale(plan, viewWidth, viewHeight) {
@@ -188,7 +196,7 @@ TT.NetlistGridUI = (function () {
             style: { left: card.x, top: card.y, width: card.w, height: card.h },
             title: `${TT.NetlistGrid.inputLabel(inputLabels, index)} = ${((Number(bits) || 0) >> index) & 1}`,
             onClick: () => onToggle && onToggle(index),
-          }, h('b', null, TT.NetlistGrid.inputLabel(inputLabels, index)), h('span', null, ((Number(bits) || 0) >> index) & 1 ? '1' : '0'))
+          }, h('span', null, ((Number(bits) || 0) >> index) & 1 ? '1' : '0'), h('b', null, TT.NetlistGrid.inputLabel(inputLabels, index)))
         }) : null,
         // gates
         plan.gateCards.map((card) => h('button', {

@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.6'
+  const VERSION = '1.6.7'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.7',
+      date: '2026-11-21',
+      items: [
+        '网表网格改为 8 列矩阵布局：80 个门 = 8×10，整张一屏显示且文字可读',
+        '输入改为顶部「位值 + 按键字母」的紧凑标签，门卡片显示 N节点 · L层 与输出值',
+      ],
+    },
     {
       version: '1.6.6',
       date: '2026-11-21',

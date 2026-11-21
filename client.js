@@ -13512,12 +13512,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.6.6'
+  const VERSION = '1.6.7'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.6.7',
+      date: '2026-11-21',
+      items: [
+        '网表网格改为 8 列矩阵布局：80 个门 = 8×10，整张一屏显示且文字可读',
+        '输入改为顶部「位值 + 按键字母」的紧凑标签，门卡片显示 N节点 · L层 与输出值',
+      ],
+    },
     {
       version: '1.6.6',
       date: '2026-11-21',
@@ -13763,57 +13771,65 @@ TT.NetlistGrid = (function () {
       depth[node] = 1 + Math.max(depth[gate.a] || 0, depth[gate.b] || 0)
     })
     const maxLevel = Math.max(1, ...netlist.gates.map((gate, index) => depth[2 + nIn + nState + index]))
-    const rows = Array.from({ length: maxLevel + 1 }, () => [])
-    netlist.gates.forEach((gate, index) => {
-      const node = 2 + nIn + nState + index
-      if (rows[depth[node]]) rows[depth[node]].push(index)
-      else rows[rows.length - 1].push(index)
-    })
-    // compact metrics so 32 levels fit on screen when scaled down
-    const cellW = 92
-    const cellH = 32
-    const gapX = 8
-    const gapY = 8
-    const inputH = 28
-    const inputGapY = 6
-    const inputRows = nIn > 8 ? 2 : 1
-    const perInputRow = inputRows === 2 ? Math.ceil(nIn / 2) : nIn
-    const topY = 22 + inputRows * (inputH + inputGapY) + 18
-    const widest = Math.max(perInputRow, ...rows.map((row) => row.length), 4)
-    const width = Math.max(620, widest * (cellW + gapX) + 100)
-    const nodes = Object.create(null)
-    const xFor = (count, index) => (width - count * cellW - (count - 1) * gapX) / 2 + index * (cellW + gapX)
 
-    nodes[0] = { x: 12, y: 8, w: 28, h: 20, kind: 'const', label: '0' }
-    nodes[1] = { x: 46, y: 8, w: 28, h: 20, kind: 'const', label: '1' }
+    // Matrix layout like a die photo: gates wrap in rows (8 columns), with the
+    // logic depth shown as L1..L32 on each card instead of as rows.
+    const count = netlist.gates.length
+    const columns = count <= 4 ? Math.max(1, count) : count <= 16 ? 4 : 8
+    const rowsCount = Math.max(1, Math.ceil(count / columns))
+    const cellW = 92
+    const cellH = 34
+    const gapX = 6
+    const gapY = 6
+    const inputW = 52
+    const inputGap = 4
+    const inputY = 30
+    const topY = inputY + 30
+    const gridW = columns * cellW + (columns - 1) * gapX
+    const inputWTotal = nIn * inputW + (nIn - 1) * inputGap
+    const width = Math.max(560, gridW + 60, inputWTotal + 60)
+    const nodes = Object.create(null)
+    const startX = (width - gridW) / 2
+    const inputStartX = (width - inputWTotal) / 2
+
+    nodes[0] = { x: 10, y: 6, w: 24, h: 18, kind: 'const', label: '0' }
+    nodes[1] = { x: 40, y: 6, w: 24, h: 18, kind: 'const', label: '1' }
     for (let i = 0; i < nIn; i += 1) {
-      const row = inputRows === 2 ? Math.floor(i / perInputRow) : 0
-      const column = inputRows === 2 ? i % perInputRow : i
       nodes[2 + i] = {
-        x: xFor(perInputRow, column),
-        y: 22 + row * (inputH + inputGapY),
-        w: cellW,
-        h: inputH,
+        x: inputStartX + i * (inputW + inputGap),
+        y: inputY,
+        w: inputW,
+        h: 22,
         kind: 'input',
         index: i,
       }
     }
     const gateCards = []
-    for (let level = 1; level <= maxLevel; level += 1) {
-      const row = rows[level] || []
-      const y = topY + (level - 1) * (cellH + gapY)
-      row.forEach((gateIndex, column) => {
-        const gate = netlist.gates[gateIndex]
-        const node = 2 + nIn + nState + gateIndex
-        const card = { x: xFor(row.length, column), y, w: cellW, h: cellH, node, index: gateIndex, level, a: gate.a, b: gate.b }
-        gateCards.push(card)
-        nodes[node] = { x: card.x, y, w: cellW, h: cellH, kind: 'gate', card }
-      })
-    }
-    const outputY = topY + maxLevel * (cellH + gapY) + 12
-    const outputs = netlist.outputs.map((node, index) => ({ x: xFor(netlist.outputs.length, index), y: outputY, w: cellW, h: 30, node, index }))
-    const height = outputY + 62
-    return { nodes, gateCards, outputs, width, height, maxLevel, rows, nIn, inputRows }
+    netlist.gates.forEach((gate, index) => {
+      const node = 2 + nIn + nState + index
+      const column = index % columns
+      const row = Math.floor(index / columns)
+      const card = {
+        x: startX + column * (cellW + gapX),
+        y: topY + row * (cellH + gapY),
+        w: cellW,
+        h: cellH,
+        node,
+        index,
+        level: depth[node],
+        a: gate.a,
+        b: gate.b,
+      }
+      gateCards.push(card)
+      nodes[node] = { x: card.x, y: card.y, w: cellW, h: cellH, kind: 'gate', card }
+    })
+    const outputY = topY + rowsCount * (cellH + gapY) + 8
+    const outputs = netlist.outputs.map((node, index) => {
+      const totalW = netlist.outputs.length * 96
+      return { x: (width - totalW) / 2 + index * 96, y: outputY, w: 90, h: 26, node, index }
+    })
+    const height = outputY + 52
+    return { nodes, gateCards, outputs, width, height, maxLevel, rows: [], nIn, inputRows: 1 }
   }
 
   function fitScale(plan, viewWidth, viewHeight) {
@@ -13927,7 +13943,7 @@ TT.NetlistGridUI = (function () {
             style: { left: card.x, top: card.y, width: card.w, height: card.h },
             title: `${TT.NetlistGrid.inputLabel(inputLabels, index)} = ${((Number(bits) || 0) >> index) & 1}`,
             onClick: () => onToggle && onToggle(index),
-          }, h('b', null, TT.NetlistGrid.inputLabel(inputLabels, index)), h('span', null, ((Number(bits) || 0) >> index) & 1 ? '1' : '0'))
+          }, h('span', null, ((Number(bits) || 0) >> index) & 1 ? '1' : '0'), h('b', null, TT.NetlistGrid.inputLabel(inputLabels, index)))
         }) : null,
         // gates
         plan.gateCards.map((card) => h('button', {
@@ -17115,32 +17131,32 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-netgridcard { width:min(1200px,96%); max-height:94vh; display:flex; flex-direction:column; }
 .tt-netgrid-wrap { min-height:0; display:flex; flex-direction:column; gap:6px; }
 .tt-netgrid-viewport { position:relative; height:min(70vh,720px); overflow:auto; border-radius:12px;
-  background: radial-gradient(70% 50% at 20% 0%, rgba(86,225,255,.08), transparent 70%), #050b12;
-  border:1px solid rgba(86,225,255,.16); }
+  background:#070f1a; border:1px solid rgba(86,225,255,.14); }
 .tt-netgrid-stage { position:relative; margin:0 auto; }
 .tt-netgrid { position:absolute; top:0; left:0; transform-origin:top left; overflow:hidden;
   border-radius:12px; background:transparent; }
 .tt-netgrid-zoom { position:sticky; top:6px; left:100%; z-index:5; display:flex; gap:4px; justify-content:flex-end;
   padding:6px 8px; width:max-content; margin-left:auto; }
 .tt-netgrid-svg { position:absolute; inset:0; pointer-events:none; overflow:visible; }
-.tt-netgrid-wire { fill:none; stroke:rgba(86,225,255,.22); stroke-width:1.2; transition:stroke .15s ease; }
-.tt-netgrid-wire[data-on="true"] { stroke:rgba(255,195,92,.55); stroke-width:1.6; }
-.tt-netgrid-wire[data-highlight="true"] { stroke:#ffc35c; stroke-width:2.2; }
-.tt-netgrid-node { position:absolute; box-sizing:border-box; border-radius:8px; padding:3px 6px; font-size:9px;
-  display:flex; align-items:center; gap:4px; color:var(--tt-ink); background:rgba(7,18,28,.9);
-  border:1px solid rgba(86,225,255,.3); cursor:pointer; overflow:hidden; }
-.tt-netgrid-input { flex-direction:column; justify-content:center; align-items:flex-start; gap:1px; }
-.tt-netgrid-input b { font-size:8px; color:var(--tt-dim); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-.tt-netgrid-input span { font-family:var(--dsh-font-family-mono, monospace); font-size:13px; color:var(--tt-faint); }
+.tt-netgrid-wire { fill:none; stroke:rgba(86,200,255,.16); stroke-width:1; transition:stroke .15s ease; }
+.tt-netgrid-wire[data-on="true"] { stroke:rgba(255,195,92,.4); stroke-width:1.2; }
+.tt-netgrid-wire[data-highlight="true"] { stroke:#ffc35c; stroke-width:1.8; }
+.tt-netgrid-node { position:absolute; box-sizing:border-box; border-radius:6px; padding:2px 5px; font-size:9px;
+  display:flex; align-items:center; gap:3px; color:#cfe8ff; background:rgba(12,24,40,.92);
+  border:1px solid rgba(86,180,255,.28); cursor:pointer; overflow:hidden; }
+.tt-netgrid-input { flex-direction:column; justify-content:center; align-items:center; gap:0; padding:1px 2px;
+  background:transparent; border-color:rgba(86,180,255,.12); }
+.tt-netgrid-input b { font-size:8.5px; color:#9fc4e8; font-weight:600; white-space:nowrap; line-height:1; }
+.tt-netgrid-input span { font-family:var(--dsh-font-family-mono, monospace); font-size:10px; color:var(--tt-faint); line-height:1; }
 .tt-netgrid-input[data-on="true"] { border-color:var(--tt-amber); box-shadow:0 0 10px rgba(255,195,92,.3); }
 .tt-netgrid-input[data-on="true"] span { color:var(--tt-amber); }
 .tt-netgrid-const { width:34px; height:26px; justify-content:center; color:var(--tt-faint); font-family:var(--dsh-font-family-mono, monospace); }
-.tt-netgrid-gate { flex-direction:column; gap:0; align-items:flex-start; justify-content:center;
-  background:rgba(8,22,34,.92); border-color:rgba(86,225,255,.28); }
+.tt-netgrid-gate { flex-direction:column; gap:0; align-items:center; justify-content:center; padding:1px 3px;
+  background:#0c1828; border-color:#1f3350; box-shadow:none; }
 .tt-netgrid-gate[data-out="true"] { border-color:rgba(255,195,92,.65); background:rgba(255,195,92,.08); }
 .tt-netgrid-gate[data-selected="true"] { border-color:#fff; box-shadow:0 0 0 1px #fff, 0 0 14px rgba(255,255,255,.3); }
-.tt-netgrid-gatetag { font-family:var(--dsh-font-family-mono, monospace); font-size:8px; color:var(--tt-dim); white-space:nowrap; }
-.tt-netgrid-gateval { font-family:var(--dsh-font-family-mono, monospace); font-size:13px; color:var(--tt-mint); }
+.tt-netgrid-gatetag { font-family:var(--dsh-font-family-mono, monospace); font-size:8px; color:#8fb3c8; white-space:nowrap; line-height:1.1; }
+.tt-netgrid-gateval { font-family:var(--dsh-font-family-mono, monospace); font-size:11px; color:#e8f6ff; line-height:1.1; }
 .tt-netgrid-gate[data-out="true"] .tt-netgrid-gateval { color:var(--tt-amber); }
 .tt-netgrid-output { justify-content:space-between; border-color:rgba(43,230,194,.35); }
 .tt-netgrid-output i { width:8px; height:8px; border-radius:50%; background:#12303f; border:1px solid rgba(120,190,220,.4); flex:0 0 auto; }
