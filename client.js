@@ -13533,12 +13533,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.1'
+  const VERSION = '1.8.2'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.8.2',
+      date: '2026-11-22',
+      items: ['框内网表固定为与框同宽、约 460px 高，展开后完整显示不再被压成一条'],
+    },
     {
       version: '1.8.1',
       date: '2026-11-22',
@@ -13556,6 +13561,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.8.2',
+      date: '2026-11-22',
+      items: ['框内网表固定为与框同宽、约 460px 高，展开后完整显示不再被压成一条'],
     },
     {
       version: '1.8.1',
@@ -17398,11 +17408,12 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-netgrid-compact .tt-netgrid-wire { stroke-width:.8; }
 
 .tt-telemetry-rows { display:flex; flex-direction:column; gap:9px; min-width:0; }
-.tt-telemetry[data-inline="true"] { max-height:min(66vh,600px); }
+.tt-telemetry[data-inline="true"] { max-height:min(78vh,640px); }
 .tt-telemetry[data-inline="true"] .tt-telemetry-rows { display:none; }
 .tt-telemetry[data-inline="true"] .tt-netgrid-inlinebody { flex:1 1 auto; min-height:0; }
 .tt-telemetry[data-inline="true"] .tt-netgrid-inlinebody .tt-netgrid-wrap { flex:1 1 auto; min-height:0; }
-.tt-telemetry[data-inline="true"] .tt-netgrid-inlinebody .tt-netgrid-viewport { flex:1 1 auto; height:auto; min-height:0; }
+\.tt-telemetry[data-inline="true"] .tt-netgrid-inlinebody .tt-netgrid-viewport { flex:0 0 auto; height:min(48vh,460px); min-height:0; }
+.tt-telemetry[data-inline="true"] .tt-netgrid-inlinebody .tt-finalenote { display:none; }
 .tt-telemetry[data-inline="true"] .tt-netgrid-detail { display:none; }
 .tt-netgrid-entry { display:flex; gap:5px; padding-top:6px; margin-top:2px; border-top:1px solid rgba(86,225,255,.12); }
 .tt-netgrid-entry .tt-netgrid-toggle { flex:1 1 0; }
