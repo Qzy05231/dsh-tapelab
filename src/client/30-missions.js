@@ -1336,11 +1336,11 @@ TT.Missions = (function () {
         return pushToast({ ...state, sims: { ...state.sims, [id]: true } }, 'sim.toast.done', {}, 'good')
       }
       case 'grid/open':
-        return { ...state, gridOpen: true, gridKind: ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg'].indexOf(action.kind) >= 0 ? action.kind : 'safety' }
+        return { ...state, gridOpen: true, gridKind: ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg', 'container'].indexOf(action.kind) >= 0 ? action.kind : 'safety' }
       case 'grid/close':
         return { ...state, gridOpen: false }
       case 'grid/inline': {
-        const kinds = ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg']
+        const kinds = ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg', 'container']
         const kind = kinds.indexOf(action.kind) >= 0 ? action.kind : state.gridKind || 'safety'
         return { ...state, gridInline: !state.gridInline, gridKind: kind }
       }

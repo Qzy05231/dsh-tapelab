@@ -6331,11 +6331,11 @@ TT.Missions = (function () {
         return pushToast({ ...state, sims: { ...state.sims, [id]: true } }, 'sim.toast.done', {}, 'good')
       }
       case 'grid/open':
-        return { ...state, gridOpen: true, gridKind: ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg'].indexOf(action.kind) >= 0 ? action.kind : 'safety' }
+        return { ...state, gridOpen: true, gridKind: ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg', 'container'].indexOf(action.kind) >= 0 ? action.kind : 'safety' }
       case 'grid/close':
         return { ...state, gridOpen: false }
       case 'grid/inline': {
-        const kinds = ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg']
+        const kinds = ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg', 'container']
         const kind = kinds.indexOf(action.kind) >= 0 ? action.kind : state.gridKind || 'safety'
         return { ...state, gridInline: !state.gridInline, gridKind: kind }
       }
@@ -13533,12 +13533,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.8.2'
+  const VERSION = '1.8.3'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.8.3',
+      date: '2026-11-22',
+      items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
+    },
     {
       version: '1.8.2',
       date: '2026-11-22',
@@ -13561,6 +13566,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.8.3',
+      date: '2026-11-22',
+      items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
     },
     {
       version: '1.8.2',
@@ -14193,6 +14203,7 @@ TT.dict = {
     'netgrid.sevensegTitle': '七段显示网表',
 
     'netgrid.counterTitle': '4 位计数器网表',
+    'netgrid.containerTitle': '容器内电路网表',
     'netgrid.latchHint': '每来一个区块自动推进一拍；高亮的门表示这一拍状态翻转',
     'netgrid.counterHint': '点「下一拍」推进时钟，蓝色高亮为刚刚变化的门',
     'netgrid.nextBeat': '下一拍',
@@ -15442,6 +15453,7 @@ TT.dict = {
     'netgrid.sevensegTitle': 'Seven-segment netlist',
 
     'netgrid.counterTitle': '4-bit counter netlist',
+    'netgrid.containerTitle': 'Container circuit netlist',
     'netgrid.latchHint': 'Advances one beat per block; highlighted gates changed this beat',
     'netgrid.counterHint': 'Press “next beat” to clock it; blue highlights mark changed gates',
     'netgrid.nextBeat': 'Next beat',
@@ -17886,6 +17898,14 @@ TT.UI.Panel = function Panel(props) {
         stepLabel: 'netgrid.nextBeat',
         stepAction: { type: 'counter/step' },
       }
+    } else if (state.gridKind === 'container') {
+      gridConfig = {
+        netlist: TT.Circuit.canonical.halfAdder(),
+        bits: 0,
+        inputLabels: ['A', 'B'],
+        outputLabels: ['S', 'C'],
+        titleKey: 'netgrid.containerTitle',
+      }
     } else if (TT.Safety) {
       gridConfig = {
         netlist: TT.Safety.netlist(),
@@ -18130,17 +18150,17 @@ TT.UI.Panel = function Panel(props) {
               style: narrow && !dataOpen ? { display: 'none' } : undefined,
             },
               TT.h('div', { className: 'tt-telemetry-rows' }, TT.UI.Telemetry({ state, t, resolve, api, chapterIndex: state.chapter })),
-              [3, 4, 6, 7, 8, 10].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-entry' },
+              [3, 4, 6, 7, 8, 10, 13].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-entry' },
                 TT.h('button', {
                   type: 'button',
                   className: 'tt-netgrid-toggle',
                   'data-active': state.gridInline ? 'true' : 'false',
-                  onClick: () => api.dispatch({ type: 'grid/inline', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety' })[state.chapter] }),
+                  onClick: () => api.dispatch({ type: 'grid/inline', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
                 }, state.gridInline ? `▾ ${t('netgrid.collapse')}` : `🧮 ${t('netgrid.inlineExpand')}`),
                 TT.h('button', {
                   type: 'button',
                   className: 'tt-netgrid-toggle',
-                  onClick: () => api.dispatch({ type: 'grid/open', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety' })[state.chapter] }),
+                  onClick: () => api.dispatch({ type: 'grid/open', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
                 }, `🔍 ${t('netgrid.zoom')}`),
               ) : null,
               state.gridInline && gridConfig ? TT.h('div', { className: 'tt-netgrid-inlinebody' },

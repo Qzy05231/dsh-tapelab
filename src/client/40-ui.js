@@ -34,6 +34,7 @@ TT.dict = {
     'netgrid.sevensegTitle': '七段显示网表',
 
     'netgrid.counterTitle': '4 位计数器网表',
+    'netgrid.containerTitle': '容器内电路网表',
     'netgrid.latchHint': '每来一个区块自动推进一拍；高亮的门表示这一拍状态翻转',
     'netgrid.counterHint': '点「下一拍」推进时钟，蓝色高亮为刚刚变化的门',
     'netgrid.nextBeat': '下一拍',
@@ -1283,6 +1284,7 @@ TT.dict = {
     'netgrid.sevensegTitle': 'Seven-segment netlist',
 
     'netgrid.counterTitle': '4-bit counter netlist',
+    'netgrid.containerTitle': 'Container circuit netlist',
     'netgrid.latchHint': 'Advances one beat per block; highlighted gates changed this beat',
     'netgrid.counterHint': 'Press “next beat” to clock it; blue highlights mark changed gates',
     'netgrid.nextBeat': 'Next beat',
@@ -3727,6 +3729,14 @@ TT.UI.Panel = function Panel(props) {
         stepLabel: 'netgrid.nextBeat',
         stepAction: { type: 'counter/step' },
       }
+    } else if (state.gridKind === 'container') {
+      gridConfig = {
+        netlist: TT.Circuit.canonical.halfAdder(),
+        bits: 0,
+        inputLabels: ['A', 'B'],
+        outputLabels: ['S', 'C'],
+        titleKey: 'netgrid.containerTitle',
+      }
     } else if (TT.Safety) {
       gridConfig = {
         netlist: TT.Safety.netlist(),
@@ -3971,17 +3981,17 @@ TT.UI.Panel = function Panel(props) {
               style: narrow && !dataOpen ? { display: 'none' } : undefined,
             },
               TT.h('div', { className: 'tt-telemetry-rows' }, TT.UI.Telemetry({ state, t, resolve, api, chapterIndex: state.chapter })),
-              [3, 4, 6, 7, 8, 10].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-entry' },
+              [3, 4, 6, 7, 8, 10, 13].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-entry' },
                 TT.h('button', {
                   type: 'button',
                   className: 'tt-netgrid-toggle',
                   'data-active': state.gridInline ? 'true' : 'false',
-                  onClick: () => api.dispatch({ type: 'grid/inline', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety' })[state.chapter] }),
+                  onClick: () => api.dispatch({ type: 'grid/inline', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
                 }, state.gridInline ? `▾ ${t('netgrid.collapse')}` : `🧮 ${t('netgrid.inlineExpand')}`),
                 TT.h('button', {
                   type: 'button',
                   className: 'tt-netgrid-toggle',
-                  onClick: () => api.dispatch({ type: 'grid/open', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety' })[state.chapter] }),
+                  onClick: () => api.dispatch({ type: 'grid/open', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
                 }, `🔍 ${t('netgrid.zoom')}`),
               ) : null,
               state.gridInline && gridConfig ? TT.h('div', { className: 'tt-netgrid-inlinebody' },
