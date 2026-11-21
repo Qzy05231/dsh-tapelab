@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.6'
+  const VERSION = '1.7.7'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.7',
+      date: '2026-11-22',
+      items: [
+        '紧凑网表放大：改为 6 列排布、门卡片 46px 宽、字体加大',
+        '第 3/6/7 章（半加器/4 位加法器/七段显示）也加入网表展开按钮',
+      ],
+    },
     {
       version: '1.7.6',
       date: '2026-11-22',

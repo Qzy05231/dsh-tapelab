@@ -26,8 +26,8 @@ test('the safety netlist lays out over 32 levels with 80 gates and 4 outputs', (
   assert.equal(G.fitScale(plan, 0, 0), 1)
   const compact = G.layout(TT.Safety.netlist(), { compact: true })
   assert.equal(compact.gateCards.length, 80)
-  assert.ok(compact.width < 380 && compact.height < 340)
-  assert.ok(G.fitScale(compact, 320, 350) > 0.8)
+  assert.ok(compact.width < 340 && compact.height < 440)
+  assert.ok(G.fitScale(compact, 320, 430) > 0.8)
   for (const card of plan.gateCards) {
     assert.ok(plan.nodes[card.node], `missing position for gate ${card.index}`)
     assert.equal(card.a, netlist.gates[card.index].a)

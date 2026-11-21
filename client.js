@@ -6330,7 +6330,7 @@ TT.Missions = (function () {
         return pushToast({ ...state, sims: { ...state.sims, [id]: true } }, 'sim.toast.done', {}, 'good')
       }
       case 'grid/open':
-        return { ...state, gridOpen: true, gridKind: ['safety', 'latch', 'counter'].indexOf(action.kind) >= 0 ? action.kind : 'safety' }
+        return { ...state, gridOpen: true, gridKind: ['safety', 'latch', 'counter', 'half', 'adder', 'sevenseg'].indexOf(action.kind) >= 0 ? action.kind : 'safety' }
       case 'grid/close':
         return { ...state, gridOpen: false }
       case 'update/open':
@@ -13513,12 +13513,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.6'
+  const VERSION = '1.7.7'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.7',
+      date: '2026-11-22',
+      items: [
+        '紧凑网表放大：改为 6 列排布、门卡片 46px 宽、字体加大',
+        '第 3/6/7 章（半加器/4 位加法器/七段显示）也加入网表展开按钮',
+      ],
+    },
     {
       version: '1.7.6',
       date: '2026-11-22',
@@ -13837,11 +13845,13 @@ TT.NetlistGrid = (function () {
     // Matrix layout like a die photo: gates wrap in rows (8 columns), with the
     // logic depth shown as L1..L32 on each card instead of as rows.
     const count = netlist.gates.length
-    const columns = count <= 4 ? Math.max(1, count) : count <= 16 ? 4 : 8
+    const columns = compact
+      ? (count <= 16 ? 4 : 6)
+      : (count <= 4 ? Math.max(1, count) : count <= 16 ? 4 : 8)
     const rowsCount = Math.max(1, Math.ceil(count / columns))
-    const cellW = compact ? 38 : 92
-    const cellH = compact ? 19 : 32
-    const gapX = compact ? 2 : 6
+    const cellW = compact ? 46 : 92
+    const cellH = compact ? 20 : 32
+    const gapX = compact ? 3 : 6
     const gapY = compact ? 3 : 5
     const inputW = compact ? 20 : 52
     const inputGap = compact ? 2 : 4
@@ -14107,6 +14117,10 @@ TT.dict = {
     'panel.guide': '新手引导',
     'netgrid.title': '安全电路网表',
     'netgrid.latchTitle': 'SR 锁存器网表',
+    'netgrid.halfTitle': '半加器网表',
+    'netgrid.adderTitle': '4 位加法器网表',
+    'netgrid.sevensegTitle': '七段显示网表',
+
     'netgrid.counterTitle': '4 位计数器网表',
     'netgrid.latchHint': '每来一个区块自动推进一拍；高亮的门表示这一拍状态翻转',
     'netgrid.counterHint': '点「下一拍」推进时钟，蓝色高亮为刚刚变化的门',
@@ -15349,6 +15363,10 @@ TT.dict = {
     'panel.guide': 'Getting started',
     'netgrid.title': 'Safety netlist',
     'netgrid.latchTitle': 'SR latch netlist',
+    'netgrid.halfTitle': 'Half adder netlist',
+    'netgrid.adderTitle': '4-bit adder netlist',
+    'netgrid.sevensegTitle': 'Seven-segment netlist',
+
     'netgrid.counterTitle': '4-bit counter netlist',
     'netgrid.latchHint': 'Advances one beat per block; highlighted gates changed this beat',
     'netgrid.counterHint': 'Press “next beat” to clock it; blue highlights mark changed gates',
@@ -17301,21 +17319,21 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-rightcol[data-netgrid="true"] .tt-telemetry { max-height:min(58vh,560px); }
 .tt-netgrid-compact .tt-netgrid-gate { flex-direction:row; justify-content:space-between; align-items:center;
   padding:0 2px; gap:1px; border-radius:3px; }
-.tt-netgrid-compact .tt-netgrid-gatetag { font-size:5.5px; letter-spacing:-.2px; }
-.tt-netgrid-compact .tt-netgrid-gateval { font-size:7px; }
+.tt-netgrid-compact .tt-netgrid-gatetag { font-size:6.5px; letter-spacing:-.2px; }
+.tt-netgrid-compact .tt-netgrid-gateval { font-size:9px; }
 .tt-netgrid-compact .tt-netgrid-input { border-radius:3px; padding:0 1px; }
-.tt-netgrid-compact .tt-netgrid-input b { font-size:5px; }
-.tt-netgrid-compact .tt-netgrid-input span { font-size:6px; }
-.tt-netgrid-compact .tt-netgrid-output { font-size:5px; padding:0 2px; border-radius:3px; }
+.tt-netgrid-compact .tt-netgrid-input b { font-size:6px; }
+.tt-netgrid-compact .tt-netgrid-input span { font-size:7px; }
+.tt-netgrid-compact .tt-netgrid-output { font-size:6px; padding:0 2px; border-radius:3px; }
 .tt-netgrid-compact .tt-netgrid-output i { width:4px; height:4px; }
-.tt-netgrid-compact .tt-netgrid-output b { font-size:6px; }
+.tt-netgrid-compact .tt-netgrid-output b { font-size:7px; }
 .tt-netgrid-compact .tt-netgrid-const { display:none; }
 .tt-netgrid-compact .tt-netgrid-wire { stroke-width:.8; }
 
 .tt-netgrid-inlinehead { display:flex; justify-content:flex-end; padding-top:5px; margin-top:2px;
   border-top:1px solid rgba(86,225,255,.12); }
 .tt-netgrid-inlinebody { display:flex; flex-direction:column; gap:6px; min-height:0; }
-.tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(36vh,350px); }
+.tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(46vh,430px); }
 .tt-netgrid-inlinebody .tt-netgrid-zoom { display:none; }
 
 
@@ -17726,7 +17744,17 @@ TT.UI.Panel = function Panel(props) {
   const versionModal = state.updateOpen && TT.VersionUI ? TT.h(TT.VersionUI.Page, { state, t, api }) : null
   let gridConfig = null
   if (state.gridOpen) {
-    if (state.gridKind === 'latch' && TT.Circuit) {
+    if (state.gridKind === 'half' && TT.Circuit) {
+      gridConfig = {
+        netlist: (state.play && state.play.halfNetlist) || TT.Circuit.canonical.halfAdder(),
+        bits: (state.play && state.play.bits) || 0,
+        stateBits: 0,
+        inputLabels: ['A', 'B'],
+        outputLabels: ['S', 'C'],
+        titleKey: 'netgrid.halfTitle',
+        stepLabel: null,
+      }
+    } else if (state.gridKind === 'latch' && TT.Circuit) {
       gridConfig = {
         netlist: (state.play && state.play.latch) || TT.Circuit.canonical.srLatch(),
         bits: ((state.play && state.play.S) || 0) | (((state.play && state.play.R) || 0) << 1),
@@ -17734,6 +17762,27 @@ TT.UI.Panel = function Panel(props) {
         inputLabels: ['S', 'R'],
         outputLabels: ['Q', 'Q̄'],
         titleKey: 'netgrid.latchTitle',
+        stepLabel: null,
+      }
+    } else if (state.gridKind === 'adder' && TT.Circuit) {
+      gridConfig = {
+        netlist: (state.play && state.play.adder) || TT.Circuit.canonical.fourBitAdder(),
+        bits: (state.play && state.play.bits) || 0,
+        stateBits: 0,
+        inputLabels: ['A0', 'A1', 'A2', 'A3', 'B0', 'B1', 'B2', 'B3', 'Cin'],
+        outputLabels: ['S0', 'S1', 'S2', 'S3', 'Cout'],
+        titleKey: 'netgrid.adderTitle',
+        stepLabel: null,
+      }
+    } else if (state.gridKind === 'sevenseg' && TT.Circuit) {
+      const inputs = (state.play && state.play.inputs) || [0, 0, 0, 0]
+      gridConfig = {
+        netlist: TT.Circuit.canonical.sevenSegment(),
+        bits: inputs.reduce((acc, value, index) => acc | ((value ? 1 : 0) << index), 0),
+        stateBits: 0,
+        inputLabels: ['D0', 'D1', 'D2', 'D3'],
+        outputLabels: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+        titleKey: 'netgrid.sevensegTitle',
         stepLabel: null,
       }
     } else if (state.gridKind === 'counter' && TT.Circuit) {
@@ -17970,12 +18019,12 @@ TT.UI.Panel = function Panel(props) {
               style: narrow && !dataOpen ? { display: 'none' } : undefined,
             },
               TT.UI.Telemetry({ state, t, resolve, api, chapterIndex: state.chapter }),
-              [4, 8, 10].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-inlinehead' },
+              [3, 4, 6, 7, 8, 10].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-inlinehead' },
                 TT.h('button', {
                   type: 'button',
                   className: 'tt-netgrid-toggle',
                   'data-active': state.gridOpen ? 'true' : 'false',
-                  onClick: () => api.dispatch(state.gridOpen ? { type: 'grid/close' } : { type: 'grid/open', kind: state.chapter === 4 ? 'latch' : state.chapter === 8 ? 'counter' : 'safety' }),
+                  onClick: () => api.dispatch(state.gridOpen ? { type: 'grid/close' } : { type: 'grid/open', kind: ({ 3: 'half', 4: 'latch', 6: 'adder', 7: 'sevenseg', 8: 'counter', 10: 'safety' })[state.chapter] }),
                 }, state.gridOpen ? `▾ ${t('netgrid.collapse')}` : `🧮 ${t('netgrid.expandWide')}`),
               ) : null,
               state.gridOpen && gridConfig ? TT.h('div', { className: 'tt-netgrid-inlinebody' },
@@ -17985,7 +18034,9 @@ TT.UI.Panel = function Panel(props) {
                   stateBits: gridConfig.stateBits,
                   onToggle: state.gridKind === 'safety'
                     ? (index) => api.dispatch({ type: 'safety/toggle', index })
-                    : (gridConfig.inputLabels.length ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' }) : undefined),
+                    : state.gridKind === 'latch'
+                      ? (index) => api.dispatch({ type: 'latch/toggle', kind: index === 1 ? 'reset' : 'set' })
+                      : undefined,
                   t,
                   inputLabels: gridConfig.inputLabels,
                   outputLabels: gridConfig.outputLabels,

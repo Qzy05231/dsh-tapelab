@@ -29,11 +29,13 @@ TT.NetlistGrid = (function () {
     // Matrix layout like a die photo: gates wrap in rows (8 columns), with the
     // logic depth shown as L1..L32 on each card instead of as rows.
     const count = netlist.gates.length
-    const columns = count <= 4 ? Math.max(1, count) : count <= 16 ? 4 : 8
+    const columns = compact
+      ? (count <= 16 ? 4 : 6)
+      : (count <= 4 ? Math.max(1, count) : count <= 16 ? 4 : 8)
     const rowsCount = Math.max(1, Math.ceil(count / columns))
-    const cellW = compact ? 38 : 92
-    const cellH = compact ? 19 : 32
-    const gapX = compact ? 2 : 6
+    const cellW = compact ? 46 : 92
+    const cellH = compact ? 20 : 32
+    const gapX = compact ? 3 : 6
     const gapY = compact ? 3 : 5
     const inputW = compact ? 20 : 52
     const inputGap = compact ? 2 : 4
