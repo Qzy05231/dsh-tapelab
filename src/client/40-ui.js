@@ -3221,10 +3221,24 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-rightcol[data-netgrid="true"] { width:min(330px,38%); }
 .tt-telemetry, .tt-telemetry[data-narrow="true"] { width:100%; max-width:100%; }
 .tt-rightcol[data-netgrid="true"] .tt-telemetry { max-height:min(58vh,560px); }
+.tt-netgrid-compact .tt-netgrid-gate { flex-direction:row; justify-content:space-between; align-items:center;
+  padding:0 2px; gap:1px; border-radius:3px; }
+.tt-netgrid-compact .tt-netgrid-gatetag { font-size:5.5px; letter-spacing:-.2px; }
+.tt-netgrid-compact .tt-netgrid-gateval { font-size:7px; }
+.tt-netgrid-compact .tt-netgrid-input { border-radius:3px; padding:0 1px; }
+.tt-netgrid-compact .tt-netgrid-input b { font-size:5px; }
+.tt-netgrid-compact .tt-netgrid-input span { font-size:6px; }
+.tt-netgrid-compact .tt-netgrid-output { font-size:5px; padding:0 2px; border-radius:3px; }
+.tt-netgrid-compact .tt-netgrid-output i { width:4px; height:4px; }
+.tt-netgrid-compact .tt-netgrid-output b { font-size:6px; }
+.tt-netgrid-compact .tt-netgrid-const { display:none; }
+.tt-netgrid-compact .tt-netgrid-wire { stroke-width:.8; }
+
 .tt-netgrid-inlinehead { display:flex; justify-content:flex-end; padding-top:5px; margin-top:2px;
   border-top:1px solid rgba(86,225,255,.12); }
 .tt-netgrid-inlinebody { display:flex; flex-direction:column; gap:6px; min-height:0; }
 .tt-netgrid-inlinebody .tt-netgrid-viewport { height:min(36vh,350px); }
+.tt-netgrid-inlinebody .tt-netgrid-zoom { display:none; }
 
 
 
@@ -3897,7 +3911,7 @@ TT.UI.Panel = function Panel(props) {
                   t,
                   inputLabels: gridConfig.inputLabels,
                   outputLabels: gridConfig.outputLabels,
-                  autoFit: false,
+                  compactLayout: true,
                 }),
                 gridConfig.stepLabel ? TT.h('div', { className: 'tt-labrow', style: { justifyContent: 'center' } },
                   TT.h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary', onClick: () => api.dispatch(gridConfig.stepAction) }, `⏭ ${t(gridConfig.stepLabel)}`),

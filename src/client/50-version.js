@@ -5,12 +5,17 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.7.5'
+  const VERSION = '1.7.6'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.7.6',
+      date: '2026-11-22',
+      items: ['窄框内网表改用紧凑排版：80 门 8×10 全部一屏显示，无滚动条'],
+    },
     {
       version: '1.7.5',
       date: '2026-11-22',

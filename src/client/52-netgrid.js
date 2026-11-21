@@ -11,7 +11,8 @@ TT.NetlistGrid = (function () {
     return 2 + (netlist.nIn || 0) + (netlist.nState || 0) + netlist.gates.length
   }
 
-  function layout(netlist) {
+  function layout(netlist, options) {
+    const compact = Boolean(options && options.compact)
     const nIn = netlist.nIn || 0
     const nState = netlist.nState || 0
     const n = nodeCount(netlist)
@@ -30,17 +31,19 @@ TT.NetlistGrid = (function () {
     const count = netlist.gates.length
     const columns = count <= 4 ? Math.max(1, count) : count <= 16 ? 4 : 8
     const rowsCount = Math.max(1, Math.ceil(count / columns))
-    const cellW = 92
-    const cellH = 32
-    const gapX = 6
-    const gapY = 5
-    const inputW = 52
-    const inputGap = 4
-    const inputY = 30
-    const topY = inputY + 30
+    const cellW = compact ? 38 : 92
+    const cellH = compact ? 19 : 32
+    const gapX = compact ? 2 : 6
+    const gapY = compact ? 3 : 5
+    const inputW = compact ? 20 : 52
+    const inputGap = compact ? 2 : 4
+    const inputY = compact ? 8 : 30
+    const inputRowsCompact = compact && nIn > 8 ? 2 : 1
+    const topY = inputY + (compact ? inputRowsCompact * 16 + 8 : 30)
     const gridW = columns * cellW + (columns - 1) * gapX
-    const inputWTotal = nIn * inputW + (nIn - 1) * inputGap
-    const width = Math.max(560, gridW + 60, inputWTotal + 60)
+    const inputPerRow = compact && nIn > 8 ? Math.ceil(nIn / 2) : nIn
+    const inputWTotal = inputPerRow * inputW + (inputPerRow - 1) * inputGap
+    const width = Math.max(compact ? 300 : 560, gridW + (compact ? 10 : 60), inputWTotal + (compact ? 10 : 60))
     const nodes = Object.create(null)
     const startX = (width - gridW) / 2
     const inputStartX = (width - inputWTotal) / 2
@@ -48,11 +51,13 @@ TT.NetlistGrid = (function () {
     nodes[0] = { x: 10, y: 6, w: 24, h: 18, kind: 'const', label: '0' }
     nodes[1] = { x: 40, y: 6, w: 24, h: 18, kind: 'const', label: '1' }
     for (let i = 0; i < nIn; i += 1) {
+      const inputRow = compact && nIn > 8 ? Math.floor(i / inputPerRow) : 0
+      const inputCol = compact && nIn > 8 ? i % inputPerRow : i
       nodes[2 + i] = {
-        x: inputStartX + i * (inputW + inputGap),
-        y: inputY,
+        x: inputStartX + inputCol * (inputW + inputGap),
+        y: inputY + inputRow * 16,
         w: inputW,
-        h: 22,
+        h: compact ? 13 : 22,
         kind: 'input',
         index: i,
       }
@@ -77,11 +82,12 @@ TT.NetlistGrid = (function () {
       nodes[node] = { x: card.x, y: card.y, w: cellW, h: cellH, kind: 'gate', card }
     })
     const outputY = topY + rowsCount * (cellH + gapY) + 8
+    const outputW = compact ? 46 : 90
     const outputs = netlist.outputs.map((node, index) => {
-      const totalW = netlist.outputs.length * 96
-      return { x: (width - totalW) / 2 + index * 96, y: outputY, w: 90, h: 26, node, index }
+      const totalW = netlist.outputs.length * (outputW + (compact ? 2 : 6))
+      return { x: (width - totalW) / 2 + index * (outputW + (compact ? 2 : 6)), y: outputY, w: outputW, h: compact ? 14 : 26, node, index }
     })
-    const height = outputY + 52
+    const height = outputY + (compact ? 24 : 52)
     return { nodes, gateCards, outputs, width, height, maxLevel, rows: [], nIn, inputRows: 1 }
   }
 
@@ -111,9 +117,9 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout } = props
     const [selected, setSelected] = React.useState(null)
-    const plan = TT.NetlistGrid.layout(netlist)
+    const plan = TT.NetlistGrid.layout(netlist, { compact: Boolean(compactLayout) })
     const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
     const previousRef = React.useRef(null)
     const changed = new Set()
@@ -183,7 +189,7 @@ TT.NetlistGridUI = (function () {
     const fit = TT.NetlistGrid.fitScale(plan, viewport.w, viewport.h)
     const scale = zoom || fit
 
-    return h('div', { className: 'tt-netgrid-wrap' },
+    return h('div', { className: 'tt-netgrid-wrap' + (compactLayout ? ' tt-netgrid-compact' : '') },
       h('div', { className: 'tt-netgrid-viewport', ref: viewportRef },
         h('div', { className: 'tt-netgrid-zoom' },
           h('button', { type: 'button', className: 'tt-chip', onClick: () => setZoom(Math.max(0.12, scale / 1.25)) }, '−'),
