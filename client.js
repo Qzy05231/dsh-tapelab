@@ -9392,6 +9392,13 @@ TT.ArcadeUI = (function () {
       if (TT.Arcade.isBlackMidi(midi)) blackKeys.push(midi)
       else whiteKeys.push(midi)
     }
+    const octave = music.octave === undefined ? 4 : music.octave
+    const keyHints = {}
+    Object.keys(TT.Arcade.PIANO_KEYS).forEach((key) => {
+      const raw = 12 * (octave + 1) + TT.Arcade.PIANO_KEYS[key]
+      if (raw < TT.Arcade.PIANO_MIN || raw > TT.Arcade.PIANO_MAX) return
+      keyHints[raw] = keyHints[raw] ? `${keyHints[raw]} / ${key.toUpperCase()}` : key.toUpperCase()
+    })
 
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
@@ -9470,9 +9477,12 @@ TT.ArcadeUI = (function () {
               type: 'button',
               className: 'tt-piano-white',
               'data-active': music.lastMidi === midi ? 'true' : 'false',
-              title: TT.Arcade.midiName(midi),
+              title: `${TT.Arcade.midiName(midi)}${keyHints[midi] ? ` · ${keyHints[midi]}` : ''}`,
               onClick: () => api.dispatch({ type: 'music/key', midi }),
-            }, h('span', null, midi % 12 === 0 ? TT.Arcade.midiName(midi) : ''))),
+            },
+              h('span', { className: 'tt-piano-notelabel' }, midi % 12 === 0 ? TT.Arcade.midiName(midi) : ''),
+              keyHints[midi] ? h('kbd', { className: 'tt-piano-keyhint' }, keyHints[midi]) : null,
+            )),
             blackKeys.map((midi) => {
               const whiteIndex = whiteKeys.indexOf(midi - 1)
               return h('button', {
@@ -9480,14 +9490,14 @@ TT.ArcadeUI = (function () {
                 type: 'button',
                 className: 'tt-piano-black-key',
                 'data-active': music.lastMidi === midi ? 'true' : 'false',
-                title: TT.Arcade.midiName(midi),
+                title: `${TT.Arcade.midiName(midi)}${keyHints[midi] ? ` · ${keyHints[midi]}` : ''}`,
                 style: {
                   left: `${((whiteIndex + 1) / whiteKeys.length) * 100}%`,
                   width: `${(100 / whiteKeys.length) * 0.62}%`,
                   transform: 'translateX(-50%)',
                 },
                 onClick: () => api.dispatch({ type: 'music/key', midi }),
-              })
+              }, keyHints[midi] ? h('kbd', { className: 'tt-piano-keyhint' }, keyHints[midi]) : null)
             }),
           ),
         ),
@@ -13814,12 +13824,22 @@ TT.Version = (function () {
       items: ['切换章节时自动切换/关闭网表，不再停留在上一章的网表'],
     },
     {
+      version: '1.8.5',
+      date: '2026-11-22',
+      items: ['钢琴键盘在每个键下方显示对应的电脑键盘字母，随八度切换更新'],
+    },
+    {
       version: '1.8.4',
       date: '2026-11-22',
       items: [
         '修正各章网表映射：第 1 章与非门、第 2 章半加器、第 5 章乐高全加器补齐入口',
         '巨兽 CPU 章移除错误的 4 位加法器网表；第 7 章改用实际综合出的网表',
       ],
+    },
+    {
+      version: '1.8.5',
+      date: '2026-11-22',
+      items: ['钢琴键盘在每个键下方显示对应的电脑键盘字母，随八度切换更新'],
     },
     {
       version: '1.8.4',
@@ -13833,6 +13853,11 @@ TT.Version = (function () {
       version: '1.8.3',
       date: '2026-11-22',
       items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
+    },
+    {
+      version: '1.8.5',
+      date: '2026-11-22',
+      items: ['钢琴键盘在每个键下方显示对应的电脑键盘字母，随八度切换更新'],
     },
     {
       version: '1.8.4',
@@ -13916,12 +13941,22 @@ TT.Version = (function () {
       items: ['切换章节时自动切换/关闭网表，不再停留在上一章的网表'],
     },
     {
+      version: '1.8.5',
+      date: '2026-11-22',
+      items: ['钢琴键盘在每个键下方显示对应的电脑键盘字母，随八度切换更新'],
+    },
+    {
       version: '1.8.4',
       date: '2026-11-22',
       items: [
         '修正各章网表映射：第 1 章与非门、第 2 章半加器、第 5 章乐高全加器补齐入口',
         '巨兽 CPU 章移除错误的 4 位加法器网表；第 7 章改用实际综合出的网表',
       ],
+    },
+    {
+      version: '1.8.5',
+      date: '2026-11-22',
+      items: ['钢琴键盘在每个键下方显示对应的电脑键盘字母，随八度切换更新'],
     },
     {
       version: '1.8.4',
@@ -13935,6 +13970,11 @@ TT.Version = (function () {
       version: '1.8.3',
       date: '2026-11-22',
       items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
+    },
+    {
+      version: '1.8.5',
+      date: '2026-11-22',
+      items: ['钢琴键盘在每个键下方显示对应的电脑键盘字母，随八度切换更新'],
     },
     {
       version: '1.8.4',
@@ -17731,6 +17771,11 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 4px 4px; cursor:pointer;
   background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:7px; user-select:none; overflow:hidden; }
 .tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
+.tt-piano-white { position:relative; }
+.tt-piano-notelabel { font-size:7px; line-height:1; color:rgba(8,20,30,.75); }
+.tt-piano-keyhint { display:block; margin-top:2px; font-size:6.5px; line-height:1; font-family:var(--dsh-font-family-mono, monospace);
+  color:rgba(10,30,45,.72); opacity:.9; white-space:nowrap; }
+.tt-piano-black-key .tt-piano-keyhint { color:rgba(200,230,255,.85); margin-top:0; font-size:6px; }
 .tt-piano-white[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
   box-shadow:inset 0 0 18px rgba(255,195,92,.6); }
 .tt-piano-black-key { position:absolute; top:0; height:64px; z-index:2; cursor:pointer;

@@ -3180,6 +3180,11 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 4px 4px; cursor:pointer;
   background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:7px; user-select:none; overflow:hidden; }
 .tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
+.tt-piano-white { position:relative; }
+.tt-piano-notelabel { font-size:7px; line-height:1; color:rgba(8,20,30,.75); }
+.tt-piano-keyhint { display:block; margin-top:2px; font-size:6.5px; line-height:1; font-family:var(--dsh-font-family-mono, monospace);
+  color:rgba(10,30,45,.72); opacity:.9; white-space:nowrap; }
+.tt-piano-black-key .tt-piano-keyhint { color:rgba(200,230,255,.85); margin-top:0; font-size:6px; }
 .tt-piano-white[data-active="true"] { background:linear-gradient(180deg,#ffe9ae,#ffc35c); border-color:var(--tt-amber);
   box-shadow:inset 0 0 18px rgba(255,195,92,.6); }
 .tt-piano-black-key { position:absolute; top:0; height:64px; z-index:2; cursor:pointer;

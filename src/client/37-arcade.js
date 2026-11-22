@@ -505,6 +505,13 @@ TT.ArcadeUI = (function () {
       if (TT.Arcade.isBlackMidi(midi)) blackKeys.push(midi)
       else whiteKeys.push(midi)
     }
+    const octave = music.octave === undefined ? 4 : music.octave
+    const keyHints = {}
+    Object.keys(TT.Arcade.PIANO_KEYS).forEach((key) => {
+      const raw = 12 * (octave + 1) + TT.Arcade.PIANO_KEYS[key]
+      if (raw < TT.Arcade.PIANO_MIN || raw > TT.Arcade.PIANO_MAX) return
+      keyHints[raw] = keyHints[raw] ? `${keyHints[raw]} / ${key.toUpperCase()}` : key.toUpperCase()
+    })
 
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
@@ -583,9 +590,12 @@ TT.ArcadeUI = (function () {
               type: 'button',
               className: 'tt-piano-white',
               'data-active': music.lastMidi === midi ? 'true' : 'false',
-              title: TT.Arcade.midiName(midi),
+              title: `${TT.Arcade.midiName(midi)}${keyHints[midi] ? ` · ${keyHints[midi]}` : ''}`,
               onClick: () => api.dispatch({ type: 'music/key', midi }),
-            }, h('span', null, midi % 12 === 0 ? TT.Arcade.midiName(midi) : ''))),
+            },
+              h('span', { className: 'tt-piano-notelabel' }, midi % 12 === 0 ? TT.Arcade.midiName(midi) : ''),
+              keyHints[midi] ? h('kbd', { className: 'tt-piano-keyhint' }, keyHints[midi]) : null,
+            )),
             blackKeys.map((midi) => {
               const whiteIndex = whiteKeys.indexOf(midi - 1)
               return h('button', {
@@ -593,14 +603,14 @@ TT.ArcadeUI = (function () {
                 type: 'button',
                 className: 'tt-piano-black-key',
                 'data-active': music.lastMidi === midi ? 'true' : 'false',
-                title: TT.Arcade.midiName(midi),
+                title: `${TT.Arcade.midiName(midi)}${keyHints[midi] ? ` · ${keyHints[midi]}` : ''}`,
                 style: {
                   left: `${((whiteIndex + 1) / whiteKeys.length) * 100}%`,
                   width: `${(100 / whiteKeys.length) * 0.62}%`,
                   transform: 'translateX(-50%)',
                 },
                 onClick: () => api.dispatch({ type: 'music/key', midi }),
-              })
+              }, keyHints[midi] ? h('kbd', { className: 'tt-piano-keyhint' }, keyHints[midi]) : null)
             }),
           ),
         ),
