@@ -500,7 +500,7 @@ TT.ArcadeUI = (function () {
     const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
     const windowStart = Math.max(0, Math.min(tune.notes.length - 16, (music.step | 0) - 7))
     const notes = tune.notes.slice(windowStart, windowStart + 16)
-    const [showNet, setShowNet] = React.useState(false)
+    const [showNet, setShowNet] = React.useState(true)
     const whiteKeys = []
     const blackKeys = []
     for (let midi = TT.Arcade.PIANO_MIN; midi <= TT.Arcade.PIANO_MAX; midi += 1) {
@@ -526,7 +526,7 @@ TT.ArcadeUI = (function () {
       }).filter(Boolean),
     }))
 
-    return h('div', { className: 'tt-labgrid' },
+    return h('div', { className: 'tt-labgrid tt-musicgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
         h('div', { className: 'tt-music-top' },
           h('div', { className: 'tt-music-controls' },
@@ -715,7 +715,7 @@ TT.ArcadeUI = (function () {
     const { arcade, t, api } = props
     const lock = arcade.lock
     const guess = lock.guess
-    const [showNet, setShowNet] = React.useState(false)
+    const [showNet, setShowNet] = React.useState(true)
     const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     return h('div', { className: 'tt-labgrid' },
@@ -763,7 +763,7 @@ TT.ArcadeUI = (function () {
   function Guess(props) {
     const { arcade, t, api } = props
     const game = arcade.guess
-    const [showNet, setShowNet] = React.useState(false)
+    const [showNet, setShowNet] = React.useState(true)
     const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     return h('div', { className: 'tt-labgrid' },
@@ -816,7 +816,7 @@ TT.ArcadeUI = (function () {
     const vote = arcade.vote
     const inputs = [vote.a, vote.b, vote.c]
     const out = TT.Arcade.majority(vote.a, vote.b, vote.c)
-    const [showNet, setShowNet] = React.useState(false)
+    const [showNet, setShowNet] = React.useState(true)
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.vote.title'), hint: t('arcade.vote.hint') },
         h('div', { className: 'tt-labrow' }, ['A', 'B', 'C'].map((name, index) =>

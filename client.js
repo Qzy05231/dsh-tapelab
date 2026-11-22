@@ -9387,7 +9387,7 @@ TT.ArcadeUI = (function () {
     const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
     const windowStart = Math.max(0, Math.min(tune.notes.length - 16, (music.step | 0) - 7))
     const notes = tune.notes.slice(windowStart, windowStart + 16)
-    const [showNet, setShowNet] = React.useState(false)
+    const [showNet, setShowNet] = React.useState(true)
     const whiteKeys = []
     const blackKeys = []
     for (let midi = TT.Arcade.PIANO_MIN; midi <= TT.Arcade.PIANO_MAX; midi += 1) {
@@ -9413,7 +9413,7 @@ TT.ArcadeUI = (function () {
       }).filter(Boolean),
     }))
 
-    return h('div', { className: 'tt-labgrid' },
+    return h('div', { className: 'tt-labgrid tt-musicgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
         h('div', { className: 'tt-music-top' },
           h('div', { className: 'tt-music-controls' },
@@ -9602,7 +9602,7 @@ TT.ArcadeUI = (function () {
     const { arcade, t, api } = props
     const lock = arcade.lock
     const guess = lock.guess
-    const [showNet, setShowNet] = React.useState(false)
+    const [showNet, setShowNet] = React.useState(true)
     const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     return h('div', { className: 'tt-labgrid' },
@@ -9650,7 +9650,7 @@ TT.ArcadeUI = (function () {
   function Guess(props) {
     const { arcade, t, api } = props
     const game = arcade.guess
-    const [showNet, setShowNet] = React.useState(false)
+    const [showNet, setShowNet] = React.useState(true)
     const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     return h('div', { className: 'tt-labgrid' },
@@ -9703,7 +9703,7 @@ TT.ArcadeUI = (function () {
     const vote = arcade.vote
     const inputs = [vote.a, vote.b, vote.c]
     const out = TT.Arcade.majority(vote.a, vote.b, vote.c)
-    const [showNet, setShowNet] = React.useState(false)
+    const [showNet, setShowNet] = React.useState(true)
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.vote.title'), hint: t('arcade.vote.hint') },
         h('div', { className: 'tt-labrow' }, ['A', 'B', 'C'].map((name, index) =>
@@ -13791,12 +13791,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.6'
+  const VERSION = '1.9.7'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.7',
+      date: '2026-11-22',
+      items: [
+        '音乐盒页改为左宽右窄（约 1.7:0.55），游戏区、钢琴和网表更大',
+        '计数器网表默认展开，进入即可看到，仍可一键收起',
+      ],
+    },
     {
       version: '1.9.6',
       date: '2026-11-22',
@@ -13985,6 +13993,14 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.7',
+      date: '2026-11-22',
+      items: [
+        '音乐盒页改为左宽右窄（约 1.7:0.55），游戏区、钢琴和网表更大',
+        '计数器网表默认展开，进入即可看到，仍可一键收起',
+      ],
     },
     {
       version: '1.9.6',
@@ -17940,6 +17956,8 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 4px 4px; cursor:pointer;
   background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:7px; user-select:none; overflow:hidden; }
 .tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
+.tt-musicgrid { grid-template-columns:minmax(0,1.7fr) minmax(0,.55fr); }
+@media (max-width: 1100px) { .tt-musicgrid { grid-template-columns:1fr; } }
 .tt-music-top { display:flex; align-items:flex-start; gap:10px; }
 .tt-music-controls { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:6px; }
 .tt-music-net { flex:0 0 min(46%, 470px); min-width:0; display:flex; flex-direction:column; gap:4px; padding:7px 8px;

@@ -3186,6 +3186,8 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 4px 4px; cursor:pointer;
   background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:7px; user-select:none; overflow:hidden; }
 .tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
+.tt-musicgrid { grid-template-columns:minmax(0,1.7fr) minmax(0,.55fr); }
+@media (max-width: 1100px) { .tt-musicgrid { grid-template-columns:1fr; } }
 .tt-music-top { display:flex; align-items:flex-start; gap:10px; }
 .tt-music-controls { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:6px; }
 .tt-music-net { flex:0 0 min(46%, 470px); min-width:0; display:flex; flex-direction:column; gap:4px; padding:7px 8px;

@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.6'
+  const VERSION = '1.9.7'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.7',
+      date: '2026-11-22',
+      items: [
+        '音乐盒页改为左宽右窄（约 1.7:0.55），游戏区、钢琴和网表更大',
+        '计数器网表默认展开，进入即可看到，仍可一键收起',
+      ],
+    },
     {
       version: '1.9.6',
       date: '2026-11-22',
@@ -199,6 +207,14 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.7',
+      date: '2026-11-22',
+      items: [
+        '音乐盒页改为左宽右窄（约 1.7:0.55），游戏区、钢琴和网表更大',
+        '计数器网表默认展开，进入即可看到，仍可一键收起',
+      ],
     },
     {
       version: '1.9.6',
