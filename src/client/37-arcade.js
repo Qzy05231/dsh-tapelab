@@ -690,6 +690,7 @@ TT.ArcadeUI = (function () {
     const lock = arcade.lock
     const guess = lock.guess
     const [showNet, setShowNet] = React.useState(false)
+    const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.lock.title'), hint: t('arcade.lock.hint') },
@@ -724,10 +725,11 @@ TT.ArcadeUI = (function () {
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),
         netlist: compareNetlist,
-        bits: lock.solved ? ((guess | (lock.code << 4)) >>> 0) : 0,
+        bits: probe,
         t,
-        inputLabels: ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3'],
+        inputLabels: ['A0', 'A1', 'A2', 'A3', 'B0', 'B1', 'B2', 'B3'],
         outputLabels: ['EQ'],
+        onToggle: (index) => setProbe((value) => value ^ (1 << index)),
       }) : null,
     )
   }
@@ -736,6 +738,7 @@ TT.ArcadeUI = (function () {
     const { arcade, t, api } = props
     const game = arcade.guess
     const [showNet, setShowNet] = React.useState(false)
+    const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.guess.title'), hint: t('arcade.guess.hint') },
@@ -773,10 +776,11 @@ TT.ArcadeUI = (function () {
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),
         netlist: compareNetlist,
-        bits: game.solved ? (((game.guess | (game.secret << 4)) >>> 0)) : 0,
+        bits: probe,
         t,
-        inputLabels: ['G0', 'G1', 'G2', 'G3', 'S0', 'S1', 'S2', 'S3'],
+        inputLabels: ['A0', 'A1', 'A2', 'A3', 'B0', 'B1', 'B2', 'B3'],
         outputLabels: ['EQ'],
+        onToggle: (index) => setProbe((value) => value ^ (1 << index)),
       }) : null,
     )
   }
@@ -823,6 +827,7 @@ TT.ArcadeUI = (function () {
         t,
         inputLabels: ['A', 'B', 'C'],
         outputLabels: ['PASS'],
+        onToggle: (index) => api.dispatch({ type: 'vote/toggle', index }),
       }) : null,
     )
   }
@@ -833,6 +838,7 @@ TT.ArcadeUI = (function () {
     const puzzles = debug.puzzles || []
     const puzzle = puzzles[debug.level]
     const [showGrid, setShowGrid] = React.useState(false)
+    const [probe, setProbe] = React.useState(0)
     const fixed = puzzle && debug.selected !== null && debug.selected !== undefined
       ? TT.Arcade.fixedNetlist(puzzle, debug.selected)
       : null
@@ -880,10 +886,11 @@ TT.ArcadeUI = (function () {
           ? h('div', { className: 'tt-debuggrid', style: { marginTop: 6 } },
               h(TT.NetlistGridUI.Grid, {
                   netlist: displayNetlist,
-                  bits: 0,
+                  bits: probe,
                   t,
                   inputLabels: Array.from({ length: displayNetlist.nIn }, (_, index) => `I${index}`),
                   outputLabels: Array.from({ length: displayNetlist.outputs.length }, (_, index) => `O${index}`),
+                  onToggle: (index) => setProbe((value) => value ^ (1 << index)),
                   faultGates: debug.status === 'pass' ? [] : [puzzle.gateIndex],
                   okGates: debug.status === 'pass' ? [puzzle.gateIndex] : [],
                 }),
