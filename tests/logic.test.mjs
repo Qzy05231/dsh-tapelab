@@ -751,3 +751,5 @@ test('compose can splice constants into part inputs', () => {
   assert.equal(C.gateCount(composed), 1)
   assert.equal(C.evaluate(composed, 0).outputs[0], 0) // NOT 1 = 0
 })
+
+

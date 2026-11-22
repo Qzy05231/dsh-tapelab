@@ -5,12 +5,22 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.11'
+  const VERSION = '1.10.0'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.10.0',
+      date: '2026-11-22',
+      items: [
+        '密码锁升级为 Mastermind 规则：仅提示匹配位数并记录历史推理',
+        '第 7 章巨兽 CPU 支持加减调整两个 4 位操作数，观察加法与溢出',
+        '抽离硬件规划器与传感器模块中的硬编码中文，完善 i18n 多语言对齐',
+        '补齐 README 完整 14 章节介绍与最新测试数据统计',
+      ],
+    },
     {
       version: '1.9.11',
       date: '2026-11-22',

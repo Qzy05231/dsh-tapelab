@@ -114,3 +114,19 @@ test('music stops when the tune ends and piano keys advance the counter', () => 
   state = M.reduce(state, { type: 'music/key', midi: 60 })
   assert.equal(state.arcade.music.beats, before + 1)
 })
+
+
+test('chapter 6 behemoth CPU supports custom operand adjustment', () => {
+  let state = M.initial()
+  state = M.reduce(state, { type: 'chapter/select', index: 6 })
+  assert.deepEqual(state.play.operands, [3, 5])
+  state = M.reduce(state, { type: 'program/operand', which: 'a', delta: 1 })
+  assert.equal(state.play.operands[0], 4)
+  state = M.reduce(state, { type: 'program/operand', which: 'b', delta: -1 })
+  assert.equal(state.play.operands[1], 4)
+  state = M.reduce(state, { type: 'program/setOperands', a: 15, b: 1 })
+  assert.deepEqual(state.play.operands, [15, 1])
+  state = M.reduce(state, { type: 'program/run' })
+  assert.equal(state.play.running, true)
+  assert.equal(state.play.result.outputBits, 16) // 15 + 1 = 16 (Cout = 1, S = 0)
+})

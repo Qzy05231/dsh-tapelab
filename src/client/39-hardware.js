@@ -33,10 +33,16 @@ TT.Hardware = (function () {
     const inputs = netlist.nIn
     const outputs = netlist.outputs
     const nodeDriver = []
-    nodeDriver[0] = { kind: 'rail', label: 'GND（0V）' }
-    nodeDriver[1] = { kind: 'rail', label: 'VCC（5V）' }
+    nodeDriver[0] = { kind: 'rail', label: 'GND (0V)', labelKey: 'hw.wire.gnd' }
+    nodeDriver[1] = { kind: 'rail', label: 'VCC (5V)', labelKey: 'hw.wire.vcc' }
     for (let i = 0; i < inputs; i += 1) {
-      nodeDriver[2 + i] = { kind: 'switch', index: i, label: `拨码开关 S${i + 1}` }
+      nodeDriver[2 + i] = {
+        kind: 'switch',
+        index: i,
+        label: `拨码开关 S${i + 1}`,
+        labelKey: 'hw.wire.switch',
+        labelParams: { n: i + 1 },
+      }
     }
     for (let g = 0; g < gateCount; g += 1) {
       const pins = gatePins(g)
@@ -44,6 +50,8 @@ TT.Hardware = (function () {
         kind: 'gate',
         gate: g,
         label: `U${pins.chip} 第 ${pins.unit} 个门 · 输出脚 ${pins.y}`,
+        labelKey: 'hw.wire.gateDriver',
+        labelParams: { chip: pins.chip, unit: pins.unit, pin: pins.y },
         pin: pins.y,
         chip: pins.chip,
       }
@@ -51,7 +59,20 @@ TT.Hardware = (function () {
 
     const pinTable = []
     const wires = []
-    const wire = (from, to, note) => wires.push({ from, to, note: note || '' })
+    const warningKeys = []
+    const wire = (from, to, note, fromKey, fromParams, toKey, toParams, noteKey, noteParams) => {
+      wires.push({
+        from,
+        to,
+        note: note || '',
+        fromKey,
+        fromParams,
+        toKey,
+        toParams,
+        noteKey,
+        noteParams,
+      })
+    }
 
     for (let g = 0; g < gateCount; g += 1) {
       const gate = gates[g]
@@ -68,14 +89,18 @@ TT.Hardware = (function () {
         const driver = nodeDriver[node]
         if (!driver) {
           warnings.push(`门 ${g + 1} 的 ${pinName} 输入引用了不存在的节点 ${node}`)
+          warningKeys.push({ key: 'hw.warn.missingNode', params: { gate: g + 1, pin: pinName, node } })
           return
         }
+        const toLabel = `U${pins.chip} 脚${pin}（${pinName}）`
+        const toKey = 'hw.wire.chipPin'
+        const toParams = { chip: pins.chip, pin, pinName }
         if (driver.kind === 'rail') {
-          wire(driver.label, `U${pins.chip} 脚${pin}（${pinName}）`, `固定接 ${node === 0 ? 'GND' : 'VCC'}（恒 ${node}）`)
+          wire(driver.label, toLabel, `固定接 ${node === 0 ? 'GND' : 'VCC'}（恒 ${node}）`, driver.labelKey, {}, toKey, toParams, 'hw.wire.noteRail', { rail: node === 0 ? 'GND' : 'VCC', node })
         } else if (driver.kind === 'switch') {
-          wire(driver.label, `U${pins.chip} 脚${pin}（${pinName}）`, '开关串联 10kΩ 下拉到 GND')
+          wire(driver.label, toLabel, '开关串联 10kΩ 下拉到 GND', driver.labelKey, driver.labelParams, toKey, toParams, 'hw.wire.noteSwitch', {})
         } else {
-          wire(`U${driver.chip} 脚${driver.pin}（Y）`, `U${pins.chip} 脚${pin}（${pinName}）`, '74HC00 输出 → 输入')
+          wire(`U${driver.chip} 脚${driver.pin}（Y）`, toLabel, '74HC00 输出 → 输入', 'hw.wire.chipOut', { chip: driver.chip, pin: driver.pin }, toKey, toParams, 'hw.wire.noteGateToGate', {})
         }
       })
     }
@@ -84,14 +109,18 @@ TT.Hardware = (function () {
       const driver = nodeDriver[node]
       if (!driver) {
         warnings.push(`输出 ${index + 1} 引用了不存在的节点 ${node}`)
+        warningKeys.push({ key: 'hw.warn.missingOutputNode', params: { out: index + 1, node } })
         return
       }
+      const toLabel = `LED${index + 1}`
+      const toKey = 'hw.wire.led'
+      const toParams = { n: index + 1 }
       if (driver.kind === 'rail') {
-        wire(driver.label, `LED${index + 1}`, `恒 ${node}：LED 直接接电源/地（经 330Ω）`)
+        wire(driver.label, toLabel, `恒 ${node}：LED 直接接电源/地（经 330Ω）`, driver.labelKey, {}, toKey, toParams, 'hw.wire.noteLedRail', { node })
       } else if (driver.kind === 'switch') {
-        wire(driver.label, `LED${index + 1}`, driver.label + ' → 330Ω → LED → GND')
+        wire(driver.label, toLabel, driver.label + ' → 330Ω → LED → GND', driver.labelKey, driver.labelParams, toKey, toParams, 'hw.wire.noteLedSwitch', { label: driver.label })
       } else {
-        wire(`U${driver.chip} 脚${driver.pin}（Y）`, `LED${index + 1}`, '经 330Ω 限流电阻到 GND')
+        wire(`U${driver.chip} 脚${driver.pin}（Y）`, toLabel, '经 330Ω 限流电阻到 GND', 'hw.wire.chipOut', { chip: driver.chip, pin: driver.pin }, toKey, toParams, 'hw.wire.noteLedGate', {})
       }
     })
 
@@ -101,12 +130,22 @@ TT.Hardware = (function () {
       fanOut[gate.b] = (fanOut[gate.b] || 0) + 1
     }
     const maxFanOut = Math.max(0, ...Object.values(fanOut))
-    if (maxFanOut > 6) warnings.push(`最大扇出 ${maxFanOut}：74HC00 单输出可驱动约 10 个输入，实际布线请分叉并保持短线`)
+    if (maxFanOut > 6) {
+      warnings.push(`最大扇出 ${maxFanOut}：74HC00 单输出可驱动约 10 个输入，实际布线请分叉并保持短线`)
+      warningKeys.push({ key: 'hw.warn.maxFanOut', params: { n: maxFanOut } })
+    }
     if ((netlist.nState || 0) > 0) {
       warnings.push('这是时序电路（含锁存器/状态位）：74HC00 只能搭组合逻辑，时钟与状态请用 74HC74/74HC573 并手工布线。')
+      warningKeys.push({ key: 'hw.warn.stateful' })
     }
-    if (gateCount > 40) warnings.push(`共 ${gateCount} 个门（${chips} 片 74HC00）：面包板会非常拥挤，建议改用洞洞板/PCB。`)
-    if (outputs.length > 7) warnings.push('输出超过 7 个：请为每路 LED 单独准备 330Ω 电阻。')
+    if (gateCount > 40) {
+      warnings.push(`共 ${gateCount} 个门（${chips} 片 74HC00）：面包板会非常拥挤，建议改用洞洞板/PCB。`)
+      warningKeys.push({ key: 'hw.warn.crowded', params: { gates: gateCount, chips } })
+    }
+    if (outputs.length > 7) {
+      warnings.push('输出超过 7 个：请为每路 LED 单独准备 330Ω 电阻。')
+      warningKeys.push({ key: 'hw.warn.manyOutputs' })
+    }
 
     const switches = inputs
     const leds = outputs.length
@@ -114,15 +153,15 @@ TT.Hardware = (function () {
     const boards = Math.max(1, Math.ceil(chips / 2))
     const jumpers = Math.max(10, Math.ceil((wires.length + chips * 2) / 5) * 5)
     const bom = [
-      { item: '74HC00 四路 2 输入与非门（DIP-14）', qty: chips, note: `${gateCount} 个门 ÷ 4` },
-      { item: '0.1µF 陶瓷电容（去耦）', qty: decoupling, note: '每片芯片 VCC–GND 之间各一颗' },
-      { item: '10kΩ 电阻（下拉）', qty: switches, note: '每个拨码开关一颗' },
-      { item: '拨码开关 / 轻触开关', qty: switches, note: '每个输入一位' },
-      { item: '330Ω 电阻（LED 限流）', qty: leds, note: '每个输出 LED 一颗' },
-      { item: 'LED（5mm）', qty: leds, note: '每个输出一位' },
-      { item: '面包板 830 点', qty: boards, note: '每 2 片芯片约一块板' },
-      { item: '杜邦线 / 单股跳线', qty: jumpers, note: '按连线表裁剪' },
-      { item: '5V 电源（USB 或稳压模块）', qty: 1, note: 'HC 系列 2–6V' },
+      { item: '74HC00 四路 2 输入与非门（DIP-14）', itemKey: 'hw.bom.74hc00', qty: chips, note: `${gateCount} 个门 ÷ 4`, noteKey: 'hw.bom.noteGates', noteParams: { n: gateCount } },
+      { item: '0.1µF 陶瓷电容（去耦）', itemKey: 'hw.bom.cap', qty: decoupling, note: '每片芯片 VCC–GND 之间各一颗', noteKey: 'hw.bom.noteCap' },
+      { item: '10kΩ 电阻（下拉）', itemKey: 'hw.bom.res10k', qty: switches, note: '每个拨码开关一颗', noteKey: 'hw.bom.noteSwitchRes' },
+      { item: '拨码开关 / 轻触开关', itemKey: 'hw.bom.switches', qty: switches, note: '每个输入一位', noteKey: 'hw.bom.noteSwitch' },
+      { item: '330Ω 电阻（LED 限流）', itemKey: 'hw.bom.res330', qty: leds, note: '每个输出 LED 一颗', noteKey: 'hw.bom.noteLedRes' },
+      { item: 'LED（5mm）', itemKey: 'hw.bom.led', qty: leds, note: '每个输出一位', noteKey: 'hw.bom.noteLed' },
+      { item: '面包板 830 点', itemKey: 'hw.bom.breadboard', qty: boards, note: '每 2 片芯片约一块板', noteKey: 'hw.bom.noteBreadboard' },
+      { item: '杜邦线 / 单股跳线', itemKey: 'hw.bom.jumpers', qty: jumpers, note: '按连线表裁剪', noteKey: 'hw.bom.noteJumpers' },
+      { item: '5V 电源（USB 或稳压模块）', itemKey: 'hw.bom.power', qty: 1, note: 'HC 系列 2–6V', noteKey: 'hw.bom.notePower' },
     ]
 
     return {

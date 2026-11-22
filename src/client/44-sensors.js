@@ -206,13 +206,16 @@ TT.Sensors = (function () {
 
   function verify(code, expectedFingerprint) {
     const reasons = []
+    const reasonKeys = []
     let payload
     try {
       payload = JSON.parse(unb64url(code))
     } catch (error) {
-      return { ok: false, reasons: ['凭证码无法解码'], payload: null }
+      return { ok: false, reasons: ['凭证码无法解码'], reasonKeys: [{ key: 'sensor.verify.errDecode' }], payload: null }
     }
-    if (!payload || payload.schema !== 'dsh-tapelab.sensors.v1') return { ok: false, reasons: ['凭证格式不匹配'], payload: null }
+    if (!payload || payload.schema !== 'dsh-tapelab.sensors.v1') {
+      return { ok: false, reasons: ['凭证格式不匹配'], reasonKeys: [{ key: 'sensor.verify.errSchema' }], payload: null }
+    }
     let netlist
     try {
       netlist = TT.Circuit.makeNetlist({
@@ -223,24 +226,34 @@ TT.Sensors = (function () {
       const check = TT.Circuit.validateNetlist(netlist)
       if (!check.ok) throw new Error(check.error)
     } catch (error) {
-      return { ok: false, reasons: ['凭证里的网表无效：' + String(error && error.message ? error.message : error)], payload }
+      const msg = String(error && error.message ? error.message : error)
+      return { ok: false, reasons: ['凭证里的网表无效：' + msg], reasonKeys: [{ key: 'sensor.verify.errNetlist', params: { error: msg } }], payload }
     }
     const actualFingerprint = fingerprint(netlist)
-    if (actualFingerprint !== payload.fingerprint) reasons.push('网表指纹不一致（可能被篡改）')
+    if (actualFingerprint !== payload.fingerprint) {
+      reasons.push('网表指纹不一致（可能被篡改）')
+      reasonKeys.push({ key: 'sensor.verify.errFingerprint' })
+    }
     if (expectedFingerprint && String(expectedFingerprint).trim().toLowerCase() !== actualFingerprint) {
-      reasons.push(`指纹不匹配：凭证 ${actualFingerprint}，期望 ${String(expectedFingerprint).trim().toLowerCase()}`)
+      const exp = String(expectedFingerprint).trim().toLowerCase()
+      reasons.push(`指纹不匹配：凭证 ${actualFingerprint}，期望 ${exp}`)
+      reasonKeys.push({ key: 'sensor.verify.errMismatch', params: { actual: actualFingerprint, expected: exp } })
     }
     const sc = scenario(payload.scenario)
     const bits = bitsFromValues(sc, payload.values, payload.thresholds)
-    if (bits !== payload.bits) reasons.push('传感器条件与凭证记录的位不一致')
+    if (bits !== payload.bits) {
+      reasons.push('传感器条件与凭证记录的位不一致')
+      reasonKeys.push({ key: 'sensor.verify.errBits' })
+    }
     const outputs = TT.Circuit.evaluate(netlist, bits).outputs
     for (let index = 0; index < outputs.length; index += 1) {
       if (outputs[index] !== payload.outputs[index]) {
         reasons.push(`执行器 ${index + 1} 结果不一致：重算 ${outputs[index]}，凭证 ${payload.outputs[index]}`)
+        reasonKeys.push({ key: 'sensor.verify.errOutput', params: { index: index + 1, recomputed: outputs[index], receipt: payload.outputs[index] } })
         break
       }
     }
-    return { ok: reasons.length === 0, reasons, payload, bits, outputs, fingerprint: actualFingerprint, actuators: sc.outputs.map((output, index) => ({ key: output.key, labelKey: output.labelKey, tone: output.tone, on: outputs[index] === 1 })) }
+    return { ok: reasons.length === 0, reasons, reasonKeys, payload, bits, outputs, fingerprint: actualFingerprint, actuators: sc.outputs.map((output, index) => ({ key: output.key, labelKey: output.labelKey, tone: output.tone, on: outputs[index] === 1 })) }
   }
 
   return { SENSORS, SCENARIOS, scenario, sensorsOf, circuit, bitsFromValues, evaluate, audit, receipt, verify, fingerprint, b64url, unb64url }
@@ -370,7 +383,7 @@ TT.SensorsUI = (function () {
           ? h('div', { className: 'tt-finalenote', style: { borderLeftColor: engine.verifyResult.ok ? 'var(--tt-mint)' : 'var(--tt-red)' } },
               engine.verifyResult.ok
                 ? `${t('access.verify.pass')} · ${engine.verifyResult.actuators.filter((actuator) => actuator.on).map((actuator) => t(actuator.labelKey)).join(' / ') || t('sensor.none')}`
-                : `${t('access.verify.fail')}：${(engine.verifyResult.reasons || []).join('；')}`)
+                : `${t('access.verify.fail')}：${(engine.verifyResult.reasonKeys || []).map((r) => t(r.key, r.params || {})).join('；') || (engine.verifyResult.reasons || []).join('；')}`)
           : null,
       ),
       h('section', { className: 'tt-labcard' },

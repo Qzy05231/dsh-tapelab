@@ -358,7 +358,9 @@ TT.LabUI = (function () {
           h('div', { className: 'tt-labstat' }, h('b', null, plan.boards), h('span', null, t('lab.hardware.boards'))),
         ),
         plan.warnings.length ? h('div', { className: 'tt-finalenote', style: { margin: '4px 0' } },
-          plan.warnings.map((warning, index) => h('div', { key: index }, '⚠ ', warning))) : null,
+          (plan.warningKeys || []).length
+            ? plan.warningKeys.map((w, index) => h('div', { key: index }, '⚠ ', t(w.key, w.params || {})))
+            : plan.warnings.map((warning, index) => h('div', { key: index }, '⚠ ', warning))) : null,
         h('div', { className: 'tt-labrow' },
           h('span', { className: 'tt-lablabel' }, t('lab.export.title')),
           h('button', { type: 'button', className: 'tt-chip',
@@ -378,9 +380,9 @@ TT.LabUI = (function () {
           )),
           h('tbody', null, plan.bom.map((entry, index) =>
             h('tr', { key: index },
-              h('td', null, entry.item),
+              h('td', null, entry.itemKey ? t(entry.itemKey, entry.itemParams || {}) : entry.item),
               h('td', { className: 'tt-bit' }, entry.qty),
-              h('td', { style: { fontSize: 10, color: 'var(--tt-dim)' } }, entry.note),
+              h('td', { style: { fontSize: 10, color: 'var(--tt-dim)' } }, entry.noteKey ? t(entry.noteKey, entry.noteParams || {}) : entry.note),
             ),
           )),
         ),
@@ -402,12 +404,15 @@ TT.LabUI = (function () {
           )),
         ),
         h('h4', { style: { margin: '10px 0 4px', fontSize: 12, color: 'var(--tt-mint)' } }, `${t('lab.hardware.wiresTitle')} · ${plan.wires}`),
-        h('div', { className: 'tt-hardwarewires' }, plan.wireList.map((entry, index) =>
-          h('div', { key: index, className: 'tt-hardwarewire' },
-            h('span', null, entry.from), h('b', null, '→'), h('span', null, entry.to),
-            entry.note ? h('em', null, entry.note) : null,
-          ),
-        )),
+        h('div', { className: 'tt-hardwarewires' }, plan.wireList.map((entry, index) => {
+          const fromText = entry.fromKey ? t(entry.fromKey, entry.fromParams || {}) : entry.from
+          const toText = entry.toKey ? t(entry.toKey, entry.toParams || {}) : entry.to
+          const noteText = entry.noteKey ? t(entry.noteKey, entry.noteParams || {}) : entry.note
+          return h('div', { key: index, className: 'tt-hardwarewire' },
+            h('span', null, fromText), h('b', null, '→'), h('span', null, toText),
+            noteText ? h('em', null, noteText) : null,
+          )
+        })),
         h('p', { className: 'tt-finalenote', style: { marginTop: 10 } }, t('lab.hardware.steps')),
       ) : h('div', null,
         h('p', { className: 'tt-labempty' }, t('lab.hardware.empty')),

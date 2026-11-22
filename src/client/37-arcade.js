@@ -737,6 +737,7 @@ TT.ArcadeUI = (function () {
     const [showNet, setShowNet] = React.useState(true)
     const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
+    const history = lock.history || []
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.lock.title'), hint: t('arcade.lock.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
@@ -746,11 +747,11 @@ TT.ArcadeUI = (function () {
             className: 'tt-chip',
             'data-active': (guess >> index) & 1 ? 'true' : 'false',
             onClick: () => api.dispatch({ type: 'lock/toggle', index }),
-          }, `B${index}`),
+          }, `B${index} = ${(guess >> index) & 1}`),
         )),
         h('div', { className: 'tt-labrow' },
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
-            disabled: lock.solved, onClick: () => api.dispatch({ type: 'lock/check' }) }, t('arcade.lock.check')),
+            disabled: lock.solved || lock.failed, onClick: () => api.dispatch({ type: 'lock/check' }) }, t('arcade.lock.check')),
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
             onClick: () => api.dispatch({ type: 'lock/reset' }) }, t('arcade.lock.reset')),
           h('span', { className: 'tt-lablabel' }, `${t('arcade.lock.attempts')} ${lock.attempts}/${lock.maxAttempts || 6}`),
@@ -758,14 +759,21 @@ TT.ArcadeUI = (function () {
         ),
         lock.solved ? h('div', { className: 'tt-badge', 'data-tone': 'good' }, t('arcade.lock.solved')) : null,
         lock.failed ? h('div', { className: 'tt-badge', 'data-tone': 'bad' }, t('arcade.lock.failed')) : null,
-        lock.last ? h('div', { className: 'tt-leds' }, [0, 1, 2, 3].map((index) =>
-          h('span', { key: index, className: 'tt-led', 'data-on': ((lock.last >> index) & 1) ? 'true' : 'false' },
-            h('i', null), `B${index} ${((lock.code >> index) & 1) ? '✓' : '✗'}`),
-        )) : null,
+        history.length > 0 ? h('div', { className: 'tt-librarylist', style: { marginTop: 8 } },
+          history.slice(-6).map((entry, idx) => {
+            const bitsStr = [0, 1, 2, 3].map((b) => (entry.guess >> b) & 1).join(' ')
+            return h('div', { key: idx, className: 'tt-libraryrow' },
+              h('span', { className: 'tt-libraryname' }, `#${entry.attempt} [${bitsStr}]`),
+              h('span', { className: 'tt-badge', 'data-tone': entry.matches === 4 ? 'good' : entry.matches >= 2 ? 'warn' : 'muted' },
+                t('arcade.lock.matches', { n: entry.matches })),
+            )
+          }),
+        ) : null,
       ),
       h(Card, { title: t('arcade.lock.circuit'), hint: '' },
         h('p', { className: 'tt-labempty' }, t('arcade.lock.body')),
-        h('div', { className: 'tt-hex tt-mono' }, 'lock = (guess == code) · 4 × XNOR + AND'),
+        h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.lock.ruleHint')),
+        h('div', { className: 'tt-hex tt-mono', style: { marginTop: 6 } }, 'lock = (guess == code) · 4 × XNOR + AND'),
       ),
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),

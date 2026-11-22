@@ -704,7 +704,7 @@ TT.Missions = (function () {
       game: 'music',
       music: { playing: false, tempo: 420, scale: 0, tune: 0, step: 0, octave: 4, lastMidi: null },
       pixel: { bits: pattern, anim: false },
-      lock: { code: 9, guess: 0, attempts: 0, maxAttempts: 6, last: null, solved: false, failed: false, bestAttempts: null },
+      lock: { code: 9, guess: 0, attempts: 0, maxAttempts: 6, history: [], last: null, solved: false, failed: false, bestAttempts: null },
       guess: { secret: 11, guess: 0, tries: 0, maxTries: 5, history: [], solved: false, score: 0 },
       vote: { a: 0, b: 0, c: 0 },
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
@@ -1910,6 +1910,14 @@ TT.Missions = (function () {
         const solved = lock.guess === lock.code
         const maxAttempts = lock.maxAttempts || 6
         const failed = !solved && attempts >= maxAttempts
+        // Mastermind logic: count exact bit matches (0 to 4)
+        let exactMatches = 0
+        for (let i = 0; i < 4; i += 1) {
+          if (((lock.guess >> i) & 1) === ((lock.code >> i) & 1)) {
+            exactMatches += 1
+          }
+        }
+        const entry = { guess: lock.guess, matches: exactMatches, attempt: attempts }
         let stats = state.stats
         if (solved) {
           stats = {
@@ -1923,12 +1931,41 @@ TT.Missions = (function () {
           stats,
           arcade: {
             ...state.arcade,
-            lock: { ...lock, attempts, last: lock.guess, solved, failed, bestAttempts: stats.lockBestAttempts },
+            lock: {
+              ...lock,
+              attempts,
+              last: lock.guess,
+              lastMatches: exactMatches,
+              history: [...(lock.history || []), entry],
+              solved,
+              failed,
+              bestAttempts: stats.lockBestAttempts,
+            },
           },
         }
       }
-      case 'lock/reset':
-        return { ...state, arcade: { ...state.arcade, lock: { ...state.arcade.lock, guess: 0, attempts: 0, last: null, solved: false, failed: false } } }
+      case 'lock/reset': {
+        const codes = [9, 6, 12, 3, 10, 5, 15, 1]
+        const currentCode = state.arcade.lock.code
+        const nextCode = codes[(codes.indexOf(currentCode) + 1) % codes.length] || 9
+        return {
+          ...state,
+          arcade: {
+            ...state.arcade,
+            lock: {
+              ...state.arcade.lock,
+              code: nextCode,
+              guess: 0,
+              attempts: 0,
+              history: [],
+              last: null,
+              lastMatches: null,
+              solved: false,
+              failed: false,
+            },
+          },
+        }
+      }
       case 'guess/toggle': {
         const index = Math.max(0, Math.min(3, Number(action.index) || 0))
         const value = (state.arcade.guess.guess || 0) ^ (1 << index)
@@ -2478,6 +2515,48 @@ TT.Missions = (function () {
           epoch: (state.epoch || 1) + 1,
         }
       }
+      case 'program/operand': {
+        if (state.chapter !== 6) return state
+        if (state.play.running) return state
+        const which = action.which === 'b' ? 1 : 0
+        const delta = Number(action.delta) || 0
+        const current = state.play.operands[which]
+        const nextVal = (current + delta + 16) % 16
+        const operands = [...state.play.operands]
+        operands[which] = nextVal
+        return {
+          ...state,
+          play: {
+            ...state.play,
+            running: false,
+            operands,
+            reveal: 0,
+            showResult: false,
+            done: false,
+            result: null,
+            history: [],
+          },
+        }
+      }
+      case 'program/setOperands': {
+        if (state.chapter !== 6) return state
+        if (state.play.running) return state
+        const a = Math.max(0, Math.min(15, Number(action.a) || 0))
+        const b = Math.max(0, Math.min(15, Number(action.b) || 0))
+        return {
+          ...state,
+          play: {
+            ...state.play,
+            running: false,
+            operands: [a, b],
+            reveal: 0,
+            showResult: false,
+            done: false,
+            result: null,
+            history: [],
+          },
+        }
+      }
       case 'program/again': {
         if (state.chapter !== 6) return state
         const pairs = [
@@ -2485,6 +2564,8 @@ TT.Missions = (function () {
           [7, 9],
           [15, 1],
           [10, 6],
+          [12, 13],
+          [8, 8],
         ]
         const idx = pairs.findIndex((pair) => pair[0] === state.play.operands[0] && pair[1] === state.play.operands[1])
         const nextPair = pairs[(idx + 1) % pairs.length]

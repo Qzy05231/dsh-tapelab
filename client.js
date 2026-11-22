@@ -5699,7 +5699,7 @@ TT.Missions = (function () {
       game: 'music',
       music: { playing: false, tempo: 420, scale: 0, tune: 0, step: 0, octave: 4, lastMidi: null },
       pixel: { bits: pattern, anim: false },
-      lock: { code: 9, guess: 0, attempts: 0, maxAttempts: 6, last: null, solved: false, failed: false, bestAttempts: null },
+      lock: { code: 9, guess: 0, attempts: 0, maxAttempts: 6, history: [], last: null, solved: false, failed: false, bestAttempts: null },
       guess: { secret: 11, guess: 0, tries: 0, maxTries: 5, history: [], solved: false, score: 0 },
       vote: { a: 0, b: 0, c: 0 },
       debug: { level: 0, selected: null, status: 'idle', solved: 0, attempts: 0, puzzles: null },
@@ -6905,6 +6905,14 @@ TT.Missions = (function () {
         const solved = lock.guess === lock.code
         const maxAttempts = lock.maxAttempts || 6
         const failed = !solved && attempts >= maxAttempts
+        // Mastermind logic: count exact bit matches (0 to 4)
+        let exactMatches = 0
+        for (let i = 0; i < 4; i += 1) {
+          if (((lock.guess >> i) & 1) === ((lock.code >> i) & 1)) {
+            exactMatches += 1
+          }
+        }
+        const entry = { guess: lock.guess, matches: exactMatches, attempt: attempts }
         let stats = state.stats
         if (solved) {
           stats = {
@@ -6918,12 +6926,41 @@ TT.Missions = (function () {
           stats,
           arcade: {
             ...state.arcade,
-            lock: { ...lock, attempts, last: lock.guess, solved, failed, bestAttempts: stats.lockBestAttempts },
+            lock: {
+              ...lock,
+              attempts,
+              last: lock.guess,
+              lastMatches: exactMatches,
+              history: [...(lock.history || []), entry],
+              solved,
+              failed,
+              bestAttempts: stats.lockBestAttempts,
+            },
           },
         }
       }
-      case 'lock/reset':
-        return { ...state, arcade: { ...state.arcade, lock: { ...state.arcade.lock, guess: 0, attempts: 0, last: null, solved: false, failed: false } } }
+      case 'lock/reset': {
+        const codes = [9, 6, 12, 3, 10, 5, 15, 1]
+        const currentCode = state.arcade.lock.code
+        const nextCode = codes[(codes.indexOf(currentCode) + 1) % codes.length] || 9
+        return {
+          ...state,
+          arcade: {
+            ...state.arcade,
+            lock: {
+              ...state.arcade.lock,
+              code: nextCode,
+              guess: 0,
+              attempts: 0,
+              history: [],
+              last: null,
+              lastMatches: null,
+              solved: false,
+              failed: false,
+            },
+          },
+        }
+      }
       case 'guess/toggle': {
         const index = Math.max(0, Math.min(3, Number(action.index) || 0))
         const value = (state.arcade.guess.guess || 0) ^ (1 << index)
@@ -7473,6 +7510,48 @@ TT.Missions = (function () {
           epoch: (state.epoch || 1) + 1,
         }
       }
+      case 'program/operand': {
+        if (state.chapter !== 6) return state
+        if (state.play.running) return state
+        const which = action.which === 'b' ? 1 : 0
+        const delta = Number(action.delta) || 0
+        const current = state.play.operands[which]
+        const nextVal = (current + delta + 16) % 16
+        const operands = [...state.play.operands]
+        operands[which] = nextVal
+        return {
+          ...state,
+          play: {
+            ...state.play,
+            running: false,
+            operands,
+            reveal: 0,
+            showResult: false,
+            done: false,
+            result: null,
+            history: [],
+          },
+        }
+      }
+      case 'program/setOperands': {
+        if (state.chapter !== 6) return state
+        if (state.play.running) return state
+        const a = Math.max(0, Math.min(15, Number(action.a) || 0))
+        const b = Math.max(0, Math.min(15, Number(action.b) || 0))
+        return {
+          ...state,
+          play: {
+            ...state.play,
+            running: false,
+            operands: [a, b],
+            reveal: 0,
+            showResult: false,
+            done: false,
+            result: null,
+            history: [],
+          },
+        }
+      }
       case 'program/again': {
         if (state.chapter !== 6) return state
         const pairs = [
@@ -7480,6 +7559,8 @@ TT.Missions = (function () {
           [7, 9],
           [15, 1],
           [10, 6],
+          [12, 13],
+          [8, 8],
         ]
         const idx = pairs.findIndex((pair) => pair[0] === state.play.operands[0] && pair[1] === state.play.operands[1])
         const nextPair = pairs[(idx + 1) % pairs.length]
@@ -8476,7 +8557,9 @@ TT.LabUI = (function () {
           h('div', { className: 'tt-labstat' }, h('b', null, plan.boards), h('span', null, t('lab.hardware.boards'))),
         ),
         plan.warnings.length ? h('div', { className: 'tt-finalenote', style: { margin: '4px 0' } },
-          plan.warnings.map((warning, index) => h('div', { key: index }, '⚠ ', warning))) : null,
+          (plan.warningKeys || []).length
+            ? plan.warningKeys.map((w, index) => h('div', { key: index }, '⚠ ', t(w.key, w.params || {})))
+            : plan.warnings.map((warning, index) => h('div', { key: index }, '⚠ ', warning))) : null,
         h('div', { className: 'tt-labrow' },
           h('span', { className: 'tt-lablabel' }, t('lab.export.title')),
           h('button', { type: 'button', className: 'tt-chip',
@@ -8496,9 +8579,9 @@ TT.LabUI = (function () {
           )),
           h('tbody', null, plan.bom.map((entry, index) =>
             h('tr', { key: index },
-              h('td', null, entry.item),
+              h('td', null, entry.itemKey ? t(entry.itemKey, entry.itemParams || {}) : entry.item),
               h('td', { className: 'tt-bit' }, entry.qty),
-              h('td', { style: { fontSize: 10, color: 'var(--tt-dim)' } }, entry.note),
+              h('td', { style: { fontSize: 10, color: 'var(--tt-dim)' } }, entry.noteKey ? t(entry.noteKey, entry.noteParams || {}) : entry.note),
             ),
           )),
         ),
@@ -8520,12 +8603,15 @@ TT.LabUI = (function () {
           )),
         ),
         h('h4', { style: { margin: '10px 0 4px', fontSize: 12, color: 'var(--tt-mint)' } }, `${t('lab.hardware.wiresTitle')} · ${plan.wires}`),
-        h('div', { className: 'tt-hardwarewires' }, plan.wireList.map((entry, index) =>
-          h('div', { key: index, className: 'tt-hardwarewire' },
-            h('span', null, entry.from), h('b', null, '→'), h('span', null, entry.to),
-            entry.note ? h('em', null, entry.note) : null,
-          ),
-        )),
+        h('div', { className: 'tt-hardwarewires' }, plan.wireList.map((entry, index) => {
+          const fromText = entry.fromKey ? t(entry.fromKey, entry.fromParams || {}) : entry.from
+          const toText = entry.toKey ? t(entry.toKey, entry.toParams || {}) : entry.to
+          const noteText = entry.noteKey ? t(entry.noteKey, entry.noteParams || {}) : entry.note
+          return h('div', { key: index, className: 'tt-hardwarewire' },
+            h('span', null, fromText), h('b', null, '→'), h('span', null, toText),
+            noteText ? h('em', null, noteText) : null,
+          )
+        })),
         h('p', { className: 'tt-finalenote', style: { marginTop: 10 } }, t('lab.hardware.steps')),
       ) : h('div', null,
         h('p', { className: 'tt-labempty' }, t('lab.hardware.empty')),
@@ -9653,6 +9739,7 @@ TT.ArcadeUI = (function () {
     const [showNet, setShowNet] = React.useState(true)
     const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
+    const history = lock.history || []
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.lock.title'), hint: t('arcade.lock.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
@@ -9662,11 +9749,11 @@ TT.ArcadeUI = (function () {
             className: 'tt-chip',
             'data-active': (guess >> index) & 1 ? 'true' : 'false',
             onClick: () => api.dispatch({ type: 'lock/toggle', index }),
-          }, `B${index}`),
+          }, `B${index} = ${(guess >> index) & 1}`),
         )),
         h('div', { className: 'tt-labrow' },
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'primary',
-            disabled: lock.solved, onClick: () => api.dispatch({ type: 'lock/check' }) }, t('arcade.lock.check')),
+            disabled: lock.solved || lock.failed, onClick: () => api.dispatch({ type: 'lock/check' }) }, t('arcade.lock.check')),
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
             onClick: () => api.dispatch({ type: 'lock/reset' }) }, t('arcade.lock.reset')),
           h('span', { className: 'tt-lablabel' }, `${t('arcade.lock.attempts')} ${lock.attempts}/${lock.maxAttempts || 6}`),
@@ -9674,14 +9761,21 @@ TT.ArcadeUI = (function () {
         ),
         lock.solved ? h('div', { className: 'tt-badge', 'data-tone': 'good' }, t('arcade.lock.solved')) : null,
         lock.failed ? h('div', { className: 'tt-badge', 'data-tone': 'bad' }, t('arcade.lock.failed')) : null,
-        lock.last ? h('div', { className: 'tt-leds' }, [0, 1, 2, 3].map((index) =>
-          h('span', { key: index, className: 'tt-led', 'data-on': ((lock.last >> index) & 1) ? 'true' : 'false' },
-            h('i', null), `B${index} ${((lock.code >> index) & 1) ? '✓' : '✗'}`),
-        )) : null,
+        history.length > 0 ? h('div', { className: 'tt-librarylist', style: { marginTop: 8 } },
+          history.slice(-6).map((entry, idx) => {
+            const bitsStr = [0, 1, 2, 3].map((b) => (entry.guess >> b) & 1).join(' ')
+            return h('div', { key: idx, className: 'tt-libraryrow' },
+              h('span', { className: 'tt-libraryname' }, `#${entry.attempt} [${bitsStr}]`),
+              h('span', { className: 'tt-badge', 'data-tone': entry.matches === 4 ? 'good' : entry.matches >= 2 ? 'warn' : 'muted' },
+                t('arcade.lock.matches', { n: entry.matches })),
+            )
+          }),
+        ) : null,
       ),
       h(Card, { title: t('arcade.lock.circuit'), hint: '' },
         h('p', { className: 'tt-labempty' }, t('arcade.lock.body')),
-        h('div', { className: 'tt-hex tt-mono' }, 'lock = (guess == code) · 4 × XNOR + AND'),
+        h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.lock.ruleHint')),
+        h('div', { className: 'tt-hex tt-mono', style: { marginTop: 6 } }, 'lock = (guess == code) · 4 × XNOR + AND'),
       ),
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),
@@ -10126,10 +10220,16 @@ TT.Hardware = (function () {
     const inputs = netlist.nIn
     const outputs = netlist.outputs
     const nodeDriver = []
-    nodeDriver[0] = { kind: 'rail', label: 'GND（0V）' }
-    nodeDriver[1] = { kind: 'rail', label: 'VCC（5V）' }
+    nodeDriver[0] = { kind: 'rail', label: 'GND (0V)', labelKey: 'hw.wire.gnd' }
+    nodeDriver[1] = { kind: 'rail', label: 'VCC (5V)', labelKey: 'hw.wire.vcc' }
     for (let i = 0; i < inputs; i += 1) {
-      nodeDriver[2 + i] = { kind: 'switch', index: i, label: `拨码开关 S${i + 1}` }
+      nodeDriver[2 + i] = {
+        kind: 'switch',
+        index: i,
+        label: `拨码开关 S${i + 1}`,
+        labelKey: 'hw.wire.switch',
+        labelParams: { n: i + 1 },
+      }
     }
     for (let g = 0; g < gateCount; g += 1) {
       const pins = gatePins(g)
@@ -10137,6 +10237,8 @@ TT.Hardware = (function () {
         kind: 'gate',
         gate: g,
         label: `U${pins.chip} 第 ${pins.unit} 个门 · 输出脚 ${pins.y}`,
+        labelKey: 'hw.wire.gateDriver',
+        labelParams: { chip: pins.chip, unit: pins.unit, pin: pins.y },
         pin: pins.y,
         chip: pins.chip,
       }
@@ -10144,7 +10246,20 @@ TT.Hardware = (function () {
 
     const pinTable = []
     const wires = []
-    const wire = (from, to, note) => wires.push({ from, to, note: note || '' })
+    const warningKeys = []
+    const wire = (from, to, note, fromKey, fromParams, toKey, toParams, noteKey, noteParams) => {
+      wires.push({
+        from,
+        to,
+        note: note || '',
+        fromKey,
+        fromParams,
+        toKey,
+        toParams,
+        noteKey,
+        noteParams,
+      })
+    }
 
     for (let g = 0; g < gateCount; g += 1) {
       const gate = gates[g]
@@ -10161,14 +10276,18 @@ TT.Hardware = (function () {
         const driver = nodeDriver[node]
         if (!driver) {
           warnings.push(`门 ${g + 1} 的 ${pinName} 输入引用了不存在的节点 ${node}`)
+          warningKeys.push({ key: 'hw.warn.missingNode', params: { gate: g + 1, pin: pinName, node } })
           return
         }
+        const toLabel = `U${pins.chip} 脚${pin}（${pinName}）`
+        const toKey = 'hw.wire.chipPin'
+        const toParams = { chip: pins.chip, pin, pinName }
         if (driver.kind === 'rail') {
-          wire(driver.label, `U${pins.chip} 脚${pin}（${pinName}）`, `固定接 ${node === 0 ? 'GND' : 'VCC'}（恒 ${node}）`)
+          wire(driver.label, toLabel, `固定接 ${node === 0 ? 'GND' : 'VCC'}（恒 ${node}）`, driver.labelKey, {}, toKey, toParams, 'hw.wire.noteRail', { rail: node === 0 ? 'GND' : 'VCC', node })
         } else if (driver.kind === 'switch') {
-          wire(driver.label, `U${pins.chip} 脚${pin}（${pinName}）`, '开关串联 10kΩ 下拉到 GND')
+          wire(driver.label, toLabel, '开关串联 10kΩ 下拉到 GND', driver.labelKey, driver.labelParams, toKey, toParams, 'hw.wire.noteSwitch', {})
         } else {
-          wire(`U${driver.chip} 脚${driver.pin}（Y）`, `U${pins.chip} 脚${pin}（${pinName}）`, '74HC00 输出 → 输入')
+          wire(`U${driver.chip} 脚${driver.pin}（Y）`, toLabel, '74HC00 输出 → 输入', 'hw.wire.chipOut', { chip: driver.chip, pin: driver.pin }, toKey, toParams, 'hw.wire.noteGateToGate', {})
         }
       })
     }
@@ -10177,14 +10296,18 @@ TT.Hardware = (function () {
       const driver = nodeDriver[node]
       if (!driver) {
         warnings.push(`输出 ${index + 1} 引用了不存在的节点 ${node}`)
+        warningKeys.push({ key: 'hw.warn.missingOutputNode', params: { out: index + 1, node } })
         return
       }
+      const toLabel = `LED${index + 1}`
+      const toKey = 'hw.wire.led'
+      const toParams = { n: index + 1 }
       if (driver.kind === 'rail') {
-        wire(driver.label, `LED${index + 1}`, `恒 ${node}：LED 直接接电源/地（经 330Ω）`)
+        wire(driver.label, toLabel, `恒 ${node}：LED 直接接电源/地（经 330Ω）`, driver.labelKey, {}, toKey, toParams, 'hw.wire.noteLedRail', { node })
       } else if (driver.kind === 'switch') {
-        wire(driver.label, `LED${index + 1}`, driver.label + ' → 330Ω → LED → GND')
+        wire(driver.label, toLabel, driver.label + ' → 330Ω → LED → GND', driver.labelKey, driver.labelParams, toKey, toParams, 'hw.wire.noteLedSwitch', { label: driver.label })
       } else {
-        wire(`U${driver.chip} 脚${driver.pin}（Y）`, `LED${index + 1}`, '经 330Ω 限流电阻到 GND')
+        wire(`U${driver.chip} 脚${driver.pin}（Y）`, toLabel, '经 330Ω 限流电阻到 GND', 'hw.wire.chipOut', { chip: driver.chip, pin: driver.pin }, toKey, toParams, 'hw.wire.noteLedGate', {})
       }
     })
 
@@ -10194,12 +10317,22 @@ TT.Hardware = (function () {
       fanOut[gate.b] = (fanOut[gate.b] || 0) + 1
     }
     const maxFanOut = Math.max(0, ...Object.values(fanOut))
-    if (maxFanOut > 6) warnings.push(`最大扇出 ${maxFanOut}：74HC00 单输出可驱动约 10 个输入，实际布线请分叉并保持短线`)
+    if (maxFanOut > 6) {
+      warnings.push(`最大扇出 ${maxFanOut}：74HC00 单输出可驱动约 10 个输入，实际布线请分叉并保持短线`)
+      warningKeys.push({ key: 'hw.warn.maxFanOut', params: { n: maxFanOut } })
+    }
     if ((netlist.nState || 0) > 0) {
       warnings.push('这是时序电路（含锁存器/状态位）：74HC00 只能搭组合逻辑，时钟与状态请用 74HC74/74HC573 并手工布线。')
+      warningKeys.push({ key: 'hw.warn.stateful' })
     }
-    if (gateCount > 40) warnings.push(`共 ${gateCount} 个门（${chips} 片 74HC00）：面包板会非常拥挤，建议改用洞洞板/PCB。`)
-    if (outputs.length > 7) warnings.push('输出超过 7 个：请为每路 LED 单独准备 330Ω 电阻。')
+    if (gateCount > 40) {
+      warnings.push(`共 ${gateCount} 个门（${chips} 片 74HC00）：面包板会非常拥挤，建议改用洞洞板/PCB。`)
+      warningKeys.push({ key: 'hw.warn.crowded', params: { gates: gateCount, chips } })
+    }
+    if (outputs.length > 7) {
+      warnings.push('输出超过 7 个：请为每路 LED 单独准备 330Ω 电阻。')
+      warningKeys.push({ key: 'hw.warn.manyOutputs' })
+    }
 
     const switches = inputs
     const leds = outputs.length
@@ -10207,15 +10340,15 @@ TT.Hardware = (function () {
     const boards = Math.max(1, Math.ceil(chips / 2))
     const jumpers = Math.max(10, Math.ceil((wires.length + chips * 2) / 5) * 5)
     const bom = [
-      { item: '74HC00 四路 2 输入与非门（DIP-14）', qty: chips, note: `${gateCount} 个门 ÷ 4` },
-      { item: '0.1µF 陶瓷电容（去耦）', qty: decoupling, note: '每片芯片 VCC–GND 之间各一颗' },
-      { item: '10kΩ 电阻（下拉）', qty: switches, note: '每个拨码开关一颗' },
-      { item: '拨码开关 / 轻触开关', qty: switches, note: '每个输入一位' },
-      { item: '330Ω 电阻（LED 限流）', qty: leds, note: '每个输出 LED 一颗' },
-      { item: 'LED（5mm）', qty: leds, note: '每个输出一位' },
-      { item: '面包板 830 点', qty: boards, note: '每 2 片芯片约一块板' },
-      { item: '杜邦线 / 单股跳线', qty: jumpers, note: '按连线表裁剪' },
-      { item: '5V 电源（USB 或稳压模块）', qty: 1, note: 'HC 系列 2–6V' },
+      { item: '74HC00 四路 2 输入与非门（DIP-14）', itemKey: 'hw.bom.74hc00', qty: chips, note: `${gateCount} 个门 ÷ 4`, noteKey: 'hw.bom.noteGates', noteParams: { n: gateCount } },
+      { item: '0.1µF 陶瓷电容（去耦）', itemKey: 'hw.bom.cap', qty: decoupling, note: '每片芯片 VCC–GND 之间各一颗', noteKey: 'hw.bom.noteCap' },
+      { item: '10kΩ 电阻（下拉）', itemKey: 'hw.bom.res10k', qty: switches, note: '每个拨码开关一颗', noteKey: 'hw.bom.noteSwitchRes' },
+      { item: '拨码开关 / 轻触开关', itemKey: 'hw.bom.switches', qty: switches, note: '每个输入一位', noteKey: 'hw.bom.noteSwitch' },
+      { item: '330Ω 电阻（LED 限流）', itemKey: 'hw.bom.res330', qty: leds, note: '每个输出 LED 一颗', noteKey: 'hw.bom.noteLedRes' },
+      { item: 'LED（5mm）', itemKey: 'hw.bom.led', qty: leds, note: '每个输出一位', noteKey: 'hw.bom.noteLed' },
+      { item: '面包板 830 点', itemKey: 'hw.bom.breadboard', qty: boards, note: '每 2 片芯片约一块板', noteKey: 'hw.bom.noteBreadboard' },
+      { item: '杜邦线 / 单股跳线', itemKey: 'hw.bom.jumpers', qty: jumpers, note: '按连线表裁剪', noteKey: 'hw.bom.noteJumpers' },
+      { item: '5V 电源（USB 或稳压模块）', itemKey: 'hw.bom.power', qty: 1, note: 'HC 系列 2–6V', noteKey: 'hw.bom.notePower' },
     ]
 
     return {
@@ -11580,13 +11713,16 @@ TT.Sensors = (function () {
 
   function verify(code, expectedFingerprint) {
     const reasons = []
+    const reasonKeys = []
     let payload
     try {
       payload = JSON.parse(unb64url(code))
     } catch (error) {
-      return { ok: false, reasons: ['凭证码无法解码'], payload: null }
+      return { ok: false, reasons: ['凭证码无法解码'], reasonKeys: [{ key: 'sensor.verify.errDecode' }], payload: null }
     }
-    if (!payload || payload.schema !== 'dsh-tapelab.sensors.v1') return { ok: false, reasons: ['凭证格式不匹配'], payload: null }
+    if (!payload || payload.schema !== 'dsh-tapelab.sensors.v1') {
+      return { ok: false, reasons: ['凭证格式不匹配'], reasonKeys: [{ key: 'sensor.verify.errSchema' }], payload: null }
+    }
     let netlist
     try {
       netlist = TT.Circuit.makeNetlist({
@@ -11597,24 +11733,34 @@ TT.Sensors = (function () {
       const check = TT.Circuit.validateNetlist(netlist)
       if (!check.ok) throw new Error(check.error)
     } catch (error) {
-      return { ok: false, reasons: ['凭证里的网表无效：' + String(error && error.message ? error.message : error)], payload }
+      const msg = String(error && error.message ? error.message : error)
+      return { ok: false, reasons: ['凭证里的网表无效：' + msg], reasonKeys: [{ key: 'sensor.verify.errNetlist', params: { error: msg } }], payload }
     }
     const actualFingerprint = fingerprint(netlist)
-    if (actualFingerprint !== payload.fingerprint) reasons.push('网表指纹不一致（可能被篡改）')
+    if (actualFingerprint !== payload.fingerprint) {
+      reasons.push('网表指纹不一致（可能被篡改）')
+      reasonKeys.push({ key: 'sensor.verify.errFingerprint' })
+    }
     if (expectedFingerprint && String(expectedFingerprint).trim().toLowerCase() !== actualFingerprint) {
-      reasons.push(`指纹不匹配：凭证 ${actualFingerprint}，期望 ${String(expectedFingerprint).trim().toLowerCase()}`)
+      const exp = String(expectedFingerprint).trim().toLowerCase()
+      reasons.push(`指纹不匹配：凭证 ${actualFingerprint}，期望 ${exp}`)
+      reasonKeys.push({ key: 'sensor.verify.errMismatch', params: { actual: actualFingerprint, expected: exp } })
     }
     const sc = scenario(payload.scenario)
     const bits = bitsFromValues(sc, payload.values, payload.thresholds)
-    if (bits !== payload.bits) reasons.push('传感器条件与凭证记录的位不一致')
+    if (bits !== payload.bits) {
+      reasons.push('传感器条件与凭证记录的位不一致')
+      reasonKeys.push({ key: 'sensor.verify.errBits' })
+    }
     const outputs = TT.Circuit.evaluate(netlist, bits).outputs
     for (let index = 0; index < outputs.length; index += 1) {
       if (outputs[index] !== payload.outputs[index]) {
         reasons.push(`执行器 ${index + 1} 结果不一致：重算 ${outputs[index]}，凭证 ${payload.outputs[index]}`)
+        reasonKeys.push({ key: 'sensor.verify.errOutput', params: { index: index + 1, recomputed: outputs[index], receipt: payload.outputs[index] } })
         break
       }
     }
-    return { ok: reasons.length === 0, reasons, payload, bits, outputs, fingerprint: actualFingerprint, actuators: sc.outputs.map((output, index) => ({ key: output.key, labelKey: output.labelKey, tone: output.tone, on: outputs[index] === 1 })) }
+    return { ok: reasons.length === 0, reasons, reasonKeys, payload, bits, outputs, fingerprint: actualFingerprint, actuators: sc.outputs.map((output, index) => ({ key: output.key, labelKey: output.labelKey, tone: output.tone, on: outputs[index] === 1 })) }
   }
 
   return { SENSORS, SCENARIOS, scenario, sensorsOf, circuit, bitsFromValues, evaluate, audit, receipt, verify, fingerprint, b64url, unb64url }
@@ -11744,7 +11890,7 @@ TT.SensorsUI = (function () {
           ? h('div', { className: 'tt-finalenote', style: { borderLeftColor: engine.verifyResult.ok ? 'var(--tt-mint)' : 'var(--tt-red)' } },
               engine.verifyResult.ok
                 ? `${t('access.verify.pass')} · ${engine.verifyResult.actuators.filter((actuator) => actuator.on).map((actuator) => t(actuator.labelKey)).join(' / ') || t('sensor.none')}`
-                : `${t('access.verify.fail')}：${(engine.verifyResult.reasons || []).join('；')}`)
+                : `${t('access.verify.fail')}：${(engine.verifyResult.reasonKeys || []).map((r) => t(r.key, r.params || {})).join('；') || (engine.verifyResult.reasons || []).join('；')}`)
           : null,
       ),
       h('section', { className: 'tt-labcard' },
@@ -13839,12 +13985,22 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.11'
+  const VERSION = '1.10.0'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.10.0',
+      date: '2026-11-22',
+      items: [
+        '密码锁升级为 Mastermind 规则：仅提示匹配位数并记录历史推理',
+        '第 7 章巨兽 CPU 支持加减调整两个 4 位操作数，观察加法与溢出',
+        '抽离硬件规划器与传感器模块中的硬编码中文，完善 i18n 多语言对齐',
+        '补齐 README 完整 14 章节介绍与最新测试数据统计',
+      ],
+    },
     {
       version: '1.9.11',
       date: '2026-11-22',
@@ -15298,7 +15454,9 @@ TT.dict = {
     'arcade.pixel.playHint': '真实实现：行/列计数器逐拍扫描，点亮对应 LED；8×8 点阵约需数百颗与非门。',
     'arcade.pixel.clock': '每 0.45 秒一个区块 —— 动画速度就是链上时钟。',
     'arcade.lock.title': '4 位密码锁',
-    'arcade.lock.hint': '猜出 4 位密码；每次检查会告诉你每一位是否匹配。',
+    'arcade.lock.hint': 'Mastermind 推理规则：每次检查仅提示有几位完全匹配，不透露具体位置。',
+    'arcade.lock.matches': '{n} / 4 位正确',
+    'arcade.lock.ruleHint': 'Mastermind 规则：根据历史尝试中「匹配位数」做逻辑排除（如 1001 匹配 2 位，1010 匹配 3 位），6 次内解开密码。',
     'arcade.lock.check': '检查',
     'arcade.lock.reset': '重试',
     'arcade.lock.attempts': '尝试',
@@ -15401,6 +15559,8 @@ TT.dict = {
     'hud.settle': '交叉反馈需要 2 个节拍稳定',
     'hud.program': '程序',
     'hud.programOp': '{a} + {b}',
+    'hud.customOps': 'Operands',
+    'hud.customOps': '自定义操作数',
     'hud.result': '结果',
     'hud.resultSeg': '七段显示',
     'hud.running': '逐位进位中…',
@@ -15979,6 +16139,43 @@ TT.dict = {
     'lab.hardware.empty': '还没有可转换的电路：先综合一个逻辑函数，或打开沙盒电路，再回到这里。',
     'lab.hardware.goSynth': '去综合器',
     'lab.hardware.goSandbox': '去沙盒',
+    'hw.wire.gnd': 'GND (0V)',
+    'hw.wire.vcc': 'VCC (5V)',
+    'hw.wire.switch': '拨码开关 S{n}',
+    'hw.wire.gateDriver': 'U{chip} 第 {unit} 个门 · 输出脚 {pin}',
+    'hw.wire.chipPin': 'U{chip} 脚{pin}（{pinName}）',
+    'hw.wire.chipOut': 'U{chip} 脚{pin}（Y）',
+    'hw.wire.led': 'LED{n}',
+    'hw.wire.noteRail': '固定接 {rail}（恒 {node}）',
+    'hw.wire.noteSwitch': '开关串联 10kΩ 下拉到 GND',
+    'hw.wire.noteGateToGate': '74HC00 输出 → 输入',
+    'hw.wire.noteLedRail': '恒 {node}：LED 直接接电源/地（经 330Ω）',
+    'hw.wire.noteLedSwitch': '{label} → 330Ω → LED → GND',
+    'hw.wire.noteLedGate': '经 330Ω 限流电阻到 GND',
+    'hw.warn.missingNode': '门 {gate} 的 {pin} 输入引用了不存在的节点 {node}',
+    'hw.warn.missingOutputNode': '输出 {out} 引用了不存在的节点 {node}',
+    'hw.warn.maxFanOut': '最大扇出 {n}：74HC00 单输出可驱动约 10 个输入，实际布线请分叉并保持短线',
+    'hw.warn.stateful': '这是时序电路（含锁存器/状态位）：74HC00 只能搭组合逻辑，时钟与状态请用 74HC74/74HC573 并手工布线。',
+    'hw.warn.crowded': '共 {gates} 个门（{chips} 片 74HC00）：面包板会非常拥挤，建议改用洞洞板/PCB。',
+    'hw.warn.manyOutputs': '输出超过 7 个：请为每路 LED 单独准备 330Ω 电阻。',
+    'hw.bom.74hc00': '74HC00 四路 2 输入与非门（DIP-14）',
+    'hw.bom.cap': '0.1µF 陶瓷电容（去耦）',
+    'hw.bom.res10k': '10kΩ 电阻（下拉）',
+    'hw.bom.switches': '拨码开关 / 轻触开关',
+    'hw.bom.res330': '330Ω 电阻（LED 限流）',
+    'hw.bom.led': 'LED（5mm）',
+    'hw.bom.breadboard': '面包板 830 点',
+    'hw.bom.jumpers': '杜邦线 / 单股跳线',
+    'hw.bom.power': '5V 电源（USB 或稳压模块）',
+    'hw.bom.noteGates': '{n} 个门 ÷ 4',
+    'hw.bom.noteCap': '每片芯片 VCC–GND 之间各一颗',
+    'hw.bom.noteSwitchRes': '每个拨码开关一颗',
+    'hw.bom.noteSwitch': '每个输入一位',
+    'hw.bom.noteLedRes': '每个输出 LED 一颗',
+    'hw.bom.noteLed': '每个输出一位',
+    'hw.bom.noteBreadboard': '每 2 片芯片约一块板',
+    'hw.bom.noteJumpers': '按连线表裁剪',
+    'hw.bom.notePower': 'HC 系列 2–6V',
     'lab.hardware.steps': '搭建顺序：芯片跨中缝、VCC/GND 与去耦电容 → 按引脚表接输入 → 输出经 330Ω 接 LED → 上电前测短路 → 按真值表拨开关验证。时序电路需要额外时钟芯片。',
 
     'lab.synth.title': '真值表 → NAND 网表',
@@ -16560,7 +16757,9 @@ TT.dict = {
     'arcade.pixel.playHint': 'A real build scans rows/columns with counters and lights the matching LEDs; an 8×8 matrix is hundreds of NAND gates.',
     'arcade.pixel.clock': 'One block every 0.45 s: the animation speed is the chain clock.',
     'arcade.lock.title': '4-bit code lock',
-    'arcade.lock.hint': 'Guess the 4-bit code; each check reports which bits match.',
+    'arcade.lock.hint': 'Mastermind deduction rules: each check only tells you how many bits match, not which ones.',
+    'arcade.lock.matches': '{n} / 4 bits correct',
+    'arcade.lock.ruleHint': 'Mastermind rule: deduce the secret code by cross-referencing previous match counts within 6 attempts.',
     'arcade.lock.check': 'Check',
     'arcade.lock.reset': 'Retry',
     'arcade.lock.attempts': 'Attempts',
@@ -16663,6 +16862,8 @@ TT.dict = {
     'hud.settle': 'Cross-coupled feedback needs 2 beats to settle',
     'hud.program': 'Program',
     'hud.programOp': '{a} + {b}',
+    'hud.customOps': 'Operands',
+    'hud.customOps': '自定义操作数',
     'hud.result': 'Result',
     'hud.resultSeg': 'Seven-segment',
     'hud.running': 'Rippling carries…',
@@ -17241,6 +17442,80 @@ TT.dict = {
     'lab.hardware.empty': 'No circuit yet: synthesize a logic function or open a sandbox circuit, then come back.',
     'lab.hardware.goSynth': 'Go to synthesizer',
     'lab.hardware.goSandbox': 'Go to sandbox',
+    'hw.wire.gnd': 'GND (0V)',
+    'hw.wire.vcc': 'VCC (5V)',
+    'hw.wire.switch': '拨码开关 S{n}',
+    'hw.wire.gateDriver': 'U{chip} 第 {unit} 个门 · 输出脚 {pin}',
+    'hw.wire.chipPin': 'U{chip} 脚{pin}（{pinName}）',
+    'hw.wire.chipOut': 'U{chip} 脚{pin}（Y）',
+    'hw.wire.led': 'LED{n}',
+    'hw.wire.noteRail': '固定接 {rail}（恒 {node}）',
+    'hw.wire.noteSwitch': '开关串联 10kΩ 下拉到 GND',
+    'hw.wire.noteGateToGate': '74HC00 输出 → 输入',
+    'hw.wire.noteLedRail': '恒 {node}：LED 直接接电源/地（经 330Ω）',
+    'hw.wire.noteLedSwitch': '{label} → 330Ω → LED → GND',
+    'hw.wire.noteLedGate': '经 330Ω 限流电阻到 GND',
+    'hw.warn.missingNode': '门 {gate} 的 {pin} 输入引用了不存在的节点 {node}',
+    'hw.warn.missingOutputNode': '输出 {out} 引用了不存在的节点 {node}',
+    'hw.warn.maxFanOut': '最大扇出 {n}：74HC00 单输出可驱动约 10 个输入，实际布线请分叉并保持短线',
+    'hw.warn.stateful': '这是时序电路（含锁存器/状态位）：74HC00 只能搭组合逻辑，时钟与状态请用 74HC74/74HC573 并手工布线。',
+    'hw.warn.crowded': '共 {gates} 个门（{chips} 片 74HC00）：面包板会非常拥挤，建议改用洞洞板/PCB。',
+    'hw.warn.manyOutputs': '输出超过 7 个：请为每路 LED 单独准备 330Ω 电阻。',
+    'hw.bom.74hc00': '74HC00 四路 2 输入与非门（DIP-14）',
+    'hw.bom.cap': '0.1µF 陶瓷电容（去耦）',
+    'hw.bom.res10k': '10kΩ 电阻（下拉）',
+    'hw.bom.switches': '拨码开关 / 轻触开关',
+    'hw.bom.res330': '330Ω 电阻（LED 限流）',
+    'hw.bom.led': 'LED（5mm）',
+    'hw.bom.breadboard': '面包板 830 点',
+    'hw.bom.jumpers': '杜邦线 / 单股跳线',
+    'hw.bom.power': '5V 电源（USB 或稳压模块）',
+    'hw.bom.noteGates': '{n} 个门 ÷ 4',
+    'hw.bom.noteCap': '每片芯片 VCC–GND 之间各一颗',
+    'hw.bom.noteSwitchRes': '每个拨码开关一颗',
+    'hw.bom.noteSwitch': '每个输入一位',
+    'hw.bom.noteLedRes': '每个输出 LED 一颗',
+    'hw.bom.noteLed': '每个输出一位',
+    'hw.bom.noteBreadboard': '每 2 片芯片约一块板',
+    'hw.bom.noteJumpers': '按连线表裁剪',
+    'hw.bom.notePower': 'HC 系列 2–6V',
+    'hw.wire.gnd': 'GND (0V)',
+    'hw.wire.vcc': 'VCC (5V)',
+    'hw.wire.switch': 'DIP Switch S{n}',
+    'hw.wire.gateDriver': 'U{chip} Gate {unit} · Output Pin {pin}',
+    'hw.wire.chipPin': 'U{chip} Pin {pin} ({pinName})',
+    'hw.wire.chipOut': 'U{chip} Pin {pin} (Y)',
+    'hw.wire.led': 'LED{n}',
+    'hw.wire.noteRail': 'Tied to {rail} (const {node})',
+    'hw.wire.noteSwitch': 'Switch in series with 10kΩ pull-down to GND',
+    'hw.wire.noteGateToGate': '74HC00 Output → Input',
+    'hw.wire.noteLedRail': 'Const {node}: LED directly to power/GND (via 330Ω)',
+    'hw.wire.noteLedSwitch': '{label} → 330Ω → LED → GND',
+    'hw.wire.noteLedGate': 'Via 330Ω current-limiting resistor to GND',
+    'hw.warn.missingNode': 'Gate {gate} pin {pin} references nonexistent node {node}',
+    'hw.warn.missingOutputNode': 'Output {out} references nonexistent node {node}',
+    'hw.warn.maxFanOut': 'Max fan-out {n}: 74HC00 output drives ~10 inputs; keep wiring branched and short',
+    'hw.warn.stateful': 'Sequential circuit (has latches/state): 74HC00 only builds combinational logic; use 74HC74/573 for clock & state.',
+    'hw.warn.crowded': '{gates} gates ({chips}x 74HC00 chips): breadboard will be very crowded; stripboard/PCB recommended.',
+    'hw.warn.manyOutputs': 'More than 7 outputs: prepare dedicated 330Ω resistors for each LED.',
+    'hw.bom.74hc00': '74HC00 Quad 2-Input NAND Gate (DIP-14)',
+    'hw.bom.cap': '0.1µF Ceramic Capacitor (Decoupling)',
+    'hw.bom.res10k': '10kΩ Resistor (Pull-down)',
+    'hw.bom.switches': 'DIP Switch / Tactile Buttons',
+    'hw.bom.res330': '330Ω Resistor (LED Current Limiting)',
+    'hw.bom.led': 'LED (5mm)',
+    'hw.bom.breadboard': 'Breadboard (830 tie-points)',
+    'hw.bom.jumpers': 'Dupont / Solid-core Jumper Wires',
+    'hw.bom.power': '5V Power Supply (USB or Regulator Module)',
+    'hw.bom.noteGates': '{n} gates ÷ 4',
+    'hw.bom.noteCap': '1 per chip between VCC and GND',
+    'hw.bom.noteSwitchRes': '1 per DIP switch',
+    'hw.bom.noteSwitch': '1 bit per input',
+    'hw.bom.noteLedRes': '1 per output LED',
+    'hw.bom.noteLed': '1 bit per output',
+    'hw.bom.noteBreadboard': '~1 board per 2 chips',
+    'hw.bom.noteJumpers': 'Cut to length per wiring table',
+    'hw.bom.notePower': 'HC series 2–6V',
     'lab.hardware.steps': 'Build order: straddle the chips, wire VCC/GND + decoupling → inputs per pin table → outputs via 330Ω LEDs → check for shorts before power → verify row by row. Sequential circuits need extra clock chips.',
 
     'lab.synth.title': 'Truth table → NAND netlist',
@@ -19182,9 +19457,42 @@ TT.UI.Telemetry = function Telemetry(props) {
     const playState = play
     const result = playState.result
     const value = result && playState.showResult ? result.outputBits & 15 : null
+    const [opA, opB] = playState.operands || [3, 5]
     rows.push(TT.h('div', { key: 'program', className: 'tt-trow' },
       TT.h('span', { className: 'tt-tlabel' }, t('hud.program')),
-      TT.h('span', { className: 'tt-tval tt-mono' }, t('hud.programOp', { a: playState.operands[0], b: playState.operands[1] })),
+      TT.h('span', { className: 'tt-tval tt-mono' }, t('hud.programOp', { a: opA, b: opB })),
+    ))
+    rows.push(TT.h('div', { key: 'customOps', className: 'tt-labrow', style: { justifyContent: 'space-between', margin: '2px 0' } },
+      TT.h('span', { className: 'tt-tlabel' }, t('hud.customOps')),
+      TT.h('div', { style: { display: 'flex', gap: 4, alignItems: 'center' } },
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-chip',
+          disabled: playState.running,
+          onClick: () => api.dispatch({ type: 'program/operand', which: 'a', delta: -1 }),
+        }, '−'),
+        TT.h('b', { className: 'tt-mono', style: { fontSize: 11, minWidth: 26, textAlign: 'center', color: 'var(--tt-amber)' } }, `A:${opA}`),
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-chip',
+          disabled: playState.running,
+          onClick: () => api.dispatch({ type: 'program/operand', which: 'a', delta: 1 }),
+        }, '+'),
+        TT.h('span', { style: { color: 'var(--tt-faint)' } }, '+'),
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-chip',
+          disabled: playState.running,
+          onClick: () => api.dispatch({ type: 'program/operand', which: 'b', delta: -1 }),
+        }, '−'),
+        TT.h('b', { className: 'tt-mono', style: { fontSize: 11, minWidth: 26, textAlign: 'center', color: 'var(--tt-cyan)' } }, `B:${opB}`),
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-chip',
+          disabled: playState.running,
+          onClick: () => api.dispatch({ type: 'program/operand', which: 'b', delta: 1 }),
+        }, '+'),
+      ),
     ))
     rows.push(TT.h('div', { key: 'running', className: 'tt-trow' },
       TT.h('span', { className: 'tt-tlabel' }, t('hud.result')),
@@ -19195,7 +19503,7 @@ TT.UI.Telemetry = function Telemetry(props) {
       TT.h('div', { style: { display: 'flex', flexDirection: 'column', gap: 3 } },
         TT.h('div', { style: { fontSize: 10, color: 'var(--tt-dim)' } }, t('hud.resultSeg')),
         TT.h('div', { className: 'tt-bit', style: { fontSize: 10.5, color: '#9fe7ff' } },
-          result ? `C ${result.outputBits & 16 ? 1 : 0} · S ${TT.util.formatBits(result.outputBits & 15, 4)}` : '—'),
+          result ? `Cout:${result.outputBits & 16 ? 1 : 0} · S:${TT.util.formatBits(result.outputBits & 15, 4)} (${result.outputBits})` : '—'),
         TT.h('div', { style: { fontSize: 10, color: 'var(--tt-faint)' } }, t('hud.cpuStory')),
       ),
     ))

@@ -165,6 +165,8 @@ test('arcade reducer drives every mini game', () => {
   state = M.reduce(state, { type: 'lock/check' })
   assert.equal(state.arcade.lock.guess, 9)
   assert.equal(state.arcade.lock.solved, true)
+  assert.equal(state.arcade.lock.lastMatches, 4)
+  assert.equal(state.arcade.lock.history.length, 1)
 
   state = M.reduce(state, { type: 'arcade/game', game: 'guess' })
   assert.equal(state.arcade.guess.secret, 11)
