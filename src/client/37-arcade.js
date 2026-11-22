@@ -526,45 +526,64 @@ TT.ArcadeUI = (function () {
 
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
-        h('div', { className: 'tt-labrow' },
-          h('button', {
-            type: 'button',
-            className: 'tt-btn',
-            'data-kind': music.playing ? 'active' : 'primary',
-            onClick: () => api.dispatch({ type: 'music/toggle' }),
-          }, music.playing ? t('arcade.music.stop') : t('arcade.music.play')),
-          h('span', { className: 'tt-lablabel' }, t('arcade.music.tempo')),
-          [['slow', 620], ['normal', 420], ['fast', 280]].map(([key, value]) =>
+        h('div', { className: 'tt-music-top' },
+          h('div', { className: 'tt-music-controls' },
+          h('div', { className: 'tt-labrow' },
             h('button', {
-              key,
               type: 'button',
-              className: 'tt-chip',
-              'data-active': music.tempo === value ? 'true' : 'false',
-              onClick: () => api.dispatch({ type: 'music/tempo', tempo: value }),
-            }, t(`arcade.tempo.${key}`))),
-          h(NetToggle, { show: showNet, onClick: () => setShowNet((value) => !value), t }),
-        ),
-        h('div', { className: 'tt-labrow' },
-          h('span', { className: 'tt-lablabel' }, t('arcade.music.scale')),
-          TT.Arcade.SCALES.map((scale, index) =>
-            h('button', {
-              key: scale.id,
-              type: 'button',
-              className: 'tt-chip',
-              'data-active': music.scale === index ? 'true' : 'false',
-              onClick: () => api.dispatch({ type: 'music/scale', index }),
-            }, t(scale.nameKey))),
-        ),
-        h('div', { className: 'tt-labrow' },
-          h('span', { className: 'tt-lablabel' }, t('arcade.music.tune')),
-          TT.Arcade.TUNES.map((item, index) =>
-            h('button', {
-              key: item.id,
-              type: 'button',
-              className: 'tt-chip',
-              'data-active': music.tune === index ? 'true' : 'false',
-              onClick: () => api.dispatch({ type: 'music/tune', index }),
-            }, t(item.nameKey))),
+              className: 'tt-btn',
+              'data-kind': music.playing ? 'active' : 'primary',
+              onClick: () => api.dispatch({ type: 'music/toggle' }),
+            }, music.playing ? t('arcade.music.stop') : t('arcade.music.play')),
+            h('span', { className: 'tt-lablabel' }, t('arcade.music.tempo')),
+            [['slow', 620], ['normal', 420], ['fast', 280]].map(([key, value]) =>
+              h('button', {
+                key,
+                type: 'button',
+                className: 'tt-chip',
+                'data-active': music.tempo === value ? 'true' : 'false',
+                onClick: () => api.dispatch({ type: 'music/tempo', tempo: value }),
+              }, t(`arcade.tempo.${key}`))),
+            h(NetToggle, { show: showNet, onClick: () => setShowNet((value) => !value), t }),
+          ),
+          h('div', { className: 'tt-labrow' },
+            h('span', { className: 'tt-lablabel' }, t('arcade.music.scale')),
+            TT.Arcade.SCALES.map((scale, index) =>
+              h('button', {
+                key: scale.id,
+                type: 'button',
+                className: 'tt-chip',
+                'data-active': music.scale === index ? 'true' : 'false',
+                onClick: () => api.dispatch({ type: 'music/scale', index }),
+              }, t(scale.nameKey))),
+          ),
+          h('div', { className: 'tt-labrow' },
+            h('span', { className: 'tt-lablabel' }, t('arcade.music.tune')),
+            TT.Arcade.TUNES.map((item, index) =>
+              h('button', {
+                key: item.id,
+                type: 'button',
+                className: 'tt-chip',
+                'data-active': music.tune === index ? 'true' : 'false',
+                onClick: () => api.dispatch({ type: 'music/tune', index }),
+              }, t(item.nameKey))),
+          ),
+          ),
+          showNet && TT.NetlistGridUI ? h('div', { className: 'tt-music-net' },
+            h('div', { className: 'tt-music-nethead' },
+              h('strong', null, `🧮 ${t('netgrid.musicTitle')}`),
+              h('span', null, `${TT.Circuit.canonical.counter4().gates.length} NAND`),
+            ),
+            h(TT.NetlistGridUI.Grid, {
+              netlist: TT.Circuit.canonical.counter4(),
+              bits: 0,
+              stateBits: (music.step | 0) % 16,
+              t,
+              inputLabels: [],
+              outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
+              compactLayout: true,
+            }),
+          ) : null,
         ),
         h('div', { className: 'tt-musicsteps' }, notes.map((note, index) => {
           const absolute = windowStart + index
@@ -658,15 +677,6 @@ TT.ArcadeUI = (function () {
         ),
         h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.music.clock')),
       ),
-      showNet ? h(NetlistCard, {
-        title: t('netgrid.musicTitle'),
-        netlist: TT.Circuit.canonical.counter4(),
-        bits: 0,
-        stateBits: (music.step | 0) % 16,
-        t,
-        inputLabels: [],
-        outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
-      }) : null,
     )
   }
 

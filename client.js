@@ -9413,45 +9413,64 @@ TT.ArcadeUI = (function () {
 
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
-        h('div', { className: 'tt-labrow' },
-          h('button', {
-            type: 'button',
-            className: 'tt-btn',
-            'data-kind': music.playing ? 'active' : 'primary',
-            onClick: () => api.dispatch({ type: 'music/toggle' }),
-          }, music.playing ? t('arcade.music.stop') : t('arcade.music.play')),
-          h('span', { className: 'tt-lablabel' }, t('arcade.music.tempo')),
-          [['slow', 620], ['normal', 420], ['fast', 280]].map(([key, value]) =>
+        h('div', { className: 'tt-music-top' },
+          h('div', { className: 'tt-music-controls' },
+          h('div', { className: 'tt-labrow' },
             h('button', {
-              key,
               type: 'button',
-              className: 'tt-chip',
-              'data-active': music.tempo === value ? 'true' : 'false',
-              onClick: () => api.dispatch({ type: 'music/tempo', tempo: value }),
-            }, t(`arcade.tempo.${key}`))),
-          h(NetToggle, { show: showNet, onClick: () => setShowNet((value) => !value), t }),
-        ),
-        h('div', { className: 'tt-labrow' },
-          h('span', { className: 'tt-lablabel' }, t('arcade.music.scale')),
-          TT.Arcade.SCALES.map((scale, index) =>
-            h('button', {
-              key: scale.id,
-              type: 'button',
-              className: 'tt-chip',
-              'data-active': music.scale === index ? 'true' : 'false',
-              onClick: () => api.dispatch({ type: 'music/scale', index }),
-            }, t(scale.nameKey))),
-        ),
-        h('div', { className: 'tt-labrow' },
-          h('span', { className: 'tt-lablabel' }, t('arcade.music.tune')),
-          TT.Arcade.TUNES.map((item, index) =>
-            h('button', {
-              key: item.id,
-              type: 'button',
-              className: 'tt-chip',
-              'data-active': music.tune === index ? 'true' : 'false',
-              onClick: () => api.dispatch({ type: 'music/tune', index }),
-            }, t(item.nameKey))),
+              className: 'tt-btn',
+              'data-kind': music.playing ? 'active' : 'primary',
+              onClick: () => api.dispatch({ type: 'music/toggle' }),
+            }, music.playing ? t('arcade.music.stop') : t('arcade.music.play')),
+            h('span', { className: 'tt-lablabel' }, t('arcade.music.tempo')),
+            [['slow', 620], ['normal', 420], ['fast', 280]].map(([key, value]) =>
+              h('button', {
+                key,
+                type: 'button',
+                className: 'tt-chip',
+                'data-active': music.tempo === value ? 'true' : 'false',
+                onClick: () => api.dispatch({ type: 'music/tempo', tempo: value }),
+              }, t(`arcade.tempo.${key}`))),
+            h(NetToggle, { show: showNet, onClick: () => setShowNet((value) => !value), t }),
+          ),
+          h('div', { className: 'tt-labrow' },
+            h('span', { className: 'tt-lablabel' }, t('arcade.music.scale')),
+            TT.Arcade.SCALES.map((scale, index) =>
+              h('button', {
+                key: scale.id,
+                type: 'button',
+                className: 'tt-chip',
+                'data-active': music.scale === index ? 'true' : 'false',
+                onClick: () => api.dispatch({ type: 'music/scale', index }),
+              }, t(scale.nameKey))),
+          ),
+          h('div', { className: 'tt-labrow' },
+            h('span', { className: 'tt-lablabel' }, t('arcade.music.tune')),
+            TT.Arcade.TUNES.map((item, index) =>
+              h('button', {
+                key: item.id,
+                type: 'button',
+                className: 'tt-chip',
+                'data-active': music.tune === index ? 'true' : 'false',
+                onClick: () => api.dispatch({ type: 'music/tune', index }),
+              }, t(item.nameKey))),
+          ),
+          ),
+          showNet && TT.NetlistGridUI ? h('div', { className: 'tt-music-net' },
+            h('div', { className: 'tt-music-nethead' },
+              h('strong', null, `🧮 ${t('netgrid.musicTitle')}`),
+              h('span', null, `${TT.Circuit.canonical.counter4().gates.length} NAND`),
+            ),
+            h(TT.NetlistGridUI.Grid, {
+              netlist: TT.Circuit.canonical.counter4(),
+              bits: 0,
+              stateBits: (music.step | 0) % 16,
+              t,
+              inputLabels: [],
+              outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
+              compactLayout: true,
+            }),
+          ) : null,
         ),
         h('div', { className: 'tt-musicsteps' }, notes.map((note, index) => {
           const absolute = windowStart + index
@@ -9545,15 +9564,6 @@ TT.ArcadeUI = (function () {
         ),
         h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.music.clock')),
       ),
-      showNet ? h(NetlistCard, {
-        title: t('netgrid.musicTitle'),
-        netlist: TT.Circuit.canonical.counter4(),
-        bits: 0,
-        stateBits: (music.step | 0) % 16,
-        t,
-        inputLabels: [],
-        outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
-      }) : null,
     )
   }
 
@@ -13838,9 +13848,19 @@ TT.Version = (function () {
       ],
     },
     {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
+    },
+    {
       version: '1.8.6',
       date: '2026-11-22',
       items: ['实验室综合结果、元件展厅、电路库都支持直接预览网表'],
+    },
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
     },
     {
       version: '1.8.6',
@@ -13851,6 +13871,11 @@ TT.Version = (function () {
       version: '1.8.5',
       date: '2026-11-22',
       items: ['切换章节时自动切换/关闭网表，不再停留在上一章的网表'],
+    },
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
     },
     {
       version: '1.8.6',
@@ -13869,6 +13894,11 @@ TT.Version = (function () {
         '修正各章网表映射：第 1 章与非门、第 2 章半加器、第 5 章乐高全加器补齐入口',
         '巨兽 CPU 章移除错误的 4 位加法器网表；第 7 章改用实际综合出的网表',
       ],
+    },
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
     },
     {
       version: '1.8.6',
@@ -13892,6 +13922,11 @@ TT.Version = (function () {
       version: '1.8.3',
       date: '2026-11-22',
       items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
+    },
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
     },
     {
       version: '1.8.6',
@@ -13980,9 +14015,19 @@ TT.Version = (function () {
       ],
     },
     {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
+    },
+    {
       version: '1.8.6',
       date: '2026-11-22',
       items: ['实验室综合结果、元件展厅、电路库都支持直接预览网表'],
+    },
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
     },
     {
       version: '1.8.6',
@@ -13993,6 +14038,11 @@ TT.Version = (function () {
       version: '1.8.5',
       date: '2026-11-22',
       items: ['切换章节时自动切换/关闭网表，不再停留在上一章的网表'],
+    },
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
     },
     {
       version: '1.8.6',
@@ -14011,6 +14061,11 @@ TT.Version = (function () {
         '修正各章网表映射：第 1 章与非门、第 2 章半加器、第 5 章乐高全加器补齐入口',
         '巨兽 CPU 章移除错误的 4 位加法器网表；第 7 章改用实际综合出的网表',
       ],
+    },
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
     },
     {
       version: '1.8.6',
@@ -14034,6 +14089,11 @@ TT.Version = (function () {
       version: '1.8.3',
       date: '2026-11-22',
       items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
+    },
+    {
+      version: '1.8.7',
+      date: '2026-11-22',
+      items: ['NAND 音乐盒的网表视图移到界面右上角，与播放控制同排'],
     },
     {
       version: '1.8.6',
@@ -17846,6 +17906,15 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 4px 4px; cursor:pointer;
   background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:7px; user-select:none; overflow:hidden; }
 .tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
+.tt-music-top { display:flex; align-items:flex-start; gap:10px; }
+.tt-music-controls { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.tt-music-net { flex:0 0 340px; min-width:0; display:flex; flex-direction:column; gap:4px; padding:7px 8px;
+  border-radius:10px; background:rgba(4,12,20,.55); border:1px solid rgba(86,225,255,.14); }
+.tt-music-nethead { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:10px; color:var(--tt-dim); }
+.tt-music-nethead strong { color:var(--tt-ink); font-size:11px; }
+.tt-music-net .tt-netgrid-viewport { height:min(42vh,360px); }
+.tt-music-net .tt-netgrid-zoom { display:none; }
+@media (max-width: 900px) { .tt-music-top { flex-direction:column; } .tt-music-net { flex:0 0 auto; width:100%; } }
 .tt-piano-legend { display:flex; flex-direction:column; gap:3px; margin:2px 0 6px; padding:5px 7px; border-radius:8px;
   background:rgba(4,12,20,.45); border:1px solid rgba(86,225,255,.1); }
 .tt-piano-legendrow { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
