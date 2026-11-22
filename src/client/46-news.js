@@ -289,6 +289,7 @@ TT.NewsUI = (function () {
       ),
       h('section', { className: 'tt-labcard' },
         h('div', { className: 'tt-labcardhead' },
+          state.lang === 'en' ? h('p', { className: 'tt-finalenote', style: { margin: '0 0 6px' } }, t('news.originalLanguage')) : null,
           h('strong', null, t('news.latest')),
           h('span', null, feed.source ? (feed.crawledAt ? `${t('news.snapshot')} ${crawled}` : '') : t('news.noFeed')),
         ),

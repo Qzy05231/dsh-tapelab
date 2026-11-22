@@ -16,12 +16,48 @@ TT.Ecosystem = (function () {
 
   // TapeOut official entry points (Official category) plus the official protocol site.
   const PROJECTS = [
-    { id: 'tapeout', name: 'TapeOut', symbol: '⊗', sub: '协议主站', category: 'protocol', radius: 84, desc: '官方链上流片协议：铸造 NAND / LATCH 元件，在画布上连线组成电路，再流片为电路 NFT。', links: [{ label: '官网', url: 'https://tapeout.net/' }] },
-    { id: 'blonskr', name: 'Blonskr', symbol: 'X', sub: '官方公告', category: 'official', radius: 62, desc: 'TapeOut 发起人的官方账号：协议公告、产品发布与重大决策的首要发布渠道。', links: [{ label: 'X', url: 'https://x.com/blonskr' }] },
-    { id: 'tapehub', name: 'TapeHub.ai', symbol: '🚀', sub: '发行台', category: 'launchpad', radius: 66, desc: '官方生态发射台：创建挖矿币项目（池币 BEM / BNB / USD1）并用它铸造晶体管；毕业后 99% 池币与 5000 万项目币配对并上 PancakeSwap，95% 代币用于挖矿。', links: [{ label: '官网', url: 'https://tapehub.ai/' }] },
-    { id: 'tapekit', name: 'TapeKit', symbol: '🌐', sub: 'tape:// 网关', category: 'infra', radius: 64, desc: 'tape:// 的官方公共网关：把链上电路容器里的网站用普通浏览器打开；按链上地址跳转子域名，内容哈希在浏览器端验证，无服务器、无 DNS。', links: [{ label: '官网', url: 'https://tapekit.org/' }] },
-    { id: 'tapecode', name: 'TapeCode.ai', symbol: '🤖', sub: 'AI 构建器', category: 'ai', radius: 64, desc: '官方 AI 应用构建器：一句话生成合约与前端，约 10 分钟上线；合约归你的电路容器所有，使用需要钱包登录与 BEM 余额。', links: [{ label: '官网', url: 'https://tapecode.ai/' }] },
-    { id: 'taperelay', name: 'TapeRelay', symbol: '📡', sub: '文件与消息', category: 'infra', radius: 68, desc: '官方 XIP 提案（与 X Layer）：客户端验证的去中心化文件与消息网络；1 MiB SHA-256 分块、零 gas 消息、5 个官方节点。', links: [{ label: '官网', url: 'https://taperelay.com/' }] },
+    {
+      id: 'tapeout', name: 'TapeOut', symbol: '⊗', sub: '协议主站', subEn: 'Protocol hub',
+      category: 'protocol', radius: 84,
+      desc: '官方链上流片协议：铸造 NAND / LATCH 元件，在画布上连线组成电路，再流片为电路 NFT。',
+      descEn: 'The official on-chain tape-out protocol: mint NAND / LATCH parts, wire them into a circuit on the canvas, then tape it out as a circuit NFT.',
+      links: [{ label: '官网', labelEn: 'Website', url: 'https://tapeout.net/' }],
+    },
+    {
+      id: 'blonskr', name: 'Blonskr', symbol: 'X', sub: '官方公告', subEn: 'Official updates',
+      category: 'official', radius: 62,
+      desc: 'TapeOut 发起人的官方账号：协议公告、产品发布与重大决策的首要发布渠道。',
+      descEn: 'The official account of the TapeOut founder: the primary channel for protocol announcements, launches and major decisions.',
+      links: [{ label: 'X', labelEn: 'X', url: 'https://x.com/blonskr' }],
+    },
+    {
+      id: 'tapehub', name: 'TapeHub.ai', symbol: '🚀', sub: '发行台', subEn: 'Launchpad',
+      category: 'launchpad', radius: 66,
+      desc: '官方生态发射台：创建挖矿币项目（池币 BEM / BNB / USD1）并用它铸造晶体管；毕业后 99% 池币与 5000 万项目币配对并上 PancakeSwap，95% 代币用于挖矿。',
+      descEn: 'Official ecosystem launchpad: create a mining-coin project (pool coin BEM / BNB / USD1) and use it to mint transistors; after graduation 99% of the pool pairs with 50M project tokens on PancakeSwap, with 95% of tokens mined.',
+      links: [{ label: '官网', labelEn: 'Website', url: 'https://tapehub.ai/' }],
+    },
+    {
+      id: 'tapekit', name: 'TapeKit', symbol: '🌐', sub: 'tape:// 网关', subEn: 'tape:// gateway',
+      category: 'infra', radius: 64,
+      desc: 'tape:// 的官方公共网关：把链上电路容器里的网站用普通浏览器打开；按链上地址跳转子域名，内容哈希在浏览器端验证，无服务器、无 DNS。',
+      descEn: 'The official public gateway for tape://: open sites stored in on-chain circuit containers with a normal browser; subdomains follow on-chain addresses and content hashes are verified client-side with no servers or DNS.',
+      links: [{ label: '官网', labelEn: 'Website', url: 'https://tapekit.org/' }],
+    },
+    {
+      id: 'tapecode', name: 'TapeCode.ai', symbol: '🤖', sub: 'AI 构建器', subEn: 'AI builder',
+      category: 'ai', radius: 64,
+      desc: '官方 AI 应用构建器：一句话生成合约与前端，约 10 分钟上线；合约归你的电路容器所有，使用需要钱包登录与 BEM 余额。',
+      descEn: 'The official AI app builder: describe an app in one sentence to generate a contract and frontend, live in about 10 minutes; contracts belong to your circuit container and require wallet login plus BEM balance.',
+      links: [{ label: '官网', labelEn: 'Website', url: 'https://tapecode.ai/' }],
+    },
+    {
+      id: 'taperelay', name: 'TapeRelay', symbol: '📡', sub: '文件与消息', subEn: 'Files & messages',
+      category: 'infra', radius: 68,
+      desc: '官方 XIP 提案（与 X Layer）：客户端验证的去中心化文件与消息网络；1 MiB SHA-256 分块、零 gas 消息、5 个官方节点。',
+      descEn: 'Official XIP proposal (with X Layer): a client-verified decentralized file and message network; 1 MiB SHA-256 chunks, zero-gas messages and 5 official nodes.',
+      links: [{ label: '官网', labelEn: 'Website', url: 'https://taperelay.com/' }],
+    },
   ]
 
   function hash32(text) {
@@ -153,6 +189,8 @@ TT.EcosystemUI = (function () {
     const runningRef = React.useRef(true)
     const hoverRef = React.useRef(null)
     const selectedRef = React.useRef(null)
+    const langRef = React.useRef(state.lang === 'en' ? 'en' : 'zh')
+    langRef.current = state.lang === 'en' ? 'en' : 'zh'
     const [running, setRunning] = React.useState(true)
     const [selectedId, setSelectedId] = React.useState(null)
     const [hoverId, setHoverId] = React.useState(null)
@@ -299,7 +337,8 @@ TT.EcosystemUI = (function () {
             context.fillStyle = rgba(color, 0.95)
             context.font = `600 ${subSize}px ui-sans-serif, -apple-system, sans-serif`
             context.shadowBlur = 0
-            context.fillText(project.sub || '', bubble.x, bubble.y + radius * 0.44)
+            const sub = langRef.current === 'en' ? (project.subEn || project.sub) : project.sub
+            context.fillText(sub || '', bubble.x, bubble.y + radius * 0.44)
           }
           context.shadowColor = 'transparent'
           context.shadowBlur = 0
@@ -371,9 +410,10 @@ TT.EcosystemUI = (function () {
               h('button', { type: 'button', className: 'tt-achvclose', onClick: () => setSelectedId(null) }, '✕'),
               h('span', { className: 'tt-newstag' }, t(TT.Ecosystem.CATEGORIES[project.category].key)),
               h('h3', null, project.name),
-              h('p', null, project.desc),
+              h('p', null, state.lang === 'en' ? (project.descEn || project.desc) : project.desc),
               h('div', { className: 'tt-eco-links' }, project.links.map((link) =>
-                h('a', { key: link.url, className: 'tt-chip', href: link.url, target: '_blank', rel: 'noreferrer noopener' }, `${link.label} ↗`))),
+                h('a', { key: link.url, className: 'tt-chip', href: link.url, target: '_blank', rel: 'noreferrer noopener' },
+                  `${state.lang === 'en' ? (link.labelEn || link.label) : link.label} ↗`))),
             )
           : null,
       ),

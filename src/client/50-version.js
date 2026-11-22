@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.11.0'
+  const VERSION = '1.11.1'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.11.1',
+      date: '2026-11-22',
+      items: [
+        '官方生态项目简介、气泡副标题与链接标签补齐英文，随 EN/CN 切换',
+        '英文模式下资讯页注明外部新闻保留原文语言',
+      ],
+    },
     {
       version: '1.11.0',
       date: '2026-11-22',
