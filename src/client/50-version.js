@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.11.1'
+  const VERSION = '1.11.2'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.11.2',
+      date: '2026-11-22',
+      items: [
+        '修复部分环境下 3D 画布空白：世界挂载不再随语言/渲染重建，并延迟强制 resize/start',
+        '淡入遮罩默认透明；若 3D 仍无法启动会显示明确提示而不是纯黑',
+      ],
+    },
     {
       version: '1.11.1',
       date: '2026-11-22',

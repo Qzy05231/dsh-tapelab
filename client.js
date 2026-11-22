@@ -14074,12 +14074,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.11.1'
+  const VERSION = '1.11.2'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.11.2',
+      date: '2026-11-22',
+      items: [
+        '修复部分环境下 3D 画布空白：世界挂载不再随语言/渲染重建，并延迟强制 resize/start',
+        '淡入遮罩默认透明；若 3D 仍无法启动会显示明确提示而不是纯黑',
+      ],
+    },
     {
       version: '1.11.1',
       date: '2026-11-22',
@@ -15175,6 +15183,8 @@ TT.dict = {
     'panel.dataHide': '收起数据',
     'panel.introStart': '开始任务',
     'panel.intro': '章节说明',
+    'panel.worldFailed': '3D 渲染未能启动',
+    'panel.worldFailedHint': '请刷新页面；若仍黑屏，检查浏览器是否禁用了 Canvas 2D。',
     'panel.guide': '新手引导',
     'netgrid.title': '安全电路网表',
     'netgrid.latchTitle': 'SR 锁存器网表',
@@ -16479,6 +16489,8 @@ TT.dict = {
     'panel.dataHide': 'Hide data',
     'panel.introStart': 'Start mission',
     'panel.intro': 'Chapter brief',
+    'panel.worldFailed': '3D renderer failed to start',
+    'panel.worldFailedHint': 'Refresh the page; if it stays black, check that Canvas 2D is enabled.',
     'panel.guide': 'Getting started',
     'netgrid.title': 'Safety netlist',
     'netgrid.latchTitle': 'SR latch netlist',
@@ -17894,6 +17906,10 @@ TT.UI.CSS = `
 .tt-tool[data-active="true"] { background:var(--dsw-alias-interactive-bg-hover); border-color:var(--dsw-alias-border-l2); color:var(--dsw-alias-label-primary); }
 .tt-tool .tt-glyph { font-size:14px; line-height:1; }
 .tt-stage { position:relative; flex:1 1 auto; min-height:0; overflow:hidden; background:#04070d; }
+.tt-worldfail { position:absolute; inset:0; z-index:4; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  color:var(--tt-ink); background:rgba(4,8,14,.92); text-align:center; padding:20px; }
+.tt-worldfail b { font-size:14px; }
+.tt-worldfail span { font-size:11px; color:var(--tt-dim); max-width:420px; }
 .tt-canvas { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
 .tt-canvas:active { cursor:grabbing; }
 .tt-scrim { position:absolute; inset:0; background:linear-gradient(180deg, rgba(3,6,12,.55), rgba(3,6,12,0) 22%, rgba(3,6,12,0) 70%, rgba(3,6,12,.6)); pointer-events:none; }
@@ -18035,7 +18051,7 @@ TT.UI.CSS = `
 .tt-lab[data-paused="true"] .tt-beatbar > i { animation-play-state:paused; }
 @keyframes tt-beat { from { width:0%; } to { width:100%; } }
 
-.tt-fade { position:absolute; inset:0; pointer-events:none; z-index:5;
+.tt-fade { position:absolute; inset:0; pointer-events:none; z-index:5; opacity:0;
   background:radial-gradient(60% 55% at 50% 45%, rgba(86,225,255,.16), rgba(2,6,12,.9));
   animation:tt-fade-out .55s ease forwards; }
 @keyframes tt-fade-out { from { opacity:1; } to { opacity:0; } }
@@ -18798,17 +18814,40 @@ TT.UI.Panel = function Panel(props) {
   const inNews = state.mode === 'news'
   const inEco = state.mode === 'eco'
 
+  const tRef = React.useRef(t)
+  tRef.current = t
+  const [worldFailed, setWorldFailed] = React.useState(false)
   React.useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !TT.WorldView) return undefined
-    const view = TT.WorldView.mount(canvas, { store, api, t, setHover })
+    let view = null
+    try {
+      view = TT.WorldView.mount(canvas, {
+        store,
+        api,
+        t: (key, params) => tRef.current(key, params),
+        setHover,
+      })
+    } catch (error) {
+      setWorldFailed(true)
+      return undefined
+    }
     const stopClock = api.startClock ? api.startClock() : () => {}
+    // panel may mount while the host is still laying out: kick a resize/start once
+    const kick = setTimeout(() => {
+      try {
+        if (api.setWorldActive) api.setWorldActive(true)
+      } catch (error) {
+        /* ignore */
+      }
+    }, 260)
     return () => {
+      clearTimeout(kick)
       stopClock()
       if (api.stopCinema) api.stopCinema(true)
       view.dispose()
     }
-  }, [canvasRef, store, api, t])
+  }, [canvasRef, store, api])
 
   React.useEffect(() => {
     if (api.setWorldActive) api.setWorldActive(!inLab && !inArcade && !inNews && !inEco)
@@ -19311,6 +19350,7 @@ TT.UI.Panel = function Panel(props) {
 
     TT.h('div', { className: 'tt-stage' },
       TT.h('canvas', { className: 'tt-canvas', ref: canvasRef }),
+      worldFailed ? TT.h('div', { className: 'tt-worldfail' }, TT.h('b', null, t('panel.worldFailed')), TT.h('span', null, t('panel.worldFailedHint'))) : null,
       TT.h('div', { className: 'tt-scrim' }),
       state.intro ? null : TT.h('div', { className: 'tt-fade', key: `fade-${state.epoch}`, 'aria-hidden': 'true' }),
       state.intro ? null : TT.h('div', {
