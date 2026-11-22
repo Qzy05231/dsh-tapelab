@@ -9399,6 +9399,17 @@ TT.ArcadeUI = (function () {
       if (raw < TT.Arcade.PIANO_MIN || raw > TT.Arcade.PIANO_MAX) return
       keyHints[raw] = keyHints[raw] ? `${keyHints[raw]} / ${key.toUpperCase()}` : key.toUpperCase()
     })
+    const legendRows = [
+      { labelKey: 'arcade.music.lowerRow', keys: ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ','] },
+      { labelKey: 'arcade.music.upperRow', keys: ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i'] },
+    ].map((row) => ({
+      labelKey: row.labelKey,
+      items: row.keys.map((key) => {
+        const raw = 12 * (octave + 1) + TT.Arcade.PIANO_KEYS[key]
+        if (raw < TT.Arcade.PIANO_MIN || raw > TT.Arcade.PIANO_MAX) return null
+        return { key, name: TT.Arcade.midiName(raw) }
+      }).filter(Boolean),
+    }))
 
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
@@ -9481,7 +9492,6 @@ TT.ArcadeUI = (function () {
               onClick: () => api.dispatch({ type: 'music/key', midi }),
             },
               h('span', { className: 'tt-piano-notelabel' }, midi % 12 === 0 ? TT.Arcade.midiName(midi) : ''),
-              keyHints[midi] ? h('kbd', { className: 'tt-piano-keyhint' }, keyHints[midi]) : null,
             )),
             blackKeys.map((midi) => {
               const whiteIndex = whiteKeys.indexOf(midi - 1)
@@ -9497,9 +9507,18 @@ TT.ArcadeUI = (function () {
                   transform: 'translateX(-50%)',
                 },
                 onClick: () => api.dispatch({ type: 'music/key', midi }),
-              }, keyHints[midi] ? h('kbd', { className: 'tt-piano-keyhint' }, keyHints[midi]) : null)
+              })
             }),
           ),
+        ),
+        h('div', { className: 'tt-piano-legend' },
+          legendRows.map((row) => h('div', { className: 'tt-piano-legendrow', key: row.labelKey },
+            h('span', { className: 'tt-piano-legendlabel' }, t(row.labelKey)),
+            row.items.map((item) => h('span', { className: 'tt-piano-hintchip', key: item.key },
+              h('kbd', null, item.key.toUpperCase()),
+              h('i', null, item.name),
+            )),
+          )),
         ),
         h('div', { className: 'tt-labrow' },
           h('button', {
@@ -13819,9 +13838,19 @@ TT.Version = (function () {
       items: ['实验室综合结果、元件展厅、电路库都支持直接预览网表'],
     },
     {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['钢琴键位说明改为键盘下方一排「按键 = 音名」图例，随八度更新'],
+    },
+    {
       version: '1.8.5',
       date: '2026-11-22',
       items: ['切换章节时自动切换/关闭网表，不再停留在上一章的网表'],
+    },
+    {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['钢琴键位说明改为键盘下方一排「按键 = 音名」图例，随八度更新'],
     },
     {
       version: '1.8.5',
@@ -13835,6 +13864,11 @@ TT.Version = (function () {
         '修正各章网表映射：第 1 章与非门、第 2 章半加器、第 5 章乐高全加器补齐入口',
         '巨兽 CPU 章移除错误的 4 位加法器网表；第 7 章改用实际综合出的网表',
       ],
+    },
+    {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['钢琴键位说明改为键盘下方一排「按键 = 音名」图例，随八度更新'],
     },
     {
       version: '1.8.5',
@@ -13853,6 +13887,11 @@ TT.Version = (function () {
       version: '1.8.3',
       date: '2026-11-22',
       items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
+    },
+    {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['钢琴键位说明改为键盘下方一排「按键 = 音名」图例，随八度更新'],
     },
     {
       version: '1.8.5',
@@ -13936,9 +13975,19 @@ TT.Version = (function () {
       items: ['实验室综合结果、元件展厅、电路库都支持直接预览网表'],
     },
     {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['钢琴键位说明改为键盘下方一排「按键 = 音名」图例，随八度更新'],
+    },
+    {
       version: '1.8.5',
       date: '2026-11-22',
       items: ['切换章节时自动切换/关闭网表，不再停留在上一章的网表'],
+    },
+    {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['钢琴键位说明改为键盘下方一排「按键 = 音名」图例，随八度更新'],
     },
     {
       version: '1.8.5',
@@ -13952,6 +14001,11 @@ TT.Version = (function () {
         '修正各章网表映射：第 1 章与非门、第 2 章半加器、第 5 章乐高全加器补齐入口',
         '巨兽 CPU 章移除错误的 4 位加法器网表；第 7 章改用实际综合出的网表',
       ],
+    },
+    {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['钢琴键位说明改为键盘下方一排「按键 = 音名」图例，随八度更新'],
     },
     {
       version: '1.8.5',
@@ -13970,6 +14024,11 @@ TT.Version = (function () {
       version: '1.8.3',
       date: '2026-11-22',
       items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
+    },
+    {
+      version: '1.8.6',
+      date: '2026-11-22',
+      items: ['钢琴键位说明改为键盘下方一排「按键 = 音名」图例，随八度更新'],
     },
     {
       version: '1.8.5',
@@ -14996,6 +15055,8 @@ TT.dict = {
     'arcade.music.next': '下一音',
     'arcade.music.piano': '键盘钢琴',
     'arcade.music.lastNote': '最近弹奏',
+    'arcade.music.lowerRow': '下排',
+    'arcade.music.upperRow': '上排',
     'arcade.music.pianoHint': '完整 A0–C8：点击琴键，或键盘 Z/S/X… 与 Q/2/W… 两排弹奏；←/→ 换八度',
     'arcade.music.preview': '点击试听这个音',
     'arcade.music.how': '它在门级上是什么',
@@ -16253,6 +16314,10 @@ TT.dict = {
     'arcade.music.piano': 'Keyboard piano',
     'arcade.music.lastNote': '最近弹奏',
     'arcade.music.lastNote': 'Last note',
+    'arcade.music.lowerRow': '下排',
+    'arcade.music.upperRow': '上排',
+    'arcade.music.lowerRow': 'Lower row',
+    'arcade.music.upperRow': 'Upper row',
     'arcade.music.pianoHint': 'Full A0–C8: click keys or use the Z/S/X… and Q/2/W… rows; ←/→ changes octave',
     'arcade.music.preview': 'Click to audition this note',
     'arcade.music.how': 'What it is at gate level',
@@ -17771,6 +17836,14 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 4px 4px; cursor:pointer;
   background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:7px; user-select:none; overflow:hidden; }
 .tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
+.tt-piano-legend { display:flex; flex-direction:column; gap:3px; margin:2px 0 6px; padding:5px 7px; border-radius:8px;
+  background:rgba(4,12,20,.45); border:1px solid rgba(86,225,255,.1); }
+.tt-piano-legendrow { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.tt-piano-legendlabel { font-size:9px; color:var(--tt-faint); min-width:24px; }
+.tt-piano-hintchip { display:inline-flex; align-items:center; gap:3px; padding:1px 5px; border-radius:5px;
+  background:rgba(86,225,255,.08); border:1px solid rgba(86,225,255,.18); }
+.tt-piano-hintchip kbd { font-family:var(--dsh-font-family-mono, monospace); font-size:9px; color:var(--tt-ink); }
+.tt-piano-hintchip i { font-style:normal; font-size:8px; color:var(--tt-dim); }
 .tt-piano-white { position:relative; }
 .tt-piano-notelabel { font-size:7px; line-height:1; color:rgba(8,20,30,.75); }
 .tt-piano-keyhint { display:block; margin-top:2px; font-size:6.5px; line-height:1; font-family:var(--dsh-font-family-mono, monospace);

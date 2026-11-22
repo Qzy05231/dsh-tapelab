@@ -512,6 +512,17 @@ TT.ArcadeUI = (function () {
       if (raw < TT.Arcade.PIANO_MIN || raw > TT.Arcade.PIANO_MAX) return
       keyHints[raw] = keyHints[raw] ? `${keyHints[raw]} / ${key.toUpperCase()}` : key.toUpperCase()
     })
+    const legendRows = [
+      { labelKey: 'arcade.music.lowerRow', keys: ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ','] },
+      { labelKey: 'arcade.music.upperRow', keys: ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i'] },
+    ].map((row) => ({
+      labelKey: row.labelKey,
+      items: row.keys.map((key) => {
+        const raw = 12 * (octave + 1) + TT.Arcade.PIANO_KEYS[key]
+        if (raw < TT.Arcade.PIANO_MIN || raw > TT.Arcade.PIANO_MAX) return null
+        return { key, name: TT.Arcade.midiName(raw) }
+      }).filter(Boolean),
+    }))
 
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.music.title'), hint: t('arcade.music.hint') },
@@ -594,7 +605,6 @@ TT.ArcadeUI = (function () {
               onClick: () => api.dispatch({ type: 'music/key', midi }),
             },
               h('span', { className: 'tt-piano-notelabel' }, midi % 12 === 0 ? TT.Arcade.midiName(midi) : ''),
-              keyHints[midi] ? h('kbd', { className: 'tt-piano-keyhint' }, keyHints[midi]) : null,
             )),
             blackKeys.map((midi) => {
               const whiteIndex = whiteKeys.indexOf(midi - 1)
@@ -610,9 +620,18 @@ TT.ArcadeUI = (function () {
                   transform: 'translateX(-50%)',
                 },
                 onClick: () => api.dispatch({ type: 'music/key', midi }),
-              }, keyHints[midi] ? h('kbd', { className: 'tt-piano-keyhint' }, keyHints[midi]) : null)
+              })
             }),
           ),
+        ),
+        h('div', { className: 'tt-piano-legend' },
+          legendRows.map((row) => h('div', { className: 'tt-piano-legendrow', key: row.labelKey },
+            h('span', { className: 'tt-piano-legendlabel' }, t(row.labelKey)),
+            row.items.map((item) => h('span', { className: 'tt-piano-hintchip', key: item.key },
+              h('kbd', null, item.key.toUpperCase()),
+              h('i', null, item.name),
+            )),
+          )),
         ),
         h('div', { className: 'tt-labrow' },
           h('button', {

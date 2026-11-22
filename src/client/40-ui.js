@@ -405,6 +405,8 @@ TT.dict = {
     'arcade.music.next': '下一音',
     'arcade.music.piano': '键盘钢琴',
     'arcade.music.lastNote': '最近弹奏',
+    'arcade.music.lowerRow': '下排',
+    'arcade.music.upperRow': '上排',
     'arcade.music.pianoHint': '完整 A0–C8：点击琴键，或键盘 Z/S/X… 与 Q/2/W… 两排弹奏；←/→ 换八度',
     'arcade.music.preview': '点击试听这个音',
     'arcade.music.how': '它在门级上是什么',
@@ -1662,6 +1664,10 @@ TT.dict = {
     'arcade.music.piano': 'Keyboard piano',
     'arcade.music.lastNote': '最近弹奏',
     'arcade.music.lastNote': 'Last note',
+    'arcade.music.lowerRow': '下排',
+    'arcade.music.upperRow': '上排',
+    'arcade.music.lowerRow': 'Lower row',
+    'arcade.music.upperRow': 'Upper row',
     'arcade.music.pianoHint': 'Full A0–C8: click keys or use the Z/S/X… and Q/2/W… rows; ←/→ changes octave',
     'arcade.music.preview': 'Click to audition this note',
     'arcade.music.how': 'What it is at gate level',
@@ -3180,6 +3186,14 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
   padding-bottom:6px; border:1px solid rgba(10,24,34,.7); border-radius:0 0 4px 4px; cursor:pointer;
   background:linear-gradient(180deg,#eef8ff,#bcd8e6); color:#0b1a24; font-size:7px; user-select:none; overflow:hidden; }
 .tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
+.tt-piano-legend { display:flex; flex-direction:column; gap:3px; margin:2px 0 6px; padding:5px 7px; border-radius:8px;
+  background:rgba(4,12,20,.45); border:1px solid rgba(86,225,255,.1); }
+.tt-piano-legendrow { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.tt-piano-legendlabel { font-size:9px; color:var(--tt-faint); min-width:24px; }
+.tt-piano-hintchip { display:inline-flex; align-items:center; gap:3px; padding:1px 5px; border-radius:5px;
+  background:rgba(86,225,255,.08); border:1px solid rgba(86,225,255,.18); }
+.tt-piano-hintchip kbd { font-family:var(--dsh-font-family-mono, monospace); font-size:9px; color:var(--tt-ink); }
+.tt-piano-hintchip i { font-style:normal; font-size:8px; color:var(--tt-dim); }
 .tt-piano-white { position:relative; }
 .tt-piano-notelabel { font-size:7px; line-height:1; color:rgba(8,20,30,.75); }
 .tt-piano-keyhint { display:block; margin-top:2px; font-size:6.5px; line-height:1; font-family:var(--dsh-font-family-mono, monospace);
