@@ -477,6 +477,7 @@ TT.ArcadeUI = (function () {
       h('div', { className: 'tt-labcardhead' },
         h('strong', null, `🧮 ${props.title}`),
         h('span', null, `${props.netlist.gates.length} NAND · ${props.netlist.nIn} in / ${props.netlist.outputs.length} out`),
+        props.onClose ? h('button', { type: 'button', className: 'tt-chip', onClick: props.onClose }, props.t('netgrid.collapse')) : null,
       ),
       h(TT.NetlistGridUI.Grid, {
         netlist: props.netlist,
@@ -488,6 +489,7 @@ TT.ArcadeUI = (function () {
         onToggle: props.onToggle,
         faultGates: props.faultGates,
         okGates: props.okGates,
+        autoHeight: props.autoHeight,
       }),
     )
   }
@@ -569,22 +571,6 @@ TT.ArcadeUI = (function () {
               }, t(item.nameKey))),
           ),
           ),
-          showNet && TT.NetlistGridUI ? h('div', { className: 'tt-music-net' },
-            h('div', { className: 'tt-music-nethead' },
-              h('strong', null, `🧮 ${t('netgrid.musicTitle')}`),
-              h('span', null, `${TT.Circuit.canonical.counter4().gates.length} NAND`),
-            ),
-            h(TT.NetlistGridUI.Grid, {
-              netlist: TT.Circuit.canonical.counter4(),
-              bits: 0,
-              stateBits: (music.step | 0) % 16,
-              t,
-              inputLabels: [],
-              outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
-              compactLayout: true,
-              autoHeight: true,
-            }),
-          ) : null,
         ),
         h('div', { className: 'tt-musicsteps' }, notes.map((note, index) => {
           const absolute = windowStart + index
@@ -668,6 +654,17 @@ TT.ArcadeUI = (function () {
             `${TT.Arcade.noteName(TT.Arcade.noteAt(tune, music.step).deg, music.scale)} · ${music.tempo}ms · ${Math.round(60000 / music.tempo)} BPM`),
         ),
       ),
+      showNet && TT.NetlistGridUI ? h(NetlistCard, {
+        title: t('netgrid.musicTitle'),
+        netlist: TT.Circuit.canonical.counter4(),
+        bits: 0,
+        stateBits: (music.step | 0) % 16,
+        t,
+        inputLabels: [],
+        outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
+        autoHeight: true,
+        onClose: () => setShowNet(false),
+      }) : null,
       h(Card, { title: t('arcade.music.how'), hint: '' },
         h('p', { className: 'tt-labempty' }, t('arcade.music.howBody')),
         h('div', { className: 'tt-labstats' },
