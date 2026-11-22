@@ -799,8 +799,10 @@ TT.ArcadeUI = (function () {
     const { arcade, t, api } = props
     const game = arcade.guess
     const [showNet, setShowNet] = React.useState(true)
-    const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
+    const revealSecret = Boolean(game.solved)
+    const secretBits = revealSecret ? game.secret & 15 : 0
+    const guessBits = (game.guess & 15) | (secretBits << 4)
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.guess.title'), hint: t('arcade.guess.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
@@ -837,18 +839,18 @@ TT.ArcadeUI = (function () {
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),
         netlist: compareNetlist,
-        bits: lockBits,
+        bits: guessBits,
         t,
-        inputLabels: revealCode
-          ? ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3']
+        inputLabels: revealSecret
+          ? ['G0', 'G1', 'G2', 'G3', 'S0', 'S1', 'S2', 'S3']
           : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
         outputLabels: ['EQ'],
         onToggle: (index) => {
-          if (index < 4) api.dispatch({ type: 'lock/toggle', index })
+          if (index < 4) api.dispatch({ type: 'guess/toggle', index })
         },
       }) : null,
       showNet ? h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } },
-        revealCode ? t('arcade.lock.netRevealed') : t('arcade.lock.netHidden')) : null,
+        t('arcade.guess.netNote')) : null,
     )
   }
 

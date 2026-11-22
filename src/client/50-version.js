@@ -5,12 +5,17 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.10.1'
+  const VERSION = '1.10.2'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.10.2',
+      date: '2026-11-22',
+      items: ['修复猜数字页面误用密码锁变量导致的黑屏，全部街机页已逐一渲染验证'],
+    },
     {
       version: '1.10.1',
       date: '2026-11-22',

@@ -9801,8 +9801,10 @@ TT.ArcadeUI = (function () {
     const { arcade, t, api } = props
     const game = arcade.guess
     const [showNet, setShowNet] = React.useState(true)
-    const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
+    const revealSecret = Boolean(game.solved)
+    const secretBits = revealSecret ? game.secret & 15 : 0
+    const guessBits = (game.guess & 15) | (secretBits << 4)
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.guess.title'), hint: t('arcade.guess.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
@@ -9839,18 +9841,18 @@ TT.ArcadeUI = (function () {
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),
         netlist: compareNetlist,
-        bits: lockBits,
+        bits: guessBits,
         t,
-        inputLabels: revealCode
-          ? ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3']
+        inputLabels: revealSecret
+          ? ['G0', 'G1', 'G2', 'G3', 'S0', 'S1', 'S2', 'S3']
           : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
         outputLabels: ['EQ'],
         onToggle: (index) => {
-          if (index < 4) api.dispatch({ type: 'lock/toggle', index })
+          if (index < 4) api.dispatch({ type: 'guess/toggle', index })
         },
       }) : null,
       showNet ? h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } },
-        revealCode ? t('arcade.lock.netRevealed') : t('arcade.lock.netHidden')) : null,
+        t('arcade.guess.netNote')) : null,
     )
   }
 
@@ -13999,12 +14001,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.10.1'
+  const VERSION = '1.10.2'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.10.2',
+      date: '2026-11-22',
+      items: ['修复猜数字页面误用密码锁变量导致的黑屏，全部街机页已逐一渲染验证'],
+    },
     {
       version: '1.10.1',
       date: '2026-11-22',
@@ -15497,6 +15504,7 @@ TT.dict = {
     'arcade.guess.solved': '猜中了！答案是',
     'arcade.guess.how': '它是怎么“随机”的',
     'arcade.guess.body': '链上没有真随机，通常用 LFSR（线性反馈移位寄存器）：几个触发器 + 异或门就能生成伪随机序列；4 位就够了。',
+    'arcade.guess.netNote': '网表跟随当前猜测位 G0–G3；答案位 S0–S3 在猜中前隐藏。',
     'arcade.guess.lfsr': '本页的随机数由本地伪随机序列模拟；真实链上随机性需要额外机制。',
     'arcade.vote.title': '三人表决器',
     'arcade.vote.hint': '三人中至少两人同意才通过——多数门。',
@@ -16783,8 +16791,6 @@ TT.dict = {
     'arcade.lock.title': '4-bit code lock',
     'arcade.lock.hint': 'Mastermind deduction rules: each check only tells you how many bits match, not which ones.',
     'arcade.lock.matches': '{n} / 4 bits correct',
-    'arcade.lock.netHidden': '网表实时跟随猜测位 G0–G3；C 位在开锁或失败后显示，避免泄露答案。',
-    'arcade.lock.netRevealed': '已结束：网表现在显示完整密码位 C0–C3 与比较结果 EQ。',
     'arcade.lock.netHidden': 'The netlist follows your guess G0–G3 live; C bits stay hidden until solved/failed.',
     'arcade.lock.netRevealed': 'Finished: the netlist now shows the full code bits C0–C3 and EQ.',
     'arcade.lock.ruleHint': 'Mastermind rule: deduce the secret code by cross-referencing previous match counts within 6 attempts.',
@@ -16804,6 +16810,7 @@ TT.dict = {
     'arcade.guess.solved': 'Correct! The answer was',
     'arcade.guess.how': 'How “random” works',
     'arcade.guess.body': 'Chains have no true randomness: an LFSR (a few flip-flops and XOR gates) produces a pseudo-random sequence. Four bits are enough.',
+    'arcade.guess.netNote': 'The netlist follows your guess G0–G3; secret bits S0–S3 stay hidden until solved.',
     'arcade.guess.lfsr': 'This page simulates a local pseudo-random sequence; real on-chain randomness needs extra machinery.',
     'arcade.vote.title': 'Three-person voter',
     'arcade.vote.hint': 'Two out of three yes — a majority gate.',
