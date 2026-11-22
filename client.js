@@ -9541,17 +9541,6 @@ TT.ArcadeUI = (function () {
             `${TT.Arcade.noteName(TT.Arcade.noteAt(tune, music.step).deg, music.scale)} · ${music.tempo}ms · ${Math.round(60000 / music.tempo)} BPM`),
         ),
       ),
-      showNet && TT.NetlistGridUI ? h(NetlistCard, {
-        title: t('netgrid.musicTitle'),
-        netlist: TT.Circuit.canonical.counter4(),
-        bits: 0,
-        stateBits: (music.step | 0) % 16,
-        t,
-        inputLabels: [],
-        outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
-        autoHeight: true,
-        onClose: () => setShowNet(false),
-      }) : null,
       h(Card, { title: t('arcade.music.how'), hint: '' },
         h('p', { className: 'tt-labempty' }, t('arcade.music.howBody')),
         h('div', { className: 'tt-labstats' },
@@ -13802,12 +13791,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.4'
+  const VERSION = '1.9.5'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.5',
+      date: '2026-11-22',
+      items: ['音乐盒计数器网表回到右上角，宽度加至约 470px，并带独立收起按钮'],
+    },
     {
       version: '1.9.4',
       date: '2026-11-22',
@@ -13986,6 +13980,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.5',
+      date: '2026-11-22',
+      items: ['音乐盒计数器网表回到右上角，宽度加至约 470px，并带独立收起按钮'],
     },
     {
       version: '1.9.4',
@@ -17930,7 +17929,7 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-piano-white:nth-child(7n+1) { border-left:2px solid rgba(86,225,255,.45); }
 .tt-music-top { display:flex; align-items:flex-start; gap:10px; }
 .tt-music-controls { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:6px; }
-.tt-music-net { flex:0 0 340px; min-width:0; display:flex; flex-direction:column; gap:4px; padding:7px 8px;
+.tt-music-net { flex:0 0 min(46%, 470px); min-width:0; display:flex; flex-direction:column; gap:4px; padding:7px 8px;
   border-radius:10px; background:rgba(4,12,20,.55); border:1px solid rgba(86,225,255,.14); }
 .tt-music-nethead { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:10px; color:var(--tt-dim); }
 .tt-music-nethead strong { color:var(--tt-ink); font-size:11px; }
