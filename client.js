@@ -9737,10 +9737,12 @@ TT.ArcadeUI = (function () {
     const lock = arcade.lock
     const guess = lock.guess
     const [showNet, setShowNet] = React.useState(true)
-    const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     const history = lock.history || []
-    return h('div', { className: 'tt-labgrid' },
+    const revealCode = Boolean(lock.solved || lock.failed)
+    const codeBits = revealCode ? lock.code & 15 : 0
+    const lockBits = (guess & 15) | (codeBits << 4)
+    return h('div', { className: 'tt-labgrid tt-lockgrid' },
       h(Card, { title: t('arcade.lock.title'), hint: t('arcade.lock.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
           h('button', {
@@ -9780,12 +9782,18 @@ TT.ArcadeUI = (function () {
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),
         netlist: compareNetlist,
-        bits: probe,
+        bits: lockBits,
         t,
-        inputLabels: ['A0', 'A1', 'A2', 'A3', 'B0', 'B1', 'B2', 'B3'],
+        inputLabels: revealCode
+          ? ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3']
+          : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
         outputLabels: ['EQ'],
-        onToggle: (index) => setProbe((value) => value ^ (1 << index)),
+        onToggle: (index) => {
+          if (index < 4) api.dispatch({ type: 'lock/toggle', index })
+        },
       }) : null,
+      showNet ? h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } },
+        revealCode ? t('arcade.lock.netRevealed') : t('arcade.lock.netHidden')) : null,
     )
   }
 
@@ -9831,12 +9839,18 @@ TT.ArcadeUI = (function () {
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),
         netlist: compareNetlist,
-        bits: probe,
+        bits: lockBits,
         t,
-        inputLabels: ['A0', 'A1', 'A2', 'A3', 'B0', 'B1', 'B2', 'B3'],
+        inputLabels: revealCode
+          ? ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3']
+          : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
         outputLabels: ['EQ'],
-        onToggle: (index) => setProbe((value) => value ^ (1 << index)),
+        onToggle: (index) => {
+          if (index < 4) api.dispatch({ type: 'lock/toggle', index })
+        },
       }) : null,
+      showNet ? h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } },
+        revealCode ? t('arcade.lock.netRevealed') : t('arcade.lock.netHidden')) : null,
     )
   }
 
@@ -13985,12 +13999,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.10.0'
+  const VERSION = '1.10.1'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.10.1',
+      date: '2026-11-22',
+      items: [
+        '密码锁页面改为单列布局，消除左右卡片高度差造成的空白',
+        '比较器网表实时跟随猜测位；密码位在结束前隐藏，避免泄露答案',
+      ],
+    },
     {
       version: '1.10.0',
       date: '2026-11-22',
@@ -15456,6 +15478,8 @@ TT.dict = {
     'arcade.lock.title': '4 位密码锁',
     'arcade.lock.hint': 'Mastermind 推理规则：每次检查仅提示有几位完全匹配，不透露具体位置。',
     'arcade.lock.matches': '{n} / 4 位正确',
+    'arcade.lock.netHidden': '网表实时跟随猜测位 G0–G3；C 位在开锁或失败后显示，避免泄露答案。',
+    'arcade.lock.netRevealed': '已结束：网表现在显示完整密码位 C0–C3 与比较结果 EQ。',
     'arcade.lock.ruleHint': 'Mastermind 规则：根据历史尝试中「匹配位数」做逻辑排除（如 1001 匹配 2 位，1010 匹配 3 位），6 次内解开密码。',
     'arcade.lock.check': '检查',
     'arcade.lock.reset': '重试',
@@ -16759,6 +16783,10 @@ TT.dict = {
     'arcade.lock.title': '4-bit code lock',
     'arcade.lock.hint': 'Mastermind deduction rules: each check only tells you how many bits match, not which ones.',
     'arcade.lock.matches': '{n} / 4 bits correct',
+    'arcade.lock.netHidden': '网表实时跟随猜测位 G0–G3；C 位在开锁或失败后显示，避免泄露答案。',
+    'arcade.lock.netRevealed': '已结束：网表现在显示完整密码位 C0–C3 与比较结果 EQ。',
+    'arcade.lock.netHidden': 'The netlist follows your guess G0–G3 live; C bits stay hidden until solved/failed.',
+    'arcade.lock.netRevealed': 'Finished: the netlist now shows the full code bits C0–C3 and EQ.',
     'arcade.lock.ruleHint': 'Mastermind rule: deduce the secret code by cross-referencing previous match counts within 6 attempts.',
     'arcade.lock.check': 'Check',
     'arcade.lock.reset': 'Retry',
@@ -18018,6 +18046,7 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-labtab:hover { color:var(--tt-ink); border-color:rgba(86,225,255,.45); }
 .tt-labtab[data-active="true"] { color:#04121c; background:linear-gradient(160deg, #8df0ff, #2be6c2); border-color:transparent; }
 .tt-labgrid { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); gap:14px; align-items:start; }
+.tt-lockgrid { grid-template-columns:1fr; }
 .tt-labcard { background:linear-gradient(168deg, rgba(12,27,42,.95), rgba(6,13,22,.96));
   border:1px solid rgba(86,225,255,.16); border-radius:14px; padding:14px 15px; display:flex;
   flex-direction:column; gap:10px; min-width:0; }

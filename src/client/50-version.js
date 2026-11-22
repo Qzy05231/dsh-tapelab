@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.10.0'
+  const VERSION = '1.10.1'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.10.1',
+      date: '2026-11-22',
+      items: [
+        '密码锁页面改为单列布局，消除左右卡片高度差造成的空白',
+        '比较器网表实时跟随猜测位；密码位在结束前隐藏，避免泄露答案',
+      ],
+    },
     {
       version: '1.10.0',
       date: '2026-11-22',

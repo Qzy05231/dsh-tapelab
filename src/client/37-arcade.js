@@ -735,10 +735,12 @@ TT.ArcadeUI = (function () {
     const lock = arcade.lock
     const guess = lock.guess
     const [showNet, setShowNet] = React.useState(true)
-    const [probe, setProbe] = React.useState(0)
     const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     const history = lock.history || []
-    return h('div', { className: 'tt-labgrid' },
+    const revealCode = Boolean(lock.solved || lock.failed)
+    const codeBits = revealCode ? lock.code & 15 : 0
+    const lockBits = (guess & 15) | (codeBits << 4)
+    return h('div', { className: 'tt-labgrid tt-lockgrid' },
       h(Card, { title: t('arcade.lock.title'), hint: t('arcade.lock.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
           h('button', {
@@ -778,12 +780,18 @@ TT.ArcadeUI = (function () {
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),
         netlist: compareNetlist,
-        bits: probe,
+        bits: lockBits,
         t,
-        inputLabels: ['A0', 'A1', 'A2', 'A3', 'B0', 'B1', 'B2', 'B3'],
+        inputLabels: revealCode
+          ? ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3']
+          : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
         outputLabels: ['EQ'],
-        onToggle: (index) => setProbe((value) => value ^ (1 << index)),
+        onToggle: (index) => {
+          if (index < 4) api.dispatch({ type: 'lock/toggle', index })
+        },
       }) : null,
+      showNet ? h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } },
+        revealCode ? t('arcade.lock.netRevealed') : t('arcade.lock.netHidden')) : null,
     )
   }
 
@@ -829,12 +837,18 @@ TT.ArcadeUI = (function () {
       showNet ? h(NetlistCard, {
         title: t('netgrid.lockTitle'),
         netlist: compareNetlist,
-        bits: probe,
+        bits: lockBits,
         t,
-        inputLabels: ['A0', 'A1', 'A2', 'A3', 'B0', 'B1', 'B2', 'B3'],
+        inputLabels: revealCode
+          ? ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3']
+          : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
         outputLabels: ['EQ'],
-        onToggle: (index) => setProbe((value) => value ^ (1 << index)),
+        onToggle: (index) => {
+          if (index < 4) api.dispatch({ type: 'lock/toggle', index })
+        },
       }) : null,
+      showNet ? h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } },
+        revealCode ? t('arcade.lock.netRevealed') : t('arcade.lock.netHidden')) : null,
     )
   }
 
