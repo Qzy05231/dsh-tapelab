@@ -1,6 +1,6 @@
 {
   "name": "dsh-tapeout-3d-lab",
-  "version": "1.10.2",
+  "version": "1.10.3",
   "private": true,
   "type": "module",
   "description": "TapeOut 协议 3D 交互演示实验室：七章任务，从一颗与非门到链上巨兽。",

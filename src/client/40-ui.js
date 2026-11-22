@@ -2999,6 +2999,9 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-labtab[data-active="true"] { color:#04121c; background:linear-gradient(160deg, #8df0ff, #2be6c2); border-color:transparent; }
 .tt-labgrid { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); gap:14px; align-items:start; }
 .tt-lockgrid { grid-template-columns:1fr; }
+.tt-singlegrid { grid-template-columns:1fr; }
+.tt-arcade-net { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(86,225,255,.14); display:flex; flex-direction:column; gap:6px; }
+.tt-arcade-net .tt-netgrid-viewport { height:min(44vh,380px); }
 .tt-labcard { background:linear-gradient(168deg, rgba(12,27,42,.95), rgba(6,13,22,.96));
   border:1px solid rgba(86,225,255,.16); border-radius:14px; padding:14px 15px; display:flex;
   flex-direction:column; gap:10px; min-width:0; }

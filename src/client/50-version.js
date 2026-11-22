@@ -5,12 +5,17 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.10.2'
+  const VERSION = '1.10.3'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.10.3',
+      date: '2026-11-22',
+      items: ['密码锁/猜数字/表决器改为单列，网表嵌入游戏卡内部，消除空白'],
+    },
     {
       version: '1.10.2',
       date: '2026-11-22',

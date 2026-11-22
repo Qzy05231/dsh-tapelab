@@ -494,6 +494,26 @@ TT.ArcadeUI = (function () {
     )
   }
 
+  function NetlistBlock(props) {
+    if (!TT.NetlistGridUI || !props.netlist) return null
+    return h('div', { className: 'tt-arcade-net' },
+      h('div', { className: 'tt-labcardhead' },
+        h('strong', null, `🧮 ${props.title}`),
+        h('span', null, `${props.netlist.gates.length} NAND · ${props.netlist.nIn} in / ${props.netlist.outputs.length} out`),
+      ),
+      h(TT.NetlistGridUI.Grid, {
+        netlist: props.netlist,
+        bits: props.bits || 0,
+        stateBits: props.stateBits || 0,
+        t: props.t,
+        inputLabels: props.inputLabels,
+        outputLabels: props.outputLabels,
+        onToggle: props.onToggle,
+      }),
+      props.note ? h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } }, props.note) : null,
+    )
+  }
+
   function Music(props) {
     const { arcade, t, api } = props
     const music = arcade.music
@@ -740,7 +760,7 @@ TT.ArcadeUI = (function () {
     const revealCode = Boolean(lock.solved || lock.failed)
     const codeBits = revealCode ? lock.code & 15 : 0
     const lockBits = (guess & 15) | (codeBits << 4)
-    return h('div', { className: 'tt-labgrid tt-lockgrid' },
+    return h('div', { className: 'tt-labgrid tt-singlegrid' },
       h(Card, { title: t('arcade.lock.title'), hint: t('arcade.lock.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
           h('button', {
@@ -771,27 +791,26 @@ TT.ArcadeUI = (function () {
             )
           }),
         ) : null,
+        showNet ? h(NetlistBlock, {
+          title: t('netgrid.lockTitle'),
+          netlist: compareNetlist,
+          bits: lockBits,
+          t,
+          inputLabels: revealCode
+            ? ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3']
+            : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
+          outputLabels: ['EQ'],
+          onToggle: (index) => {
+            if (index < 4) api.dispatch({ type: 'lock/toggle', index })
+          },
+          note: revealCode ? t('arcade.lock.netRevealed') : t('arcade.lock.netHidden'),
+        }) : null,
       ),
       h(Card, { title: t('arcade.lock.circuit'), hint: '' },
         h('p', { className: 'tt-labempty' }, t('arcade.lock.body')),
         h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.lock.ruleHint')),
         h('div', { className: 'tt-hex tt-mono', style: { marginTop: 6 } }, 'lock = (guess == code) · 4 × XNOR + AND'),
       ),
-      showNet ? h(NetlistCard, {
-        title: t('netgrid.lockTitle'),
-        netlist: compareNetlist,
-        bits: lockBits,
-        t,
-        inputLabels: revealCode
-          ? ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3']
-          : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
-        outputLabels: ['EQ'],
-        onToggle: (index) => {
-          if (index < 4) api.dispatch({ type: 'lock/toggle', index })
-        },
-      }) : null,
-      showNet ? h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } },
-        revealCode ? t('arcade.lock.netRevealed') : t('arcade.lock.netHidden')) : null,
     )
   }
 
@@ -803,7 +822,7 @@ TT.ArcadeUI = (function () {
     const revealSecret = Boolean(game.solved)
     const secretBits = revealSecret ? game.secret & 15 : 0
     const guessBits = (game.guess & 15) | (secretBits << 4)
-    return h('div', { className: 'tt-labgrid' },
+    return h('div', { className: 'tt-labgrid tt-singlegrid' },
       h(Card, { title: t('arcade.guess.title'), hint: t('arcade.guess.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
           h('button', {
@@ -831,26 +850,25 @@ TT.ArcadeUI = (function () {
             h('span', { className: 'tt-libraryhex' }, entry.cmp === 0 ? '=' : entry.cmp > 0 ? '猜小了 ↑' : '猜大了 ↓'),
           ),
         )),
+        showNet ? h(NetlistBlock, {
+          title: t('netgrid.lockTitle'),
+          netlist: compareNetlist,
+          bits: guessBits,
+          t,
+          inputLabels: revealSecret
+            ? ['G0', 'G1', 'G2', 'G3', 'S0', 'S1', 'S2', 'S3']
+            : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
+          outputLabels: ['EQ'],
+          onToggle: (index) => {
+            if (index < 4) api.dispatch({ type: 'guess/toggle', index })
+          },
+          note: t('arcade.guess.netNote'),
+        }) : null,
       ),
       h(Card, { title: t('arcade.guess.how'), hint: '' },
         h('p', { className: 'tt-labempty' }, t('arcade.guess.body')),
         h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.guess.lfsr')),
       ),
-      showNet ? h(NetlistCard, {
-        title: t('netgrid.lockTitle'),
-        netlist: compareNetlist,
-        bits: guessBits,
-        t,
-        inputLabels: revealSecret
-          ? ['G0', 'G1', 'G2', 'G3', 'S0', 'S1', 'S2', 'S3']
-          : ['G0', 'G1', 'G2', 'G3', '?0', '?1', '?2', '?3'],
-        outputLabels: ['EQ'],
-        onToggle: (index) => {
-          if (index < 4) api.dispatch({ type: 'guess/toggle', index })
-        },
-      }) : null,
-      showNet ? h('p', { className: 'tt-finalenote', style: { margin: '2px 0 0' } },
-        t('arcade.guess.netNote')) : null,
     )
   }
 
@@ -860,7 +878,8 @@ TT.ArcadeUI = (function () {
     const inputs = [vote.a, vote.b, vote.c]
     const out = TT.Arcade.majority(vote.a, vote.b, vote.c)
     const [showNet, setShowNet] = React.useState(true)
-    return h('div', { className: 'tt-labgrid' },
+    const votes = [vote.a, vote.b, vote.c]
+    return h('div', { className: 'tt-labgrid tt-singlegrid' },
       h(Card, { title: t('arcade.vote.title'), hint: t('arcade.vote.hint') },
         h('div', { className: 'tt-labrow' }, ['A', 'B', 'C'].map((name, index) =>
           h('button', {
@@ -875,6 +894,15 @@ TT.ArcadeUI = (function () {
           h('span', { style: { fontSize: 13, color: 'var(--tt-mint)' } }, `PASS = ${out}`),
           h('span', { className: 'tt-badge', 'data-tone': out ? 'good' : 'muted' }, out ? '2 / 3 通过' : '未通过'),
         ),
+        showNet ? h(NetlistBlock, {
+          title: t('netgrid.voteTitle'),
+          netlist: TT.Arcade.majorityNetlist(),
+          bits: (votes[0] ? 1 : 0) | (votes[1] ? 2 : 0) | (votes[2] ? 4 : 0),
+          t,
+          inputLabels: ['A', 'B', 'C'],
+          outputLabels: ['PASS'],
+          onToggle: (index) => api.dispatch({ type: 'vote/toggle', index }),
+        }) : null,
       ),
       h(Card, { title: t('arcade.vote.table'), hint: '' },
         h('table', { className: 'tt-table' },
@@ -889,15 +917,6 @@ TT.ArcadeUI = (function () {
           })),
         ),
       ),
-      showNet ? h(NetlistCard, {
-        title: t('netgrid.voteTitle'),
-        netlist: TT.Arcade.majorityNetlist(),
-        bits: (inputs[0] ? 1 : 0) | (inputs[1] ? 2 : 0) | (inputs[2] ? 4 : 0),
-        t,
-        inputLabels: ['A', 'B', 'C'],
-        outputLabels: ['PASS'],
-        onToggle: (index) => api.dispatch({ type: 'vote/toggle', index }),
-      }) : null,
     )
   }
 
