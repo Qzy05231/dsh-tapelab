@@ -3569,25 +3569,29 @@ TT.UI.Panel = function Panel(props) {
           return
         }
       }
-      if (/^[1-9]$/.test(event.key)) {
+      // Mission-only shortcuts must not fire while the lab / arcade / news /
+      // ecosystem is open, otherwise pressing 1-9 or H/R jumps back to a chapter.
+      const overlayOpen = Boolean(current.welcome || current.intro || current.codex || current.updateOpen || current.simOpen)
+      const inMissions = current.mode === 'missions' && !overlayOpen
+      if (inMissions && /^[1-9]$/.test(event.key)) {
         api.dispatch({ type: 'chapter/select', index: Number(event.key) - 1 })
         return
       }
-      if (event.key === '[') {
+      if (inMissions && event.key === '[') {
         api.dispatch({ type: 'chapter/select', index: Math.max(0, current.chapter - 1) })
         return
       }
-      if (event.key === ']') {
+      if (inMissions && event.key === ']') {
         api.dispatch({ type: 'chapter/select', index: Math.min(TT.protocol.CHAPTERS.length - 1, current.chapter + 1) })
         return
       }
       const key = (event.key || '').toLowerCase()
-      if (key === 'h') api.dispatch({ type: 'hint' })
-      else if (key === 'r') api.dispatch({ type: 'chapter/reset' })
+      if (inMissions && key === 'h') api.dispatch({ type: 'hint' })
+      else if (inMissions && key === 'r') api.dispatch({ type: 'chapter/reset' })
       else if (key === 'c') api.dispatch({ type: 'codex/toggle' })
       else if (key === 'm') api.dispatch({ type: 'sound/toggle' })
-      else if (key === 'f') api.dispatch({ type: current.cinema ? 'cinema/stop' : 'cinema/start' })
-      else if (key === ' ') {
+      else if (inMissions && key === 'f') api.dispatch({ type: current.cinema ? 'cinema/stop' : 'cinema/start' })
+      else if (inMissions && key === ' ') {
         event.preventDefault()
         api.dispatch({ type: 'pause/toggle' })
       }
