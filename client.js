@@ -13791,12 +13791,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.5'
+  const VERSION = '1.9.6'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.6',
+      date: '2026-11-22',
+      items: ['音乐盒右上角网表按宽度放大（最高 1.35×），门卡片和文字更清楚'],
+    },
     {
       version: '1.9.5',
       date: '2026-11-22',
@@ -13980,6 +13985,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.6',
+      date: '2026-11-22',
+      items: ['音乐盒右上角网表按宽度放大（最高 1.35×），门卡片和文字更清楚'],
     },
     {
       version: '1.9.5',
@@ -14560,9 +14570,10 @@ TT.NetlistGrid = (function () {
     return { nodes, gateCards, outputs, width, height, maxLevel, rows: [], nIn, inputRows: 1 }
   }
 
-  function fitScale(plan, viewWidth, viewHeight) {
+  function fitScale(plan, viewWidth, viewHeight, maxScale) {
     if (!viewWidth || !viewHeight) return 1
-    return Math.max(0.12, Math.min(1, Math.min(viewWidth / plan.width, viewHeight / plan.height) * 0.98))
+    const cap = maxScale && maxScale > 0 ? maxScale : 1
+    return Math.max(0.12, Math.min(cap, Math.min(viewWidth / plan.width, viewHeight / plan.height) * 0.98))
   }
 
   function values(netlist, bits, stateBits) {
@@ -14586,7 +14597,7 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates, autoHeight } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates, autoHeight, maxScale } = props
     const [selected, setSelected] = React.useState(null)
     const plan = TT.NetlistGrid.layout(netlist, { compact: Boolean(compactLayout) })
     const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
@@ -14655,7 +14666,9 @@ TT.NetlistGridUI = (function () {
         window.removeEventListener('resize', update)
       }
     }, [])
-    const fit = TT.NetlistGrid.fitScale(plan, viewport.w, viewport.h)
+    const fit = autoHeight
+      ? Math.max(0.12, Math.min(maxScale && maxScale > 0 ? maxScale : 1, (viewport.w / plan.width) * 0.98))
+      : TT.NetlistGrid.fitScale(plan, viewport.w, viewport.h, maxScale)
     const scale = zoom || fit
 
     return h('div', { className: 'tt-netgrid-wrap' + (compactLayout ? ' tt-netgrid-compact' : '') },

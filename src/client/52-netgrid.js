@@ -93,9 +93,10 @@ TT.NetlistGrid = (function () {
     return { nodes, gateCards, outputs, width, height, maxLevel, rows: [], nIn, inputRows: 1 }
   }
 
-  function fitScale(plan, viewWidth, viewHeight) {
+  function fitScale(plan, viewWidth, viewHeight, maxScale) {
     if (!viewWidth || !viewHeight) return 1
-    return Math.max(0.12, Math.min(1, Math.min(viewWidth / plan.width, viewHeight / plan.height) * 0.98))
+    const cap = maxScale && maxScale > 0 ? maxScale : 1
+    return Math.max(0.12, Math.min(cap, Math.min(viewWidth / plan.width, viewHeight / plan.height) * 0.98))
   }
 
   function values(netlist, bits, stateBits) {
@@ -119,7 +120,7 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates, autoHeight } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates, autoHeight, maxScale } = props
     const [selected, setSelected] = React.useState(null)
     const plan = TT.NetlistGrid.layout(netlist, { compact: Boolean(compactLayout) })
     const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
@@ -188,7 +189,9 @@ TT.NetlistGridUI = (function () {
         window.removeEventListener('resize', update)
       }
     }, [])
-    const fit = TT.NetlistGrid.fitScale(plan, viewport.w, viewport.h)
+    const fit = autoHeight
+      ? Math.max(0.12, Math.min(maxScale && maxScale > 0 ? maxScale : 1, (viewport.w / plan.width) * 0.98))
+      : TT.NetlistGrid.fitScale(plan, viewport.w, viewport.h, maxScale)
     const scale = zoom || fit
 
     return h('div', { className: 'tt-netgrid-wrap' + (compactLayout ? ' tt-netgrid-compact' : '') },
