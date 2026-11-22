@@ -108,3 +108,14 @@ test('switching chapters retargets or closes the open netlist', () => {
   assert.equal(state.gridInline, false, 'closes on a chapter without a gate-level netlist')
   assert.equal(state.gridOpen, false)
 })
+
+
+test('chapter-to-netlist mapping is central and correct', () => {
+  const expected = {
+    1: 'nand', 2: 'playerHalf', 3: 'half', 4: 'latch', 5: 'lego',
+    7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container',
+  }
+  for (let index = 0; index < TT.protocol.CHAPTERS.length; index += 1) {
+    assert.equal(TT.Missions.netgridKind(index), expected[index] || null, `chapter ${index}`)
+  }
+})

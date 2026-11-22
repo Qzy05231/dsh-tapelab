@@ -580,7 +580,7 @@ TT.ArcadeUI = (function () {
             h(TT.NetlistGridUI.Grid, {
               netlist: TT.Circuit.canonical.counter4(),
               bits: 0,
-              stateBits: (music.step | 0) % 16,
+              stateBits: Math.floor(music.beats || 0) % 16,
               t,
               inputLabels: [],
               outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],

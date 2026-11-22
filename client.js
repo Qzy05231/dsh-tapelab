@@ -6816,9 +6816,13 @@ TT.Missions = (function () {
           arcade: { ...state.arcade, music: { ...state.arcade.music, playing: !state.arcade.music.playing } },
         }
       case 'music/step': {
-        const tune = TT.Arcade.TUNES[state.arcade.music.tune % TT.Arcade.TUNES.length]
-        const step = ((state.arcade.music.step || 0) + 1) % tune.notes.length
-        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, step } } }
+        const music = state.arcade.music
+        const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
+        const current = music.step || 0
+        const note = tune.notes[current % tune.notes.length]
+        const step = (current + 1) % tune.notes.length
+        const beats = (music.beats || 0) + (note ? note.beats : 1)
+        return { ...state, arcade: { ...state.arcade, music: { ...music, step, beats } } }
       }
       case 'music/key': {
         const midi = Math.max(21, Math.min(108, Number(action.midi !== undefined ? action.midi : action.key) || 60))
@@ -6842,7 +6846,7 @@ TT.Missions = (function () {
       case 'music/tune':
         return {
           ...state,
-          arcade: { ...state.arcade, music: { ...state.arcade.music, tune: Math.max(0, Number(action.index) || 0) % TT.Arcade.TUNES.length, step: 0 } },
+          arcade: { ...state.arcade, music: { ...state.arcade.music, tune: Math.max(0, Number(action.index) || 0) % TT.Arcade.TUNES.length, step: 0, beats: 0 } },
         }
       case 'pixel/toggle': {
         const bits = state.arcade.pixel.bits.slice()
@@ -9467,7 +9471,7 @@ TT.ArcadeUI = (function () {
             h(TT.NetlistGridUI.Grid, {
               netlist: TT.Circuit.canonical.counter4(),
               bits: 0,
-              stateBits: (music.step | 0) % 16,
+              stateBits: Math.floor(music.beats || 0) % 16,
               t,
               inputLabels: [],
               outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
@@ -13809,12 +13813,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.8'
+  const VERSION = '1.9.9'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.9',
+      date: '2026-11-22',
+      items: [
+        '音乐盒计数器改为按拍累计，长音也会正确跳计数',
+        '章节↔网表映射集中到一处并加测试，避免再次错配',
+      ],
+    },
     {
       version: '1.9.8',
       date: '2026-11-22',
@@ -14016,6 +14028,14 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.9',
+      date: '2026-11-22',
+      items: [
+        '音乐盒计数器改为按拍累计，长音也会正确跳计数',
+        '章节↔网表映射集中到一处并加测试，避免再次错配',
+      ],
     },
     {
       version: '1.9.8',
@@ -18860,17 +18880,17 @@ TT.UI.Panel = function Panel(props) {
               style: narrow && !dataOpen ? { display: 'none' } : undefined,
             },
               TT.h('div', { className: 'tt-telemetry-rows' }, TT.UI.Telemetry({ state, t, resolve, api, chapterIndex: state.chapter })),
-              [1, 2, 3, 4, 5, 7, 8, 10, 13].indexOf(state.chapter) >= 0 ? TT.h('div', { className: 'tt-netgrid-entry' },
+              TT.Missions.netgridKind(state.chapter) ? TT.h('div', { className: 'tt-netgrid-entry' },
                 TT.h('button', {
                   type: 'button',
                   className: 'tt-netgrid-toggle',
                   'data-active': state.gridInline ? 'true' : 'false',
-                  onClick: () => api.dispatch({ type: 'grid/inline', kind: ({ 1: 'nand', 2: 'playerHalf', 3: 'half', 4: 'latch', 5: 'lego', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
+                  onClick: () => api.dispatch({ type: 'grid/inline', kind: TT.Missions.netgridKind(state.chapter) }),
                 }, state.gridInline ? `▾ ${t('netgrid.collapse')}` : `🧮 ${t('netgrid.inlineExpand')}`),
                 TT.h('button', {
                   type: 'button',
                   className: 'tt-netgrid-toggle',
-                  onClick: () => api.dispatch({ type: 'grid/open', kind: ({ 1: 'nand', 2: 'playerHalf', 3: 'half', 4: 'latch', 5: 'lego', 7: 'sevenseg', 8: 'counter', 10: 'safety', 13: 'container' })[state.chapter] }),
+                  onClick: () => api.dispatch({ type: 'grid/open', kind: TT.Missions.netgridKind(state.chapter) }),
                 }, `🔍 ${t('netgrid.zoom')}`),
               ) : null,
               state.gridInline && gridConfig ? TT.h('div', { className: 'tt-netgrid-inlinebody' },

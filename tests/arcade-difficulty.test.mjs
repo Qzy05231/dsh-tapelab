@@ -76,3 +76,19 @@ test('sandbox remembers the page it was opened from', () => {
   state = M.reduce(state, { type: 'lab/sandbox', source: 'library', id: 'one' })
   assert.equal(state.lab.sandbox.from, 'library')
 })
+
+
+test('the music counter netlist counts beats, not notes', () => {
+  let state = M.initial()
+  state = M.reduce(state, { type: 'arcade/game', game: 'music' })
+  state = M.reduce(state, { type: 'music/tune', index: 1 }) // twinkle: 1,1,1,...
+  state = M.reduce(state, { type: 'music/step' })
+  state = M.reduce(state, { type: 'music/step' })
+  assert.equal(state.arcade.music.beats, 2)
+  // the counter netlist outputs equal the state bits it is given
+  const counter = TT.Circuit.canonical.counter4()
+  for (const bits of [0, 1, 2, 7, 15]) {
+    const result = TT.Circuit.evaluate(counter, 0, { stateBits: bits })
+    assert.equal(result.outputBits, bits)
+  }
+})

@@ -1821,9 +1821,13 @@ TT.Missions = (function () {
           arcade: { ...state.arcade, music: { ...state.arcade.music, playing: !state.arcade.music.playing } },
         }
       case 'music/step': {
-        const tune = TT.Arcade.TUNES[state.arcade.music.tune % TT.Arcade.TUNES.length]
-        const step = ((state.arcade.music.step || 0) + 1) % tune.notes.length
-        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, step } } }
+        const music = state.arcade.music
+        const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
+        const current = music.step || 0
+        const note = tune.notes[current % tune.notes.length]
+        const step = (current + 1) % tune.notes.length
+        const beats = (music.beats || 0) + (note ? note.beats : 1)
+        return { ...state, arcade: { ...state.arcade, music: { ...music, step, beats } } }
       }
       case 'music/key': {
         const midi = Math.max(21, Math.min(108, Number(action.midi !== undefined ? action.midi : action.key) || 60))
@@ -1847,7 +1851,7 @@ TT.Missions = (function () {
       case 'music/tune':
         return {
           ...state,
-          arcade: { ...state.arcade, music: { ...state.arcade.music, tune: Math.max(0, Number(action.index) || 0) % TT.Arcade.TUNES.length, step: 0 } },
+          arcade: { ...state.arcade, music: { ...state.arcade.music, tune: Math.max(0, Number(action.index) || 0) % TT.Arcade.TUNES.length, step: 0, beats: 0 } },
         }
       case 'pixel/toggle': {
         const bits = state.arcade.pixel.bits.slice()
