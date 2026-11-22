@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.9'
+  const VERSION = '1.9.10'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.10',
+      date: '2026-11-22',
+      items: [
+        '曲目播放到结尾会自动停止并显示“播放完毕”，再次播放从头开始',
+        '弹奏钢琴时每个音都会推进计数器，右侧网表实时变化',
+      ],
+    },
     {
       version: '1.9.9',
       date: '2026-11-22',
@@ -220,6 +228,14 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.10',
+      date: '2026-11-22',
+      items: [
+        '曲目播放到结尾会自动停止并显示“播放完毕”，再次播放从头开始',
+        '弹奏钢琴时每个音都会推进计数器，右侧网表实时变化',
+      ],
     },
     {
       version: '1.9.9',

@@ -1815,11 +1815,18 @@ TT.Missions = (function () {
       }
       case 'snake/reset':
         return { ...state, arcade: { ...state.arcade, snake: TT.Arcade ? TT.Arcade.snakeInitial(undefined, (state.arcade.snake && state.arcade.snake.speed) || 'normal') : null } }
-      case 'music/toggle':
+      case 'music/toggle': {
+        const music = state.arcade.music
+        if (music.playing) return { ...state, arcade: { ...state.arcade, music: { ...music, playing: false } } }
+        const restart = music.finished
         return {
           ...state,
-          arcade: { ...state.arcade, music: { ...state.arcade.music, playing: !state.arcade.music.playing } },
+          arcade: {
+            ...state.arcade,
+            music: { ...music, playing: true, finished: false, ...(restart ? { step: 0, beats: 0 } : {}) },
+          },
         }
+      }
       case 'music/step': {
         const music = state.arcade.music
         const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
@@ -1827,11 +1834,29 @@ TT.Missions = (function () {
         const note = tune.notes[current % tune.notes.length]
         const step = (current + 1) % tune.notes.length
         const beats = (music.beats || 0) + (note ? note.beats : 1)
-        return { ...state, arcade: { ...state.arcade, music: { ...music, step, beats } } }
+        const finished = step === 0
+        return {
+          ...state,
+          arcade: {
+            ...state.arcade,
+            music: { ...music, step, beats, playing: finished ? false : music.playing, finished },
+          },
+        }
       }
       case 'music/key': {
         const midi = Math.max(21, Math.min(108, Number(action.midi !== undefined ? action.midi : action.key) || 60))
-        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, lastMidi: midi, lastKeyAt: Date.now() } } }
+        return {
+          ...state,
+          arcade: {
+            ...state.arcade,
+            music: {
+              ...state.arcade.music,
+              lastMidi: midi,
+              lastKeyAt: Date.now(),
+              beats: (state.arcade.music.beats || 0) + 1,
+            },
+          },
+        }
       }
       case 'music/octave': {
         const base = state.arcade.music.octave === undefined ? 4 : state.arcade.music.octave

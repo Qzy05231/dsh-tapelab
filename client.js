@@ -6810,11 +6810,18 @@ TT.Missions = (function () {
       }
       case 'snake/reset':
         return { ...state, arcade: { ...state.arcade, snake: TT.Arcade ? TT.Arcade.snakeInitial(undefined, (state.arcade.snake && state.arcade.snake.speed) || 'normal') : null } }
-      case 'music/toggle':
+      case 'music/toggle': {
+        const music = state.arcade.music
+        if (music.playing) return { ...state, arcade: { ...state.arcade, music: { ...music, playing: false } } }
+        const restart = music.finished
         return {
           ...state,
-          arcade: { ...state.arcade, music: { ...state.arcade.music, playing: !state.arcade.music.playing } },
+          arcade: {
+            ...state.arcade,
+            music: { ...music, playing: true, finished: false, ...(restart ? { step: 0, beats: 0 } : {}) },
+          },
         }
+      }
       case 'music/step': {
         const music = state.arcade.music
         const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
@@ -6822,11 +6829,29 @@ TT.Missions = (function () {
         const note = tune.notes[current % tune.notes.length]
         const step = (current + 1) % tune.notes.length
         const beats = (music.beats || 0) + (note ? note.beats : 1)
-        return { ...state, arcade: { ...state.arcade, music: { ...music, step, beats } } }
+        const finished = step === 0
+        return {
+          ...state,
+          arcade: {
+            ...state.arcade,
+            music: { ...music, step, beats, playing: finished ? false : music.playing, finished },
+          },
+        }
       }
       case 'music/key': {
         const midi = Math.max(21, Math.min(108, Number(action.midi !== undefined ? action.midi : action.key) || 60))
-        return { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, lastMidi: midi, lastKeyAt: Date.now() } } }
+        return {
+          ...state,
+          arcade: {
+            ...state.arcade,
+            music: {
+              ...state.arcade.music,
+              lastMidi: midi,
+              lastKeyAt: Date.now(),
+              beats: (state.arcade.music.beats || 0) + 1,
+            },
+          },
+        }
       }
       case 'music/octave': {
         const base = state.arcade.music.octave === undefined ? 4 : state.arcade.music.octave
@@ -9428,6 +9453,7 @@ TT.ArcadeUI = (function () {
               'data-kind': music.playing ? 'active' : 'primary',
               onClick: () => api.dispatch({ type: 'music/toggle' }),
             }, music.playing ? t('arcade.music.stop') : t('arcade.music.play')),
+            music.finished ? h('span', { className: 'tt-badge', 'data-tone': 'muted' }, t('arcade.music.finished')) : null,
             h('span', { className: 'tt-lablabel' }, t('arcade.music.tempo')),
             [['slow', 620], ['normal', 420], ['fast', 280]].map(([key, value]) =>
               h('button', {
@@ -13813,12 +13839,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.9'
+  const VERSION = '1.9.10'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.10',
+      date: '2026-11-22',
+      items: [
+        '曲目播放到结尾会自动停止并显示“播放完毕”，再次播放从头开始',
+        '弹奏钢琴时每个音都会推进计数器，右侧网表实时变化',
+      ],
+    },
     {
       version: '1.9.9',
       date: '2026-11-22',
@@ -14028,6 +14062,14 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.10',
+      date: '2026-11-22',
+      items: [
+        '曲目播放到结尾会自动停止并显示“播放完毕”，再次播放从头开始',
+        '弹奏钢琴时每个音都会推进计数器，右侧网表实时变化',
+      ],
     },
     {
       version: '1.9.9',
@@ -15216,6 +15258,7 @@ TT.dict = {
     'arcade.music.hint': '用 4 位计数器分频 + 音阶表，把出块变成节拍。',
     'arcade.music.play': '▶ 播放',
     'arcade.music.stop': '⏸ 停止',
+    'arcade.music.finished': '播放完毕',
     'arcade.music.tempo': '速度',
     'arcade.music.scale': '音阶',
     'arcade.music.tune': '曲目',
@@ -16474,6 +16517,7 @@ TT.dict = {
     'arcade.music.hint': 'A 4-bit counter plus a scale table turns blocks into beats.',
     'arcade.music.play': '▶ Play',
     'arcade.music.stop': '⏸ Stop',
+    'arcade.music.finished': 'Finished',
     'arcade.music.tempo': 'Tempo',
     'arcade.music.scale': 'Scale',
     'arcade.music.tune': 'Tune',

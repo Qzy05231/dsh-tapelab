@@ -92,3 +92,25 @@ test('the music counter netlist counts beats, not notes', () => {
     assert.equal(result.outputBits, bits)
   }
 })
+
+
+test('music stops when the tune ends and piano keys advance the counter', () => {
+  let state = M.initial()
+  state = M.reduce(state, { type: 'arcade/game', game: 'music' })
+  state = M.reduce(state, { type: 'music/tune', index: 2 }) // beep
+  state = { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, playing: true } } }
+  const tune = TT.Arcade.TUNES[2]
+  state = { ...state, arcade: { ...state.arcade, music: { ...state.arcade.music, step: tune.notes.length - 1, beats: 8 } } }
+  state = M.reduce(state, { type: 'music/step' })
+  assert.equal(state.arcade.music.playing, false)
+  assert.equal(state.arcade.music.finished, true)
+  assert.equal(state.arcade.music.step, 0)
+  // replay resets the counter
+  state = M.reduce(state, { type: 'music/toggle' })
+  assert.equal(state.arcade.music.playing, true)
+  assert.equal(state.arcade.music.beats, 0)
+  // piano key presses advance the counter so the netlist changes
+  const before = state.arcade.music.beats
+  state = M.reduce(state, { type: 'music/key', midi: 60 })
+  assert.equal(state.arcade.music.beats, before + 1)
+})

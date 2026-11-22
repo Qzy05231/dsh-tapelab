@@ -537,6 +537,7 @@ TT.ArcadeUI = (function () {
               'data-kind': music.playing ? 'active' : 'primary',
               onClick: () => api.dispatch({ type: 'music/toggle' }),
             }, music.playing ? t('arcade.music.stop') : t('arcade.music.play')),
+            music.finished ? h('span', { className: 'tt-badge', 'data-tone': 'muted' }, t('arcade.music.finished')) : null,
             h('span', { className: 'tt-lablabel' }, t('arcade.music.tempo')),
             [['slow', 620], ['normal', 420], ['fast', 280]].map(([key, value]) =>
               h('button', {
