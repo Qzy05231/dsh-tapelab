@@ -119,7 +119,7 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates, autoHeight } = props
     const [selected, setSelected] = React.useState(null)
     const plan = TT.NetlistGrid.layout(netlist, { compact: Boolean(compactLayout) })
     const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
@@ -192,7 +192,7 @@ TT.NetlistGridUI = (function () {
     const scale = zoom || fit
 
     return h('div', { className: 'tt-netgrid-wrap' + (compactLayout ? ' tt-netgrid-compact' : '') },
-      h('div', { className: 'tt-netgrid-viewport', ref: viewportRef },
+      h('div', { className: 'tt-netgrid-viewport', ref: viewportRef, 'data-auto': autoHeight ? 'true' : 'false' },
         h('div', { className: 'tt-netgrid-zoom' },
           h('button', { type: 'button', className: 'tt-chip', onClick: () => setZoom(Math.max(0.12, scale / 1.25)) }, '−'),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => setZoom(null) }, `${Math.round(fit * 100)}% 适应`),

@@ -3193,6 +3193,7 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-music-nethead { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:10px; color:var(--tt-dim); }
 .tt-music-nethead strong { color:var(--tt-ink); font-size:11px; }
 .tt-music-net .tt-netgrid-viewport { height:min(42vh,360px); }
+.tt-netgrid-viewport[data-auto="true"] { height:auto; max-height:min(56vh,520px); }
 .tt-music-net .tt-netgrid-zoom { display:none; }
 @media (max-width: 900px) { .tt-music-top { flex-direction:column; } .tt-music-net { flex:0 0 auto; width:100%; } }
 .tt-piano-legend { display:flex; flex-direction:column; gap:3px; margin:2px 0 6px; padding:5px 7px; border-radius:8px;

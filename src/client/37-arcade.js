@@ -582,6 +582,7 @@ TT.ArcadeUI = (function () {
               inputLabels: [],
               outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
               compactLayout: true,
+              autoHeight: true,
             }),
           ) : null,
         ),

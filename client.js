@@ -9469,6 +9469,7 @@ TT.ArcadeUI = (function () {
               inputLabels: [],
               outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
               compactLayout: true,
+              autoHeight: true,
             }),
           ) : null,
         ),
@@ -13804,12 +13805,17 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.2'
+  const VERSION = '1.9.3'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.3',
+      date: '2026-11-22',
+      items: ['音乐盒网表按内容自动收高，消除下方的大块空白'],
+    },
     {
       version: '1.9.2',
       date: '2026-11-22',
@@ -13976,6 +13982,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.3',
+      date: '2026-11-22',
+      items: ['音乐盒网表按内容自动收高，消除下方的大块空白'],
     },
     {
       version: '1.9.2',
@@ -14565,7 +14576,7 @@ TT.NetlistGridUI = (function () {
   }
 
   function Grid(props) {
-    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates } = props
+    const { netlist, bits, stateBits, onToggle, t, inputLabels, outputLabels, autoFit, compactLayout, faultGates, okGates, autoHeight } = props
     const [selected, setSelected] = React.useState(null)
     const plan = TT.NetlistGrid.layout(netlist, { compact: Boolean(compactLayout) })
     const signals = TT.NetlistGrid.values(netlist, bits, stateBits)
@@ -14638,7 +14649,7 @@ TT.NetlistGridUI = (function () {
     const scale = zoom || fit
 
     return h('div', { className: 'tt-netgrid-wrap' + (compactLayout ? ' tt-netgrid-compact' : '') },
-      h('div', { className: 'tt-netgrid-viewport', ref: viewportRef },
+      h('div', { className: 'tt-netgrid-viewport', ref: viewportRef, 'data-auto': autoHeight ? 'true' : 'false' },
         h('div', { className: 'tt-netgrid-zoom' },
           h('button', { type: 'button', className: 'tt-chip', onClick: () => setZoom(Math.max(0.12, scale / 1.25)) }, '−'),
           h('button', { type: 'button', className: 'tt-chip', onClick: () => setZoom(null) }, `${Math.round(fit * 100)}% 适应`),
@@ -17913,6 +17924,7 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 .tt-music-nethead { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:10px; color:var(--tt-dim); }
 .tt-music-nethead strong { color:var(--tt-ink); font-size:11px; }
 .tt-music-net .tt-netgrid-viewport { height:min(42vh,360px); }
+.tt-netgrid-viewport[data-auto="true"] { height:auto; max-height:min(56vh,520px); }
 .tt-music-net .tt-netgrid-zoom { display:none; }
 @media (max-width: 900px) { .tt-music-top { flex-direction:column; } .tt-music-net { flex:0 0 auto; width:100%; } }
 .tt-piano-legend { display:flex; flex-direction:column; gap:3px; margin:2px 0 6px; padding:5px 7px; border-radius:8px;
