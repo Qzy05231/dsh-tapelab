@@ -5,12 +5,17 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.9.7'
+  const VERSION = '1.9.8'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.9.8',
+      date: '2026-11-22',
+      items: ['修复音乐盒网表未渲染的问题，进入页面即可在控制区右侧看到'],
+    },
     {
       version: '1.9.7',
       date: '2026-11-22',
@@ -207,6 +212,11 @@ TT.Version = (function () {
       version: '1.7.9',
       date: '2026-11-22',
       items: ['贪吃蛇从 8×8 网格升级为 16×16，格子更小、活动空间更大'],
+    },
+    {
+      version: '1.9.8',
+      date: '2026-11-22',
+      items: ['修复音乐盒网表未渲染的问题，进入页面即可在控制区右侧看到'],
     },
     {
       version: '1.9.7',
