@@ -34,6 +34,9 @@ TT.dict = {
     'netgrid.legoTitle': '乐高全加器网表',
     'netgrid.adderTitle': '4 位加法器网表',
     'netgrid.sevensegTitle': '七段显示网表',
+    'netgrid.voteTitle': '多数表决网表',
+    'netgrid.lockTitle': '4 位比较器网表',
+    'netgrid.musicTitle': '计数器网表',
 
     'netgrid.counterTitle': '4 位计数器网表',
     'netgrid.containerTitle': '容器内打包的电路（半加器）',
@@ -1287,6 +1290,9 @@ TT.dict = {
     'netgrid.legoTitle': 'LEGO full adder netlist',
     'netgrid.adderTitle': '4-bit adder netlist',
     'netgrid.sevensegTitle': 'Seven-segment netlist',
+    'netgrid.voteTitle': 'Majority netlist',
+    'netgrid.lockTitle': '4-bit comparator netlist',
+    'netgrid.musicTitle': 'Counter netlist',
 
     'netgrid.counterTitle': '4-bit counter netlist',
     'netgrid.containerTitle': 'Packed circuit (half adder)',
@@ -3267,6 +3273,8 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 \.tt-telemetry[data-inline="true"] .tt-netgrid-inlinebody .tt-netgrid-viewport { flex:0 0 auto; height:min(48vh,460px); min-height:0; }
 .tt-telemetry[data-inline="true"] .tt-netgrid-inlinebody .tt-finalenote { display:none; }
 .tt-telemetry[data-inline="true"] .tt-netgrid-detail { display:none; }
+.tt-netlistcard { grid-column: 1 / -1; }
+.tt-netlistcard .tt-netgrid-viewport { height:min(42vh,420px); }
 .tt-netgrid-entry { display:flex; gap:5px; padding-top:6px; margin-top:2px; border-top:1px solid rgba(86,225,255,.12); }
 .tt-netgrid-entry .tt-netgrid-toggle { flex:1 1 0; }
 .tt-netgrid-inlinebody { display:flex; flex-direction:column; gap:5px; min-height:0; }

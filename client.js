@@ -9044,6 +9044,34 @@ TT.Arcade = (function () {
     }
   }
 
+  let comparatorCache = null
+  function comparatorNetlist() {
+    if (comparatorCache) return comparatorCache
+    // 4 x XNOR + AND tree, built directly as a NAND netlist (8 inputs)
+    const gates = []
+    let nextNode = 2 + 8
+    const push = (a, b) => {
+      const node = nextNode
+      nextNode += 1
+      gates.push({ a, b })
+      return node
+    }
+    const not = (a) => push(a, a)
+    const xor = (a, b) => {
+      const one = push(a, b)
+      const two = push(a, one)
+      const three = push(b, one)
+      return push(two, three)
+    }
+    const and = (a, b) => not(push(a, b))
+    const xnor = (a, b) => not(xor(a, b))
+    const low = and(xnor(2, 6), xnor(3, 7))
+    const high = and(xnor(4, 8), xnor(5, 9))
+    const out = and(low, high)
+    comparatorCache = TT.Circuit.makeNetlist({ nIn: 8, gates, outputs: [out] })
+    return comparatorCache
+  }
+
   // ------------------------------------------------------------ debug puzzles
   function truthBits(nIn, fn) {
     const bits = []
@@ -9253,6 +9281,7 @@ TT.Arcade = (function () {
     shiftPattern,
     majority,
     majorityNetlist,
+    comparatorNetlist,
     debugPuzzles,
     fixedNetlist,
     truthBits,
@@ -9320,12 +9349,43 @@ TT.ArcadeUI = (function () {
     )
   }
 
+  function NetToggle(props) {
+    return h('button', {
+      type: 'button',
+      className: 'tt-chip',
+      'data-active': props.show ? 'true' : 'false',
+      onClick: props.onClick,
+    }, props.show ? props.t('netgrid.collapse') : `🧮 ${props.t('netgrid.open')}`)
+  }
+
+  function NetlistCard(props) {
+    if (!TT.NetlistGridUI || !props.netlist) return null
+    return h('section', { className: 'tt-labcard tt-netlistcard', style: { gridColumn: '1 / -1' } },
+      h('div', { className: 'tt-labcardhead' },
+        h('strong', null, `🧮 ${props.title}`),
+        h('span', null, `${props.netlist.gates.length} NAND · ${props.netlist.nIn} in / ${props.netlist.outputs.length} out`),
+      ),
+      h(TT.NetlistGridUI.Grid, {
+        netlist: props.netlist,
+        bits: props.bits || 0,
+        stateBits: props.stateBits || 0,
+        t: props.t,
+        inputLabels: props.inputLabels,
+        outputLabels: props.outputLabels,
+        onToggle: props.onToggle,
+        faultGates: props.faultGates,
+        okGates: props.okGates,
+      }),
+    )
+  }
+
   function Music(props) {
     const { arcade, t, api } = props
     const music = arcade.music
     const tune = TT.Arcade.TUNES[music.tune % TT.Arcade.TUNES.length]
     const windowStart = Math.max(0, Math.min(tune.notes.length - 16, (music.step | 0) - 7))
     const notes = tune.notes.slice(windowStart, windowStart + 16)
+    const [showNet, setShowNet] = React.useState(false)
     const whiteKeys = []
     const blackKeys = []
     for (let midi = TT.Arcade.PIANO_MIN; midi <= TT.Arcade.PIANO_MAX; midi += 1) {
@@ -9351,6 +9411,7 @@ TT.ArcadeUI = (function () {
               'data-active': music.tempo === value ? 'true' : 'false',
               onClick: () => api.dispatch({ type: 'music/tempo', tempo: value }),
             }, t(`arcade.tempo.${key}`))),
+          h(NetToggle, { show: showNet, onClick: () => setShowNet((value) => !value), t }),
         ),
         h('div', { className: 'tt-labrow' },
           h('span', { className: 'tt-lablabel' }, t('arcade.music.scale')),
@@ -9455,6 +9516,15 @@ TT.ArcadeUI = (function () {
         ),
         h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.music.clock')),
       ),
+      showNet ? h(NetlistCard, {
+        title: t('netgrid.musicTitle'),
+        netlist: TT.Circuit.canonical.counter4(),
+        bits: 0,
+        stateBits: (music.step | 0) % 16,
+        t,
+        inputLabels: [],
+        outputLabels: ['Q0', 'Q1', 'Q2', 'Q3'],
+      }) : null,
     )
   }
 
@@ -9506,6 +9576,8 @@ TT.ArcadeUI = (function () {
     const { arcade, t, api } = props
     const lock = arcade.lock
     const guess = lock.guess
+    const [showNet, setShowNet] = React.useState(false)
+    const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.lock.title'), hint: t('arcade.lock.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
@@ -9523,6 +9595,7 @@ TT.ArcadeUI = (function () {
           h('button', { type: 'button', className: 'tt-btn', 'data-kind': 'ghost',
             onClick: () => api.dispatch({ type: 'lock/reset' }) }, t('arcade.lock.reset')),
           h('span', { className: 'tt-lablabel' }, `${t('arcade.lock.attempts')} ${lock.attempts}/${lock.maxAttempts || 6}`),
+          h(NetToggle, { show: showNet, onClick: () => setShowNet((value) => !value), t }),
         ),
         lock.solved ? h('div', { className: 'tt-badge', 'data-tone': 'good' }, t('arcade.lock.solved')) : null,
         lock.failed ? h('div', { className: 'tt-badge', 'data-tone': 'bad' }, t('arcade.lock.failed')) : null,
@@ -9535,12 +9608,22 @@ TT.ArcadeUI = (function () {
         h('p', { className: 'tt-labempty' }, t('arcade.lock.body')),
         h('div', { className: 'tt-hex tt-mono' }, 'lock = (guess == code) · 4 × XNOR + AND'),
       ),
+      showNet ? h(NetlistCard, {
+        title: t('netgrid.lockTitle'),
+        netlist: compareNetlist,
+        bits: lock.solved ? ((guess | (lock.code << 4)) >>> 0) : 0,
+        t,
+        inputLabels: ['G0', 'G1', 'G2', 'G3', 'C0', 'C1', 'C2', 'C3'],
+        outputLabels: ['EQ'],
+      }) : null,
     )
   }
 
   function Guess(props) {
     const { arcade, t, api } = props
     const game = arcade.guess
+    const [showNet, setShowNet] = React.useState(false)
+    const compareNetlist = showNet ? TT.Arcade.comparatorNetlist() : null
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.guess.title'), hint: t('arcade.guess.hint') },
         h('div', { className: 'tt-labrow' }, [0, 1, 2, 3].map((index) =>
@@ -9560,6 +9643,7 @@ TT.ArcadeUI = (function () {
             onClick: () => api.dispatch({ type: 'guess/restart' }) }, t('arcade.guess.restart')),
           h('span', { className: 'tt-lablabel' }, `${t('arcade.guess.tries')} ${game.tries}/${game.maxTries || 5}`),
           game.solved ? h('span', { className: 'tt-badge', 'data-tone': 'good' }, `${t('arcade.guess.score')} +${game.score || 0}`) : null,
+          h(NetToggle, { show: showNet, onClick: () => setShowNet((value) => !value), t }),
         ),
         game.solved ? h('div', { className: 'tt-badge', 'data-tone': 'good' }, `${t('arcade.guess.solved')} ${game.secret}`) : null,
         h('div', { className: 'tt-librarylist' }, game.history.slice(-6).map((entry, index) =>
@@ -9573,6 +9657,14 @@ TT.ArcadeUI = (function () {
         h('p', { className: 'tt-labempty' }, t('arcade.guess.body')),
         h('p', { className: 'tt-finalenote', style: { margin: 0 } }, t('arcade.guess.lfsr')),
       ),
+      showNet ? h(NetlistCard, {
+        title: t('netgrid.lockTitle'),
+        netlist: compareNetlist,
+        bits: game.solved ? (((game.guess | (game.secret << 4)) >>> 0)) : 0,
+        t,
+        inputLabels: ['G0', 'G1', 'G2', 'G3', 'S0', 'S1', 'S2', 'S3'],
+        outputLabels: ['EQ'],
+      }) : null,
     )
   }
 
@@ -9581,6 +9673,7 @@ TT.ArcadeUI = (function () {
     const vote = arcade.vote
     const inputs = [vote.a, vote.b, vote.c]
     const out = TT.Arcade.majority(vote.a, vote.b, vote.c)
+    const [showNet, setShowNet] = React.useState(false)
     return h('div', { className: 'tt-labgrid' },
       h(Card, { title: t('arcade.vote.title'), hint: t('arcade.vote.hint') },
         h('div', { className: 'tt-labrow' }, ['A', 'B', 'C'].map((name, index) =>
@@ -9591,7 +9684,7 @@ TT.ArcadeUI = (function () {
             'data-active': inputs[index] ? 'true' : 'false',
             onClick: () => api.dispatch({ type: 'vote/toggle', index }),
           }, `${name} = ${inputs[index]}`),
-        )),
+        ), h(NetToggle, { show: showNet, onClick: () => setShowNet((value) => !value), t })),
         h('div', { className: 'tt-seg', style: { marginTop: 6 } },
           h('span', { style: { fontSize: 13, color: 'var(--tt-mint)' } }, `PASS = ${out}`),
           h('span', { className: 'tt-badge', 'data-tone': out ? 'good' : 'muted' }, out ? '2 / 3 通过' : '未通过'),
@@ -9610,6 +9703,14 @@ TT.ArcadeUI = (function () {
           })),
         ),
       ),
+      showNet ? h(NetlistCard, {
+        title: t('netgrid.voteTitle'),
+        netlist: TT.Arcade.majorityNetlist(),
+        bits: (inputs[0] ? 1 : 0) | (inputs[1] ? 2 : 0) | (inputs[2] ? 4 : 0),
+        t,
+        inputLabels: ['A', 'B', 'C'],
+        outputLabels: ['PASS'],
+      }) : null,
     )
   }
 
@@ -13719,6 +13820,14 @@ TT.Version = (function () {
       items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
     },
     {
+      version: '1.8.3',
+      date: '2026-11-22',
+      items: [
+        '游乐场接入网表：多数表决、密码锁、猜数字、音乐盒在游戏下方可展开网表',
+        '调试实验室保留故障门高亮网表',
+      ],
+    },
+    {
       version: '1.8.2',
       date: '2026-11-22',
       items: ['框内网表固定为与框同宽、约 460px 高，展开后完整显示不再被压成一条'],
@@ -13795,6 +13904,14 @@ TT.Version = (function () {
       version: '1.8.3',
       date: '2026-11-22',
       items: ['第 14 章容器化部署也加入网表入口，显示被打包的半加器电路'],
+    },
+    {
+      version: '1.8.3',
+      date: '2026-11-22',
+      items: [
+        '游乐场接入网表：多数表决、密码锁、猜数字、音乐盒在游戏下方可展开网表',
+        '调试实验室保留故障门高亮网表',
+      ],
     },
     {
       version: '1.8.2',
@@ -14429,6 +14546,9 @@ TT.dict = {
     'netgrid.legoTitle': '乐高全加器网表',
     'netgrid.adderTitle': '4 位加法器网表',
     'netgrid.sevensegTitle': '七段显示网表',
+    'netgrid.voteTitle': '多数表决网表',
+    'netgrid.lockTitle': '4 位比较器网表',
+    'netgrid.musicTitle': '计数器网表',
 
     'netgrid.counterTitle': '4 位计数器网表',
     'netgrid.containerTitle': '容器内打包的电路（半加器）',
@@ -15682,6 +15802,9 @@ TT.dict = {
     'netgrid.legoTitle': 'LEGO full adder netlist',
     'netgrid.adderTitle': '4-bit adder netlist',
     'netgrid.sevensegTitle': 'Seven-segment netlist',
+    'netgrid.voteTitle': 'Majority netlist',
+    'netgrid.lockTitle': '4-bit comparator netlist',
+    'netgrid.musicTitle': 'Counter netlist',
 
     'netgrid.counterTitle': '4-bit counter netlist',
     'netgrid.containerTitle': 'Packed circuit (half adder)',
@@ -17662,6 +17785,8 @@ button.tt-progress-pill[data-done="true"] { cursor:pointer; }
 \.tt-telemetry[data-inline="true"] .tt-netgrid-inlinebody .tt-netgrid-viewport { flex:0 0 auto; height:min(48vh,460px); min-height:0; }
 .tt-telemetry[data-inline="true"] .tt-netgrid-inlinebody .tt-finalenote { display:none; }
 .tt-telemetry[data-inline="true"] .tt-netgrid-detail { display:none; }
+.tt-netlistcard { grid-column: 1 / -1; }
+.tt-netlistcard .tt-netgrid-viewport { height:min(42vh,420px); }
 .tt-netgrid-entry { display:flex; gap:5px; padding-top:6px; margin-top:2px; border-top:1px solid rgba(86,225,255,.12); }
 .tt-netgrid-entry .tt-netgrid-toggle { flex:1 1 0; }
 .tt-netgrid-inlinebody { display:flex; flex-direction:column; gap:5px; min-height:0; }

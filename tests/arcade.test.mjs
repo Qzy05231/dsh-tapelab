@@ -195,3 +195,23 @@ test('arcade reducer drives every mini game', () => {
   state = M.reduce(state, { type: 'debug/level', level: 1 })
   assert.equal(state.arcade.debug.level, 1)
 })
+
+
+test('arcade games expose real gate netlists', () => {
+  const compare = A.comparatorNetlist()
+  assert.equal(compare.nIn, 8)
+  for (let a = 0; a < 16; a += 1) {
+    for (let b = 0; b < 16; b += 1) {
+      const result = TT.Circuit.evaluate(compare, a | (b << 4))
+      assert.equal(result.outputBits & 1, a === b ? 1 : 0, `${a} vs ${b}`)
+    }
+  }
+  const majority = A.majorityNetlist()
+  assert.equal(majority.nIn, 3)
+  for (let bits = 0; bits < 8; bits += 1) {
+    const a = bits & 1
+    const b = (bits >> 1) & 1
+    const c = (bits >> 2) & 1
+    assert.equal(TT.Circuit.evaluate(majority, bits).outputBits & 1, A.majority(a, b, c))
+  }
+})
