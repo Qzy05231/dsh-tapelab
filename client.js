@@ -5606,6 +5606,15 @@ TT.Missions = (function () {
       mode: 'missions',
       lab: freshLab(),
       soundMuted: false,
+      lang: (function () {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const saved = localStorage.getItem('dsh-tapeout-lab:lang:v1')
+            if (saved === 'en' || saved === 'zh') return saved
+          }
+        } catch (error) { /* ignore */ }
+        return 'zh'
+      })(),
       cinema: false,
       arcade: freshArcade(),
       access: freshAccess(),
@@ -7040,6 +7049,10 @@ TT.Missions = (function () {
           ...state,
           arcade: { ...state.arcade, debug: { ...state.arcade.debug, selected: null, status: 'idle' } },
         }
+      case 'lang/set':
+        return { ...state, lang: action.lang === 'en' ? 'en' : 'zh' }
+      case 'lang/toggle':
+        return { ...state, lang: state.lang === 'en' ? 'zh' : 'en' }
       case 'sound/toggle':
         return { ...state, soundMuted: !state.soundMuted }
       case 'cinema/set':
@@ -14020,12 +14033,20 @@ TT.EcosystemUI = (function () {
  */
 
 TT.Version = (function () {
-  const VERSION = '1.10.3'
+  const VERSION = '1.11.0'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.11.0',
+      date: '2026-11-22',
+      items: [
+        '新增完整英文界面：顶栏 EN/CN 一键切换，所有页面文案与词典同步',
+        '语言选择会记住到本机，重启后保持上次选择',
+      ],
+    },
     {
       version: '1.10.3',
       date: '2026-11-22',
@@ -18696,8 +18717,17 @@ TT.UI.Panel = function Panel(props) {
   const store = props.store
   const api = props.api
   const ctx = props.ctx
-  const t = props.t
+  const baseT = props.t
   const state = TT.UI.useGame(store)
+  const lang = state.lang === 'en' ? 'en' : 'zh'
+  const t = React.useCallback((key, params) => {
+    const table = TT.dict[lang] || TT.dict.zh
+    let raw = table[key]
+    if (raw === undefined) raw = TT.dict.zh[key]
+    if (raw === undefined) return baseT(key, params)
+    if (!params) return raw
+    return String(raw).replace(/\{(\w+)\}/g, (m, name) => (params[name] === undefined ? m : String(params[name])))
+  }, [lang, baseT])
   const rootRef = React.useRef(null)
   const canvasRef = React.useRef(null)
   const stateRef = React.useRef(state)
@@ -19159,6 +19189,13 @@ TT.UI.Panel = function Panel(props) {
             onClick: () => api.dispatch({ type: 'eco/open' }),
           }, t('panel.modeEco')),
         ),
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-tool',
+          title: lang === 'en' ? '切换到中文' : 'Switch to English',
+          'aria-label': 'Language / 语言',
+          onClick: () => api.dispatch({ type: 'lang/toggle' }),
+        }, lang === 'en' ? 'CN' : 'EN'),
         TT.h('button', {
           type: 'button',
           className: 'tt-tool',
@@ -20161,6 +20198,13 @@ dispatch({ type: 'cinema/set', active: false })
       }
       if (action.type === 'tapeout/done') clearTapeTimer()
       if (TT.Audio) TT.Audio.setMuted(after.soundMuted)
+      if (action.type === 'lang/set' || action.type === 'lang/toggle') {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.setItem('dsh-tapeout-lab:lang:v1', after.lang)
+        } catch (error) {
+          /* ignore */
+        }
+      }
       if (action.type === 'sound/toggle') {
         try {
           if (typeof localStorage !== 'undefined') {

@@ -130,3 +130,15 @@ test('chapter 6 behemoth CPU supports custom operand adjustment', () => {
   assert.equal(state.play.running, true)
   assert.equal(state.play.result.outputBits, 16) // 15 + 1 = 16 (Cout = 1, S = 0)
 })
+
+
+test('language toggles between Chinese and English', () => {
+  let state = M.initial()
+  assert.equal(state.lang, 'zh')
+  state = M.reduce(state, { type: 'lang/toggle' })
+  assert.equal(state.lang, 'en')
+  state = M.reduce(state, { type: 'lang/toggle' })
+  assert.equal(state.lang, 'zh')
+  state = M.reduce(state, { type: 'lang/set', lang: 'en' })
+  assert.equal(state.lang, 'en')
+})

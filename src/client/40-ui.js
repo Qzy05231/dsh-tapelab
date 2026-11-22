@@ -3617,8 +3617,17 @@ TT.UI.Panel = function Panel(props) {
   const store = props.store
   const api = props.api
   const ctx = props.ctx
-  const t = props.t
+  const baseT = props.t
   const state = TT.UI.useGame(store)
+  const lang = state.lang === 'en' ? 'en' : 'zh'
+  const t = React.useCallback((key, params) => {
+    const table = TT.dict[lang] || TT.dict.zh
+    let raw = table[key]
+    if (raw === undefined) raw = TT.dict.zh[key]
+    if (raw === undefined) return baseT(key, params)
+    if (!params) return raw
+    return String(raw).replace(/\{(\w+)\}/g, (m, name) => (params[name] === undefined ? m : String(params[name])))
+  }, [lang, baseT])
   const rootRef = React.useRef(null)
   const canvasRef = React.useRef(null)
   const stateRef = React.useRef(state)
@@ -4080,6 +4089,13 @@ TT.UI.Panel = function Panel(props) {
             onClick: () => api.dispatch({ type: 'eco/open' }),
           }, t('panel.modeEco')),
         ),
+        TT.h('button', {
+          type: 'button',
+          className: 'tt-tool',
+          title: lang === 'en' ? '切换到中文' : 'Switch to English',
+          'aria-label': 'Language / 语言',
+          onClick: () => api.dispatch({ type: 'lang/toggle' }),
+        }, lang === 'en' ? 'CN' : 'EN'),
         TT.h('button', {
           type: 'button',
           className: 'tt-tool',

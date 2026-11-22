@@ -52,7 +52,8 @@ Harness 的 **Plugins → Add plugin** 支持 Git 地址，粘贴上面的仓库
 - **Plugins** 页面 → Installed plugins 里能看到 `dsh-tapeout-3d-lab`，行 id 为 `include:tapeout-lab`；
 - 设置里的插件清单（Settings → Built-in plugins）也应显示标题与描述。
 
-> 面板标题与工具栏在 macOS 上会自动避开原生窗口按钮：顶部按 `--dsh-frame-top-clearance`
+> 顶栏集成 **EN/CN 中英文切换**，语言选择持久化到本机；
+面板标题与工具栏在 macOS 上会自动避开原生窗口按钮：顶部按 `--dsh-frame-top-clearance`
 > （48px 顶带）下沉，侧边栏收起时再按 `--dsh-frame-leading-clearance` 让出左上角的
 > 红绿灯与窗口控制区，不会发生重叠。该规则写在 `src/client/40-ui.js` 的 CSS 中。
 
@@ -199,7 +200,7 @@ Harness 的 **Plugins → Add plugin** 支持 Git 地址，粘贴上面的仓库
 
 ## 版本与更新
 
-顶部 **🔄** 按钮打开「版本与更新」：显示当前版本 `v1.10.3`、更新日志，并可调用 GitHub API
+顶部 **🔄** 按钮打开「版本与更新」：显示当前版本 `v1.11.0`、更新日志，并可调用 GitHub API
 检查 `main` 的最新提交。浏览器插件不能静默自更新，页面会给出更新命令与重载步骤：
 
 ```bash

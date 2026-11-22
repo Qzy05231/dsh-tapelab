@@ -5,12 +5,20 @@
  */
 
 TT.Version = (function () {
-  const VERSION = '1.10.3'
+  const VERSION = '1.11.0'
   const BUILT_AT = '2026-11-21'
   const REPO = 'https://github.com/Qzy05231/dsh-tapelab'
   const API = 'https://api.github.com/repos/Qzy05231/dsh-tapelab/commits/main'
   const COMMAND = 'git pull && node scripts/build.mjs'
   const CHANGELOG = [
+    {
+      version: '1.11.0',
+      date: '2026-11-22',
+      items: [
+        '新增完整英文界面：顶栏 EN/CN 一键切换，所有页面文案与词典同步',
+        '语言选择会记住到本机，重启后保持上次选择',
+      ],
+    },
     {
       version: '1.10.3',
       date: '2026-11-22',

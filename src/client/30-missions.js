@@ -611,6 +611,15 @@ TT.Missions = (function () {
       mode: 'missions',
       lab: freshLab(),
       soundMuted: false,
+      lang: (function () {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const saved = localStorage.getItem('dsh-tapeout-lab:lang:v1')
+            if (saved === 'en' || saved === 'zh') return saved
+          }
+        } catch (error) { /* ignore */ }
+        return 'zh'
+      })(),
       cinema: false,
       arcade: freshArcade(),
       access: freshAccess(),
@@ -2045,6 +2054,10 @@ TT.Missions = (function () {
           ...state,
           arcade: { ...state.arcade, debug: { ...state.arcade.debug, selected: null, status: 'idle' } },
         }
+      case 'lang/set':
+        return { ...state, lang: action.lang === 'en' ? 'en' : 'zh' }
+      case 'lang/toggle':
+        return { ...state, lang: state.lang === 'en' ? 'zh' : 'en' }
       case 'sound/toggle':
         return { ...state, soundMuted: !state.soundMuted }
       case 'cinema/set':

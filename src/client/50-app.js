@@ -366,6 +366,13 @@ dispatch({ type: 'cinema/set', active: false })
       }
       if (action.type === 'tapeout/done') clearTapeTimer()
       if (TT.Audio) TT.Audio.setMuted(after.soundMuted)
+      if (action.type === 'lang/set' || action.type === 'lang/toggle') {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.setItem('dsh-tapeout-lab:lang:v1', after.lang)
+        } catch (error) {
+          /* ignore */
+        }
+      }
       if (action.type === 'sound/toggle') {
         try {
           if (typeof localStorage !== 'undefined') {
